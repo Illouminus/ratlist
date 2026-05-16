@@ -7,18 +7,16 @@
  *   ActionsRow — count, occasion chips, view toggle, "+ add" button
  *   items grid / list / empty state
  *   end-of-list marker ("that's the lot — for now")
- *   ItemDrawer (mounted, slides in when open)
  *
- * The screen also responds to a `?add=1` query param by auto-opening the
- * Add Item drawer. The mobile FAB in BottomTabBar uses this to be a
- * cross-route "add a wish" intent.
+ * "Add" navigates to `/add` (a full-screen form). The mobile FAB and
+ * the empty-state CTA both go through that single entry point, so
+ * there's no drawer state to manage here.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useProfile } from '../../auth/useProfile';
 import { useMyItems } from '../../items/useMyItems';
-import { useGroups } from '../../groups/useGroups';
 import { useIsMobile } from '../../lib/useMediaQuery';
 import type { Occasion } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
@@ -27,24 +25,13 @@ import { EndOfList } from '../../components/EndOfList';
 import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
 import { ItemFilters, type ViewMode } from './ItemFilters';
-import { ItemDrawer, type ItemDrawerMode } from './ItemDrawer';
-import type { CreateItemInput } from '../../items/useMyItems';
 import { SittingRat } from '../../components/rats';
-
-/** Was the page opened with `?add=1`? Used to auto-open the drawer. */
-function initialDrawerFromUrl(): ItemDrawerMode {
-  if (typeof window === 'undefined') return { kind: 'closed' };
-  return new URLSearchParams(window.location.search).get('add') === '1'
-    ? { kind: 'create' }
-    : { kind: 'closed' };
-}
 
 export function MyListScreen() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { query: profileQ } = useProfile();
-  const { query: itemsQ, createItem } = useMyItems();
-  const { query: groupsQ } = useGroups();
+  const { query: itemsQ } = useMyItems();
 
   const isMobile = useIsMobile();
   const [view, setView] = useState<ViewMode>('grid');
@@ -52,18 +39,6 @@ export function MyListScreen() {
   // list — the wide grid cards don't fit. Desktop users can still pick.
   const effectiveView: ViewMode = isMobile ? 'list' : view;
   const [occasion, setOccasion] = useState<Occasion | null>(null);
-  // Drawer is *only* used for "create" on this screen — editing happens
-  // on the item detail page. Keeps the home-screen state tiny.
-  const [drawer, setDrawer] = useState<ItemDrawerMode>(initialDrawerFromUrl);
-
-  // If we opened via ?add=1 (the mobile FAB intent), clean the URL so a
-  // refresh doesn't keep re-opening the drawer. `navigate` is imperative,
-  // not a setState — safe to call from an effect.
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).has('add')) {
-      navigate('/', { replace: true });
-    }
-  }, [navigate]);
 
   const filteredItems = useMemo(() => {
     const items = itemsQ.status === 'ready' ? itemsQ.items : [];
@@ -75,9 +50,7 @@ export function MyListScreen() {
   // `RequireAuth` guarantees the profile is ready by the time we render.
   if (profileQ.status !== 'ready') return null;
 
-  const handleSubmit = (input: CreateItemInput) => createItem(input);
-  const handleOpenCreate = () => setDrawer({ kind: 'create' });
-  const handleCloseDrawer = () => setDrawer({ kind: 'closed' });
+  const goAdd = () => navigate('/add');
 
   // The page header + filters only make sense when there's a list to
   // describe. On the very first run we hand the page over to EmptyState,
@@ -96,7 +69,7 @@ export function MyListScreen() {
             onOccasion={setOccasion}
             view={view}
             onView={setView}
-            onAdd={handleOpenCreate}
+            onAdd={goAdd}
           />
         </>
       )}
@@ -111,9 +84,7 @@ export function MyListScreen() {
         <p style={{ color: 'var(--accent-deep)' }}>{itemsQ.error}</p>
       )}
 
-      {itemsQ.status === 'ready' && totalCount === 0 && (
-        <EmptyState onAdd={handleOpenCreate} />
-      )}
+      {itemsQ.status === 'ready' && totalCount === 0 && <EmptyState onAdd={goAdd} />}
 
       {showList && (
         <>
@@ -136,13 +107,6 @@ export function MyListScreen() {
           {filteredItems.length > 0 && <EndOfList />}
         </>
       )}
-
-      <ItemDrawer
-        mode={drawer}
-        onClose={handleCloseDrawer}
-        groups={groupsQ.status === 'ready' ? groupsQ.groups : []}
-        onSubmit={handleSubmit}
-      />
     </PaperLayout>
   );
 }
@@ -248,7 +212,7 @@ function ActionsRow({
           />
         </div>
         {/* Add button is desktop-only; on mobile the FAB in the bottom
-            tab bar covers the same intent (it routes here with ?add=1). */}
+            tab bar already routes to /add. */}
         <Button variant="primary" onClick={onAdd} className="hide-on-mobile">
           {t('list.addItem')}
         </Button>

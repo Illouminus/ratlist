@@ -1,5 +1,5 @@
 /**
- * `<PhotoField>` — file picker + live preview used inside `<ItemDrawer>`.
+ * `<PhotoField>` — file picker + live preview used inside `<ItemForm>`.
  *
  * The component is dumb about the surrounding form: it just exposes
  * `value` (current cover URL or null) and an `onChange` callback. The

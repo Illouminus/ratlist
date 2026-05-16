@@ -1,24 +1,20 @@
 /**
- * `<ItemDrawer>` — slide-in form for both creating and editing a wishlist
- * item. The same shape backs both flows: in create mode the form starts
- * blank with all of the user's groups pre-selected; in edit mode the form
- * is seeded from the item being edited and `group_ids` reflects its
- * current publication set.
+ * `<ItemForm>` — the editable item form used by both AddItemScreen
+ * (`/add`) and EditItemScreen (`/i/:itemId/edit`).
  *
- * Open the drawer in create mode by passing `mode={{ kind: 'create' }}`,
- * in edit mode by passing `mode={{ kind: 'edit', item: MyItem }}`. The
- * parent decides which mutation runs via `onSubmit`.
+ * The form is the same in both modes — only the submit handler and the
+ * "what to call this action" labels differ. Mode is inferred from
+ * `initial`: pass an existing item to edit it, omit to start fresh.
  *
- * The form is mounted only while the drawer is open, so we use plain
- * `useState` initialisers — closing then re-opening remounts with fresh
- * state derived from the new mode.
+ * URL meta auto-fill, photo upload, group multi-select, occasion chips —
+ * all live here. The two screens are thin wrappers that just provide
+ * the page chrome and decide where to navigate after submit.
  */
 import { useState, type FormEvent } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { OCCASIONS, type Occasion } from '../../lib/db';
 import type { MyGroup } from '../../groups/useGroups';
 import type { CreateItemInput, MyItem } from '../../items/useMyItems';
-import { Drawer } from '../../components/Drawer';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
@@ -30,8 +26,7 @@ import { errorMessage } from '../../lib/errors';
 const MAX_TITLE_LENGTH = 200;
 /** Soft cap when auto-filling from a fetched URL. Long page titles
  *  (GitHub repo descriptions, news article H1s) are usually not what you
- *  want as a wishlist item title — truncate for the user. They can
- *  extend up to MAX_TITLE_LENGTH manually if needed. */
+ *  want as a wishlist item title — truncate for the user. */
 const AUTOFILL_TITLE_LENGTH = 100;
 
 function truncate(s: string, max: number): string {
@@ -39,51 +34,24 @@ function truncate(s: string, max: number): string {
   return s.slice(0, max - 1).trimEnd() + '…';
 }
 
-/** Discriminated mode prop — keeps the create vs edit split explicit. */
-export type ItemDrawerMode =
-  | { kind: 'closed' }
-  | { kind: 'create' }
-  | { kind: 'edit'; item: MyItem };
-
-interface ItemDrawerProps {
-  mode: ItemDrawerMode;
-  onClose: () => void;
+export interface ItemFormProps {
+  /** Pre-fill the form from an existing item; omit for create mode. */
+  initial?: MyItem | null;
+  /** All groups the caller is a member of — used for the publish chips. */
   groups: MyGroup[];
-  /**
-   * Save handler — receives the form input and returns either the saved
-   * item or an error message. The parent decides whether this is a create
-   * or update call based on the `mode` it passed in.
-   */
+  /** Persist handler. Receives the form input and decides create vs
+   *  update on the caller's side. */
   onSubmit: (input: CreateItemInput) => Promise<{ item: MyItem } | { error: string }>;
+  /** Optional cancel button. Hidden when not provided (e.g. add flow on
+   *  a small screen where Cancel is in the top bar). */
+  onCancel?: () => void;
+  /** Label shown on the submit button — defaults to a generic Save. */
+  submitLabel?: string;
 }
 
-export function ItemDrawer({ mode, onClose, groups, onSubmit }: ItemDrawerProps) {
-  return (
-    <Drawer
-      open={mode.kind !== 'closed'}
-      onClose={onClose}
-      ariaLabel={mode.kind === 'edit' ? 'edit item' : 'add item'}
-    >
-      {mode.kind !== 'closed' && (
-        <ItemForm mode={mode} groups={groups} onSubmit={onSubmit} onClose={onClose} />
-      )}
-    </Drawer>
-  );
-}
-
-// ─────────────────────────── form ───────────────────────────
-
-interface ItemFormProps {
-  mode: Exclude<ItemDrawerMode, { kind: 'closed' }>;
-  groups: MyGroup[];
-  onSubmit: ItemDrawerProps['onSubmit'];
-  onClose: () => void;
-}
-
-function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
+export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: ItemFormProps) {
   const { t } = useI18n();
-  const isEdit = mode.kind === 'edit';
-  const initial = mode.kind === 'edit' ? mode.item : null;
+  const isEdit = !!initial;
 
   const [title, setTitle] = useState<string>(initial?.title ?? '');
   const [maker, setMaker] = useState<string>(initial?.maker ?? '');
@@ -131,8 +99,6 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
     const filled: string[] = [];
     const { data } = result;
     if (data.title && title.trim().length === 0) {
-      // Truncate aggressively — full page titles are rarely good wish-list
-      // item names. User can extend up to MAX_TITLE_LENGTH manually.
       setTitle(truncate(data.title, AUTOFILL_TITLE_LENGTH));
       filled.push('title');
     }
@@ -190,60 +156,14 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
       setSubmitting(false);
       return;
     }
-    setSubmitting(false);
-    onClose();
+    // Don't flip submitting back — the parent will navigate away on
+    // success, and toggling state during the unmount is a noisy log.
   }
 
-  const headlineTitle = isEdit ? t('add.editTitle') : t('add.title');
-  const headlineSub = isEdit ? t('add.editSub') : t('add.sub');
-  const submitLabel = isEdit ? t('add.saveChanges') : t('add.save');
-  const eyebrow = isEdit ? t('add.editEyebrow') : t('add.eyebrow');
+  const finalSubmitLabel = submitLabel ?? (isEdit ? t('add.saveChanges') : t('add.save'));
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          marginBottom: 'var(--s-4)',
-        }}
-      >
-        <div className="mono-meta">{eyebrow}</div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="close"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--ink-3)',
-            fontSize: 12,
-            padding: 4,
-          }}
-        >
-          esc ×
-        </button>
-      </header>
-
-      <div style={{ marginBottom: 'var(--s-5)' }}>
-        <h2
-          className="display-italic"
-          style={{ margin: 0, fontSize: 'var(--display-m)', lineHeight: 1.1, letterSpacing: -0.8 }}
-        >
-          {headlineTitle}
-        </h2>
-        <p
-          className="marginalia"
-          style={{ marginTop: 'var(--s-2)', fontSize: 16, color: 'var(--accent)' }}
-        >
-          {headlineSub}
-        </p>
-      </div>
-
-      <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-4)' }} />
-
       <PhotoField value={coverUrl} onChange={setCoverUrl} />
 
       <Field label={t('add.thing')}>
@@ -252,7 +172,7 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={t('add.thingPh')}
-          autoFocus
+          autoFocus={!isEdit}
           required
           maxLength={200}
         />
@@ -357,20 +277,22 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: onCancel ? 'space-between' : 'flex-end',
           alignItems: 'center',
           marginTop: 'var(--s-5)',
         }}
       >
-        <Button variant="ghost" onClick={onClose}>
-          {t('add.cancel')}
-        </Button>
+        {onCancel && (
+          <Button variant="ghost" onClick={onCancel}>
+            {t('add.cancel')}
+          </Button>
+        )}
         <Button
           type="submit"
           variant="primary"
           disabled={submitting || title.trim().length === 0}
         >
-          {submitting ? t('auth.sending') : submitLabel}
+          {submitting ? t('auth.sending') : finalSubmitLabel}
         </Button>
       </div>
 

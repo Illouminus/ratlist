@@ -2,8 +2,7 @@
  * `<BottomTabBar>` — fixed bottom strip on mobile (< 768px). Four
  * primary destinations grouped two-and-two around a centred FAB-style
  * "+" button. The FAB is a global "add a wish" intent that always
- * routes to `/?add=1`; `<MyListScreen>` reads the query param on mount
- * and opens its Add Item drawer.
+ * routes to `/add` (the full-screen add form).
  *
  * Hidden on desktop via CSS — the `<Sidebar>` covers the same role.
  */
@@ -39,7 +38,7 @@ export function BottomTabBar() {
 
       <button
         type="button"
-        onClick={() => navigate('/?add=1')}
+        onClick={() => navigate('/add')}
         aria-label="add a wish"
         style={{
           width: 44,

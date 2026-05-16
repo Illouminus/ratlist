@@ -5,9 +5,9 @@
  * with the price in italic on the right, occasion chip, my-note block,
  * 2×2 meta grid, and a primary "open link" + secondary actions row.
  *
- * Editing reuses `ItemDrawer` — opening it from here keeps the user on
- * the same URL, and a successful save just re-renders this page from
- * the freshly-loaded list.
+ * "Edit" routes to `/i/:itemId/edit` — a sibling full-screen form —
+ * rather than opening a drawer. Keeps the page chrome predictable
+ * across both flows.
  *
  * Privacy: this screen only renders items the user owns. Friend-owned
  * items live on `/p/:userId` (FriendListScreen) and have their own UI
@@ -23,8 +23,8 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { Button } from '../../components/Button';
+import { useToast } from '../../components/Toast';
 import { SittingRat } from '../../components/rats';
-import { ItemDrawer, type ItemDrawerMode } from './ItemDrawer';
 import type { Occasion } from '../../lib/db';
 
 /** ISO -> human "Apr 12" / "12 апр". Mirrors the eyebrow in the mockup. */
@@ -44,10 +44,10 @@ export function ItemDetailScreen() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const { itemId = '' } = useParams<{ itemId: string }>();
-  const { query, updateItem, deleteItem } = useMyItems();
+  const { query, deleteItem } = useMyItems();
   const { query: groupsQ } = useGroups();
+  const toast = useToast();
 
-  const [drawer, setDrawer] = useState<ItemDrawerMode>({ kind: 'closed' });
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +106,7 @@ export function ItemDetailScreen() {
     }
     try {
       await navigator.clipboard.writeText(url);
-      window.alert(t('item.shareCopied'));
+      toast.show(t('item.shareCopied'));
     } catch {
       /* clipboard blocked — no fallback yet */
     }
@@ -114,7 +114,7 @@ export function ItemDetailScreen() {
 
   return (
     <PaperLayout>
-      <TopRow onEdit={() => setDrawer({ kind: 'edit', item })} number={number} />
+      <TopRow onEdit={() => navigate(`/i/${item.id}/edit`)} number={number} />
 
       <div
         className="mono-meta"
@@ -258,12 +258,6 @@ export function ItemDetailScreen() {
         <SittingRat size={40} />
       </div>
 
-      <ItemDrawer
-        mode={drawer}
-        onClose={() => setDrawer({ kind: 'closed' })}
-        groups={groups}
-        onSubmit={(input) => updateItem(item.id, input)}
-      />
     </PaperLayout>
   );
 }
