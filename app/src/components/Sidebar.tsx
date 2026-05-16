@@ -9,7 +9,6 @@ import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { useProfile } from '../auth/useProfile';
 import { useI18n } from '../i18n/useI18n';
-import { Button } from './Button';
 import { LangToggle } from './LangToggle';
 
 const NAV = [
@@ -89,7 +88,7 @@ export function Sidebar() {
           display: 'flex',
           alignItems: 'center',
           gap: 'var(--s-3)',
-          marginBottom: 'var(--s-3)',
+          marginBottom: 'var(--s-4)',
         }}
       >
         <span
@@ -114,6 +113,8 @@ export function Sidebar() {
         </span>
         <div
           style={{
+            flex: 1,
+            minWidth: 0,
             fontSize: 13,
             fontWeight: 600,
             color: 'var(--ink)',
@@ -126,19 +127,34 @@ export function Sidebar() {
         </div>
       </div>
 
+      {/* Two pill buttons sharing the same chrome so they line up
+          visually instead of competing — LangToggle on the left
+          (changes view), sign-out on the right (leaves the app). */}
       <div
         style={{
           padding: '0 var(--s-3)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 'var(--s-3)',
+          alignItems: 'stretch',
+          gap: 'var(--s-2)',
         }}
       >
         <LangToggle />
-        <Button variant="ghost" onClick={() => void signOut()} style={{ fontSize: 11 }}>
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="mono-meta"
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--hair-strong)',
+            padding: '4px 10px',
+            borderRadius: 'var(--r-2)',
+            cursor: 'pointer',
+            color: 'var(--ink-2)',
+            marginLeft: 'auto',
+          }}
+        >
           {t('auth.signOut')}
-        </Button>
+        </button>
       </div>
     </aside>
   );

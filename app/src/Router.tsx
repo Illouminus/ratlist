@@ -16,6 +16,7 @@ import { LoginScreen } from './screens/LoginScreen';
 import { AuthCallbackScreen } from './screens/AuthCallbackScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { MyListScreen } from './screens/items/MyListScreen';
+import { ItemDetailScreen } from './screens/items/ItemDetailScreen';
 import { GroupsScreen } from './screens/groups/GroupsScreen';
 import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
 import { PeopleScreen } from './screens/people/PeopleScreen';
@@ -53,6 +54,7 @@ export function AppRouter() {
 
         {/* Authenticated + onboarded (full app chrome) */}
         <Route path="/" element={appRoute(<MyListScreen />)} />
+        <Route path="/i/:itemId" element={appRoute(<ItemDetailScreen />)} />
         <Route path="/groups" element={appRoute(<GroupsScreen />)} />
         <Route path="/people" element={appRoute(<PeopleScreen />)} />
         <Route path="/p/:userId" element={appRoute(<FriendListScreen />)} />

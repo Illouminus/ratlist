@@ -1,14 +1,16 @@
 /**
  * `<ItemList>` — image-row list of items. Each row is a small photo on
- * the left and a stacked title + maker + note + occasion + actions on
- * the right.
+ * the left and a stacked title + maker + note + occasion on the right.
+ *
+ * The whole row is a `<Link>` to `/i/:itemId` — that's where edit /
+ * delete / share live (matches the v2 design, which has no inline
+ * actions on the list rows).
  *
  * Layout works the same on mobile and desktop (the row is naturally
  * compact). On desktop it reads more like an editorial inventory than
- * the wide grid; on mobile it replaces the grid entirely (the user
- * shouldn't see 240px-wide cards crammed into a 375px viewport).
+ * the wide grid; on mobile it replaces the grid entirely.
  */
-import { useI18n } from '../../i18n/useI18n';
+import { Link } from 'react-router-dom';
 import type { MyItem } from '../../items/useMyItems';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
@@ -16,22 +18,13 @@ import type { Occasion } from '../../lib/db';
 
 interface ItemListProps {
   items: MyItem[];
-  onEdit: (item: MyItem) => void;
-  onDelete: (id: string) => void;
 }
 
-export function ItemList({ items, onEdit, onDelete }: ItemListProps) {
+export function ItemList({ items }: ItemListProps) {
   return (
     <div>
       {items.map((item, i) => (
-        <ItemRow
-          key={item.id}
-          item={item}
-          index={i}
-          onEdit={() => onEdit(item)}
-          onDelete={() => onDelete(item.id)}
-          last={i === items.length - 1}
-        />
+        <ItemRow key={item.id} item={item} index={i} last={i === items.length - 1} />
       ))}
     </div>
   );
@@ -42,8 +35,6 @@ export function ItemList({ items, onEdit, onDelete }: ItemListProps) {
 interface ItemRowProps {
   item: MyItem;
   index: number;
-  onEdit: () => void;
-  onDelete: () => void;
   last: boolean;
 }
 
@@ -60,13 +51,12 @@ const CLAMP_2_LINES = {
 /** Total reserved height for a row. Calibrated so a row with a 2-line
  *  title and a 2-line note still fits, AND rows with no note look
  *  airy rather than tiny. Keeps the list visually regular. */
-const ROW_MIN_HEIGHT = 132;
+const ROW_MIN_HEIGHT = 124;
 
-function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
-  const { t } = useI18n();
-
+function ItemRow({ item, index, last }: ItemRowProps) {
   return (
-    <div
+    <Link
+      to={`/i/${item.id}`}
       style={{
         position: 'relative',
         padding: 'var(--s-4) 0',
@@ -74,6 +64,8 @@ function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
         display: 'flex',
         gap: 'var(--s-4)',
         minHeight: ROW_MIN_HEIGHT,
+        textDecoration: 'none',
+        color: 'inherit',
       }}
     >
       {/* photo + numbered badge */}
@@ -176,52 +168,10 @@ function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
           </div>
         )}
 
-        {/* The actions row is pushed to the bottom of the cell via
-            margin-top: auto, so all rows align their controls on the
-            same baseline regardless of how much content is above. */}
-        <div
-          style={{
-            marginTop: 'auto',
-            paddingTop: 'var(--s-2)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 'var(--s-3)',
-          }}
-        >
+        <div style={{ marginTop: 'auto', paddingTop: 'var(--s-2)' }}>
           <OccasionTag kind={item.occasion as Occasion} />
-          <div style={{ display: 'flex', gap: 'var(--s-3)' }}>
-            <RowAction onClick={onEdit}>{t('list.edit')}</RowAction>
-            <RowAction onClick={onDelete}>{t('list.crossOff')}</RowAction>
-          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ─────────────────────────── action ───────────────────────────
-
-interface RowActionProps {
-  onClick: () => void;
-  children: React.ReactNode;
-}
-
-function RowAction({ onClick, children }: RowActionProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mono-meta"
-      style={{
-        background: 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        padding: 0,
-        color: 'var(--ink-3)',
-      }}
-    >
-      {children}
-    </button>
+    </Link>
   );
 }

@@ -146,14 +146,21 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
     bottom: 0;
     left: 0;
     right: 0;
-    height: var(--bottom-bar-h);
+    /* Reserve space for the iOS home-indicator (and similar Android
+       safe-area), so the FAB and tabs never sit under the system gesture
+       bar. We add the inset to padding-bottom rather than the height so
+       the visual bar stays the same regardless of device. */
+    padding-left: var(--page-pad-x);
+    padding-right: var(--page-pad-x);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    min-height: var(--bottom-bar-h);
     background: var(--paper);
     border-top: 1px solid var(--hair);
     z-index: 6;
   }
   /* Reserve room at the bottom of the page so the fixed tab bar doesn't
-     cover scroll-end content. */
+     cover scroll-end content — bar height plus the safe-area inset. */
   .app-main {
-    padding-bottom: var(--bottom-bar-h);
+    padding-bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px));
   }
 }

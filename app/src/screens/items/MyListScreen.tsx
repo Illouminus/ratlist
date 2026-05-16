@@ -28,7 +28,7 @@ import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
 import { ItemFilters, type ViewMode } from './ItemFilters';
 import { ItemDrawer, type ItemDrawerMode } from './ItemDrawer';
-import type { CreateItemInput, MyItem } from '../../items/useMyItems';
+import type { CreateItemInput } from '../../items/useMyItems';
 import { SittingRat } from '../../components/rats';
 
 /** Was the page opened with `?add=1`? Used to auto-open the drawer. */
@@ -43,7 +43,7 @@ export function MyListScreen() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { query: profileQ } = useProfile();
-  const { query: itemsQ, createItem, updateItem, deleteItem } = useMyItems();
+  const { query: itemsQ, createItem } = useMyItems();
   const { query: groupsQ } = useGroups();
 
   const isMobile = useIsMobile();
@@ -52,6 +52,8 @@ export function MyListScreen() {
   // list — the wide grid cards don't fit. Desktop users can still pick.
   const effectiveView: ViewMode = isMobile ? 'list' : view;
   const [occasion, setOccasion] = useState<Occasion | null>(null);
+  // Drawer is *only* used for "create" on this screen — editing happens
+  // on the item detail page. Keeps the home-screen state tiny.
   const [drawer, setDrawer] = useState<ItemDrawerMode>(initialDrawerFromUrl);
 
   // If we opened via ?add=1 (the mobile FAB intent), clean the URL so a
@@ -73,30 +75,31 @@ export function MyListScreen() {
   // `RequireAuth` guarantees the profile is ready by the time we render.
   if (profileQ.status !== 'ready') return null;
 
-  const handleSubmit = (input: CreateItemInput) => {
-    if (drawer.kind === 'edit') {
-      return updateItem(drawer.item.id, input);
-    }
-    return createItem(input);
-  };
-
-  const handleEdit = (item: MyItem) => setDrawer({ kind: 'edit', item });
+  const handleSubmit = (input: CreateItemInput) => createItem(input);
   const handleOpenCreate = () => setDrawer({ kind: 'create' });
   const handleCloseDrawer = () => setDrawer({ kind: 'closed' });
 
+  // The page header + filters only make sense when there's a list to
+  // describe. On the very first run we hand the page over to EmptyState,
+  // which carries its own "nothing yet." headline.
+  const showList = itemsQ.status === 'ready' && totalCount > 0;
+
   return (
     <PaperLayout>
-      <Header />
-
-      <ActionsRow
-        countShown={filteredItems.length}
-        countTotal={totalCount}
-        occasion={occasion}
-        onOccasion={setOccasion}
-        view={view}
-        onView={setView}
-        onAdd={handleOpenCreate}
-      />
+      {showList && (
+        <>
+          <Header />
+          <ActionsRow
+            countShown={filteredItems.length}
+            countTotal={totalCount}
+            occasion={occasion}
+            onOccasion={setOccasion}
+            view={view}
+            onView={setView}
+            onAdd={handleOpenCreate}
+          />
+        </>
+      )}
 
       {itemsQ.status === 'loading' && (
         <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
@@ -112,20 +115,12 @@ export function MyListScreen() {
         <EmptyState onAdd={handleOpenCreate} />
       )}
 
-      {itemsQ.status === 'ready' && totalCount > 0 && (
+      {showList && (
         <>
           {effectiveView === 'grid' ? (
-            <ItemGrid
-              items={filteredItems}
-              onEdit={handleEdit}
-              onDelete={(id) => void deleteItem(id)}
-            />
+            <ItemGrid items={filteredItems} />
           ) : (
-            <ItemList
-              items={filteredItems}
-              onEdit={handleEdit}
-              onDelete={(id) => void deleteItem(id)}
-            />
+            <ItemList items={filteredItems} />
           )}
           {filteredItems.length === 0 && (
             <p
@@ -264,18 +259,58 @@ function ActionsRow({
 
 // ─────────────────────────── empty state ───────────────────────────
 
+/**
+ * Empty state — first run, before the user has added any items. Mirrors
+ * the "06 · Empty state" mockup: big italic "nothing yet." headline,
+ * Caveat "a quiet beginning." sub, a single question-prompt that nudges
+ * the user toward their first item, then rat + CTA + "or paste a link"
+ * marginalia at the bottom.
+ *
+ * Lives inside MyListScreen so it can share the same PaperLayout column.
+ * The (non-empty) Header is suppressed when this renders — see the
+ * caller above.
+ */
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   const { t } = useI18n();
   return (
     <section
       style={{
-        paddingTop: 'var(--s-6)',
+        position: 'relative',
+        paddingTop: 'var(--s-4)',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'stretch',
-        gap: 'var(--s-4)',
+        gap: 'var(--s-5)',
       }}
     >
+      <div>
+        <h2
+          className="display-italic"
+          style={{
+            margin: 0,
+            fontSize: 'var(--display-l)',
+            lineHeight: 1.02,
+            letterSpacing: -1.2,
+            whiteSpace: 'pre-line',
+          }}
+        >
+          {t('empty.headline')}
+        </h2>
+        <p
+          className="marginalia"
+          style={{
+            margin: 'var(--s-2) 0 0',
+            fontSize: 18,
+            color: 'var(--accent)',
+            transform: 'rotate(-1.5deg)',
+            display: 'inline-block',
+          }}
+        >
+          {t('empty.annotation')}
+        </p>
+      </div>
+
+      <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: 0 }} />
+
       <p
         className="display-italic"
         style={{
@@ -300,11 +335,11 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         {t('empty.body')}
       </p>
 
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--s-5)' }}>
-        <SittingRat size={110} sign signText={t('empty.sign')} />
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--s-4)' }}>
+        <SittingRat size={120} sign signText={t('empty.sign')} />
       </div>
 
-      <Button variant="dark" onClick={onAdd} style={{ marginTop: 'var(--s-5)', width: '100%' }}>
+      <Button variant="dark" onClick={onAdd} style={{ width: '100%' }}>
         {t('list.addFirst')}
       </Button>
       <p

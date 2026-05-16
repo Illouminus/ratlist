@@ -2,10 +2,13 @@
  * `<ItemCard>` — one item in the grid view. Mirrors the design's
  * editorial layout: numbered index, watercolor photo placeholder, title
  * (sans bold) and price (italic serif) on one row, then maker, note and
- * occasion. Cross-off action appears on hover.
+ * occasion.
+ *
+ * The whole card is a `<Link>` to `/i/:itemId` — edit / delete / share
+ * live on the detail page (the v2 mockup has no inline actions on the
+ * list either).
  */
-import { useState } from 'react';
-import { useI18n } from '../../i18n/useI18n';
+import { Link } from 'react-router-dom';
 import type { MyItem } from '../../items/useMyItems';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
@@ -14,19 +17,18 @@ import type { Occasion } from '../../lib/db';
 interface ItemCardProps {
   item: MyItem;
   index: number;
-  onEdit: () => void;
-  onDelete: () => void;
 }
 
-export function ItemCard({ item, index, onEdit, onDelete }: ItemCardProps) {
-  const { t } = useI18n();
-  const [hover, setHover] = useState(false);
-
+export function ItemCard({ item, index }: ItemCardProps) {
   return (
-    <article
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{ position: 'relative' }}
+    <Link
+      to={`/i/${item.id}`}
+      style={{
+        position: 'relative',
+        textDecoration: 'none',
+        color: 'inherit',
+        display: 'block',
+      }}
     >
       <div style={{ position: 'relative' }}>
         <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
@@ -107,59 +109,10 @@ export function ItemCard({ item, index, onEdit, onDelete }: ItemCardProps) {
           </div>
         )}
 
-        <div
-          style={{
-            marginTop: 'var(--s-3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        <div style={{ marginTop: 'var(--s-3)' }}>
           <OccasionTag kind={item.occasion as Occasion} />
-          <div
-            style={{
-              display: 'flex',
-              gap: 'var(--s-3)',
-              opacity: hover ? 1 : 0,
-              transition: 'opacity var(--motion-fast) ease-out',
-            }}
-          >
-            <CardAction onClick={onEdit}>{t('list.edit')}</CardAction>
-            <CardAction onClick={onDelete}>{t('list.crossOff')}</CardAction>
-          </div>
         </div>
       </div>
-    </article>
-  );
-}
-
-// ─────────────────────────── action ───────────────────────────
-
-interface CardActionProps {
-  onClick: () => void;
-  children: React.ReactNode;
-}
-
-/** Small uppercase text button used for the hover actions on a card. */
-function CardAction({ onClick, children }: CardActionProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        background: 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        padding: 0,
-        fontFamily: 'var(--font-body)',
-        fontSize: 11,
-        fontWeight: 500,
-        color: 'var(--ink-3)',
-        letterSpacing: 0.06,
-        textTransform: 'uppercase',
-      }}
-    >
-      {children}
-    </button>
+    </Link>
   );
 }

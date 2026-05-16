@@ -1,6 +1,7 @@
 /**
- * `<ItemGrid>` — 3-column grid of `<ItemCard>`s with generous gutters.
- * On narrow viewports the grid collapses to 2 columns and then 1.
+ * `<ItemGrid>` — auto-fit grid of `<ItemCard>`s with generous gutters.
+ * Narrow viewports collapse to fewer columns; on phones we render
+ * `<ItemList>` instead (`MyListScreen` picks the right one).
  */
 import type { MyItem } from '../../items/useMyItems';
 import { ItemCard } from './ItemCard';
@@ -8,11 +9,9 @@ import { RunningRat } from '../../components/rats';
 
 interface ItemGridProps {
   items: MyItem[];
-  onEdit: (item: MyItem) => void;
-  onDelete: (id: string) => void;
 }
 
-export function ItemGrid({ items, onEdit, onDelete }: ItemGridProps) {
+export function ItemGrid({ items }: ItemGridProps) {
   return (
     <div
       style={{
@@ -23,13 +22,7 @@ export function ItemGrid({ items, onEdit, onDelete }: ItemGridProps) {
       }}
     >
       {items.map((item, i) => (
-        <ItemCard
-          key={item.id}
-          item={item}
-          index={i}
-          onEdit={() => onEdit(item)}
-          onDelete={() => onDelete(item.id)}
-        />
+        <ItemCard key={item.id} item={item} index={i} />
       ))}
       {/* a tiny rat scampering between the cards once the grid has weight */}
       {items.length >= 5 && (

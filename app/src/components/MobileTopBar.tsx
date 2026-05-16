@@ -47,10 +47,11 @@ export function MobileTopBar() {
           className="mono-meta"
           style={{
             background: 'transparent',
-            border: 'none',
+            border: '1px solid var(--hair-strong)',
+            padding: '4px 10px',
+            borderRadius: 'var(--r-2)',
             cursor: 'pointer',
-            padding: '4px 6px',
-            color: 'var(--ink-3)',
+            color: 'var(--ink-2)',
           }}
         >
           {t('auth.signOut')}

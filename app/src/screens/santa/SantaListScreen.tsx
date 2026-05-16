@@ -19,10 +19,73 @@ import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { SittingRat } from '../../components/rats';
 
+/** Inline block shown when the user has no groups yet — they otherwise
+ *  see only the page header and an empty list, with no hint that the
+ *  next step is "create a circle". */
+function NoGroupsCta() {
+  const { t } = useI18n();
+  return (
+    <section
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 'var(--s-5)',
+        flexWrap: 'wrap',
+        padding: 'var(--s-5)',
+        background: '#fffdf6',
+        border: '1px solid var(--hair)',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 240 }}>
+        <p
+          className="display-italic"
+          style={{
+            fontSize: 'var(--display-s)',
+            lineHeight: 1.1,
+            margin: 0,
+            marginBottom: 'var(--s-3)',
+          }}
+        >
+          {t('santa.noGroupsTitle')}
+        </p>
+        <p
+          style={{
+            margin: 0,
+            color: 'var(--ink-2)',
+            fontSize: 14,
+            lineHeight: 1.55,
+            marginBottom: 'var(--s-4)',
+          }}
+        >
+          {t('santa.noGroupsBody')}
+        </p>
+        <Link
+          to="/groups"
+          className="mono-meta"
+          style={{ color: 'var(--accent)', textDecoration: 'none' }}
+        >
+          {t('santa.noGroupsCta')}
+        </Link>
+      </div>
+      <div style={{ opacity: 0.85 }}>
+        <SittingRat size={72} signText="?" />
+      </div>
+    </section>
+  );
+}
+
 export function SantaListScreen() {
   const { t } = useI18n();
   const { query: eventsQ, createEvent } = useSantaEvents();
   const { query: groupsQ } = useGroups();
+
+  const groups = groupsQ.status === 'ready' ? groupsQ.groups : [];
+  // Wait until we know whether the user has groups before deciding which
+  // create UI to show. Otherwise a fast initial render flashes the CTA
+  // and then swaps it for the form a tick later.
+  const groupsReady = groupsQ.status === 'ready';
+  const showCta = groupsReady && groups.length === 0;
+  const showForm = groupsReady && groups.length > 0;
 
   return (
     <PaperLayout>
@@ -49,10 +112,8 @@ export function SantaListScreen() {
         </p>
       </header>
 
-      <CreateEventForm
-        groups={groupsQ.status === 'ready' ? groupsQ.groups : []}
-        onCreate={createEvent}
-      />
+      {showCta && <NoGroupsCta />}
+      {showForm && <CreateEventForm groups={groups} onCreate={createEvent} />}
 
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: 'var(--s-6) 0' }} />
 
@@ -108,10 +169,8 @@ function CreateEventForm({ groups, onCreate }: CreateEventFormProps) {
     }
   }
 
-  if (groups.length === 0) {
-    // Can't create events without at least one group. Don't show the form.
-    return null;
-  }
+  // Parent only mounts CreateEventForm when there's at least one group,
+  // so we don't need a guard here.
 
   return (
     <section>
