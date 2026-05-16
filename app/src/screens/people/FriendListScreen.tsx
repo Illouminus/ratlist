@@ -5,27 +5,26 @@
  * features: claims are hidden from owners by RLS. Everyone else who
  * shares a group with them can see the list AND who's claiming what.
  *
- * UI:
- *   - editorial header with their name + a marginalia annotation
- *   - claim-hint copy
- *   - table of items; each row shows price + occasion + the right
- *     coordination control:
- *       · unclaimed → "I'll get it" button
- *       · claimed by someone else → their name (strikethrough item)
- *       · claimed by you → "you're getting it" + release button
+ * Layout matches the editorial mobile design v2:
+ *   eyebrow + italic "{handle}'s list" + Caveat annotation
+ *   claim-hint copy
+ *   image-row items with a square 56px photo and a claim control
+ *     on the right of each row:
+ *       · unclaimed       → "I'll get it" button
+ *       · claimed by you  → "you're getting it" + release
+ *       · claimed by them → "{name} got it ✓" (item struck through)
  */
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useFriendList, type ClaimWithUser, type FriendItem } from '../../people/useFriendList';
 import { useI18n } from '../../i18n/useI18n';
+import { errorMessage } from '../../lib/errors';
 import type { Occasion } from '../../lib/db';
+import type { Profile } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
-import { Button } from '../../components/Button';
 import { SittingRat, RunningRat } from '../../components/rats';
-
-const COLUMNS = '64px 1fr 180px 130px 90px 130px';
 
 export function FriendListScreen() {
   const { t } = useI18n();
@@ -35,7 +34,6 @@ export function FriendListScreen() {
 
   return (
     <PaperLayout>
-
       {query.status === 'loading' && (
         <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
           …
@@ -44,13 +42,13 @@ export function FriendListScreen() {
 
       {query.status === 'error' && (
         <section>
-          <p style={{ color: 'var(--accent-deep)' }}>{t('friend.notFound')}</p>
+          <p style={{ color: 'var(--accent-deep)' }}>{errorMessage(t, query.error)}</p>
         </section>
       )}
 
       {query.status === 'ready' && (
         <>
-          <Header displayName={query.profile.display_name} />
+          <Header profile={query.profile} />
 
           <p
             style={{
@@ -58,7 +56,8 @@ export function FriendListScreen() {
               color: 'var(--ink-2)',
               lineHeight: 1.55,
               maxWidth: 560,
-              marginBottom: 'var(--s-6)',
+              marginTop: 'var(--s-4)',
+              marginBottom: 'var(--s-5)',
             }}
           >
             {t('friend.claimHint')}
@@ -67,7 +66,7 @@ export function FriendListScreen() {
           {query.items.length === 0 ? (
             <EmptyState />
           ) : (
-            <ItemsTable
+            <ItemsList
               items={query.items}
               myUserId={me?.id ?? null}
               onClaim={(id) => void claim(id)}
@@ -82,92 +81,87 @@ export function FriendListScreen() {
 
 // ─────────────────────────── header ───────────────────────────
 
-function Header({ displayName }: { displayName: string }) {
+function Header({
+  profile,
+}: {
+  profile: Pick<Profile, 'id' | 'display_name' | 'handle' | 'avatar_url'>;
+}) {
   const { t } = useI18n();
+  const headline = profile.handle ? `${profile.handle}'s list` : profile.display_name;
+
   return (
-    <div style={{ marginBottom: 'var(--s-5)' }}>
-      <div className="mono-meta" style={{ marginBottom: 'var(--s-3)' }}>
-        {t('friend.eyebrow')}
+    <div style={{ marginBottom: 'var(--s-4)' }}>
+      <div className="mono-meta" style={{ marginBottom: 'var(--s-2)' }}>
+        {profile.display_name}
+        {profile.handle && profile.handle !== profile.display_name && (
+          <>{' · @'}{profile.handle}</>
+        )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-4)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
         <h2
           className="display-italic"
-          style={{ fontSize: 'var(--display-l)', margin: 0, lineHeight: 1.05, letterSpacing: -1.4 }}
+          style={{
+            margin: 0,
+            fontSize: 'var(--display-l)',
+            lineHeight: 1.0,
+            letterSpacing: -1.2,
+          }}
         >
-          {displayName}
+          {headline}
         </h2>
         <div
           className="marginalia"
           style={{
-            fontSize: 20,
+            fontSize: 16,
             color: 'var(--accent)',
             transform: 'rotate(-2deg)',
-            marginBottom: 6,
+            marginBottom: 4,
+            display: 'inline-block',
           }}
         >
           {t('friend.annotation')}
         </div>
       </div>
-      <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: 'var(--s-5) 0 0' }} />
+      <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: 'var(--s-4) 0 0' }} />
     </div>
   );
 }
 
-// ─────────────────────────── table ───────────────────────────
+// ─────────────────────────── list ───────────────────────────
 
-interface ItemsTableProps {
+interface ItemsListProps {
   items: FriendItem[];
   myUserId: string | null;
   onClaim: (itemId: string) => void;
   onRelease: (itemId: string) => void;
 }
 
-function ItemsTable({ items, myUserId, onClaim, onRelease }: ItemsTableProps) {
-  const { t } = useI18n();
+function ItemsList({ items, myUserId, onClaim, onRelease }: ItemsListProps) {
   return (
     <div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: COLUMNS,
-          gap: 'var(--s-4)',
-          padding: '0 0 var(--s-3)',
-          borderBottom: '1px solid var(--hair-strong)',
-        }}
-      >
-        {['', t('list.item'), t('list.maker'), 'occasion', t('list.price'), ''].map((h, i) => (
-          <div
-            key={i}
-            className="mono-meta"
-            style={{ fontSize: 10, textAlign: i === 4 ? 'right' : 'left' }}
-          >
-            {h}
-          </div>
-        ))}
-      </div>
-
-      {items.map((item) => (
+      {items.map((item, i) => (
         <FriendItemRow
           key={item.id}
           item={item}
           myUserId={myUserId}
           onClaim={() => onClaim(item.id)}
           onRelease={() => onRelease(item.id)}
+          last={i === items.length - 1}
         />
       ))}
-      {/* a small rat trailing the table */}
+      {/* a small rat trailing the list */}
       {items.length > 0 && (
         <div
           aria-hidden
           style={{
-            marginTop: 'var(--s-6)',
+            marginTop: 'var(--s-5)',
             display: 'flex',
             justifyContent: 'flex-end',
             opacity: 0.5,
             pointerEvents: 'none',
           }}
         >
-          <RunningRat size={36} flip />
+          <RunningRat size={32} flip />
         </div>
       )}
     </div>
@@ -179,71 +173,92 @@ interface FriendItemRowProps {
   myUserId: string | null;
   onClaim: () => void;
   onRelease: () => void;
+  last: boolean;
 }
 
-function FriendItemRow({ item, myUserId, onClaim, onRelease }: FriendItemRowProps) {
+function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemRowProps) {
   const myClaim = myUserId ? item.claims.find((c) => c.user_id === myUserId) : undefined;
   const othersClaim = item.claims.find((c) => c.user_id !== myUserId);
   const isClaimed = item.claims.length > 0;
+  const dimmed = isClaimed && !myClaim;
 
   return (
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns: COLUMNS,
+        padding: 'var(--s-3) 0',
+        borderBottom: last ? 'none' : '1px solid var(--hair)',
+        opacity: dimmed ? 0.55 : 1,
+        display: 'flex',
         gap: 'var(--s-4)',
-        padding: 'var(--s-4) 0',
         alignItems: 'center',
-        borderBottom: '1px solid var(--hair)',
-        opacity: isClaimed && !myClaim ? 0.55 : 1,
       }}
     >
-      <div style={{ width: 64, height: 48 }}>
-        <ItemPhoto coverUrl={item.cover_url} height={48} alt={item.title} />
+      <div style={{ width: 56, flexShrink: 0 }}>
+        <ItemPhoto coverUrl={item.cover_url} aspectRatio="1 / 1" alt={item.title} />
       </div>
 
-      <div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontWeight: 600,
-            fontSize: 14,
-            color: 'var(--ink)',
-            textDecoration: isClaimed && !myClaim ? 'line-through' : 'none',
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 'var(--s-2)',
+            alignItems: 'baseline',
           }}
         >
-          {item.title}
+          <h3
+            style={{
+              margin: 0,
+              fontFamily: 'var(--font-body)',
+              fontWeight: 600,
+              fontSize: 13.5,
+              color: 'var(--ink)',
+              lineHeight: 1.3,
+              flex: 1,
+              minWidth: 0,
+              textDecoration: dimmed ? 'line-through' : 'none',
+            }}
+          >
+            {item.title}
+          </h3>
+          {item.price_text && (
+            <div
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontStyle: 'italic',
+                fontWeight: 500,
+                fontSize: 14,
+                color: 'var(--accent)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {item.price_text}
+            </div>
+          )}
         </div>
-        {item.note && (
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>{item.note}</div>
+
+        {item.maker && (
+          <div style={{ marginTop: 1, fontSize: 11, color: 'var(--ink-3)' }}>{item.maker}</div>
         )}
-      </div>
 
-      <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>{item.maker ?? ''}</div>
-
-      <div>
-        <OccasionTag kind={item.occasion as Occasion} />
-      </div>
-
-      <div
-        style={{
-          textAlign: 'right',
-          fontFamily: 'var(--font-display)',
-          fontStyle: 'italic',
-          fontWeight: 500,
-          fontSize: 16,
-          color: 'var(--accent)',
-        }}
-      >
-        {item.price_text ?? ''}
-      </div>
-
-      <div style={{ textAlign: 'right' }}>
-        <ClaimControl
-          myClaim={myClaim ?? null}
-          othersClaim={othersClaim ?? null}
-          onClaim={onClaim}
-          onRelease={onRelease}
-        />
+        <div
+          style={{
+            marginTop: 'var(--s-2)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 'var(--s-2)',
+            flexWrap: 'wrap',
+          }}
+        >
+          <OccasionTag kind={item.occasion as Occasion} />
+          <ClaimControl
+            myClaim={myClaim ?? null}
+            othersClaim={othersClaim ?? null}
+            onClaim={onClaim}
+            onRelease={onRelease}
+          />
+        </div>
       </div>
     </div>
   );
@@ -263,10 +278,21 @@ function ClaimControl({ myClaim, othersClaim, onClaim, onRelease }: ClaimControl
 
   if (myClaim) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 'var(--s-2)',
+        }}
+      >
         <span
           className="marginalia"
-          style={{ fontSize: 14, color: 'var(--accent)', transform: 'rotate(-1deg)' }}
+          style={{
+            fontSize: 13,
+            color: 'var(--accent)',
+            transform: 'rotate(-1deg)',
+            whiteSpace: 'nowrap',
+          }}
         >
           {t('friend.youClaim')} ✓
         </span>
@@ -295,8 +321,9 @@ function ClaimControl({ myClaim, othersClaim, onClaim, onRelease }: ClaimControl
         style={{
           fontSize: 14,
           color: 'var(--ink-3)',
-          transform: 'rotate(-1deg)',
+          transform: 'rotate(-2deg)',
           display: 'inline-block',
+          whiteSpace: 'nowrap',
         }}
       >
         {t('friend.claimedBy', { name: othersClaim.user.display_name })}
@@ -305,18 +332,26 @@ function ClaimControl({ myClaim, othersClaim, onClaim, onRelease }: ClaimControl
   }
 
   return (
-    <Button
-      variant="ghost"
+    <button
+      type="button"
       onClick={onClaim}
       style={{
-        color: 'var(--ink)',
+        background: 'transparent',
         border: '1px solid var(--ink)',
-        padding: '5px 12px',
+        padding: '4px 10px',
+        borderRadius: 'var(--r-1)',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-body)',
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: '0.08em',
         textTransform: 'uppercase',
+        color: 'var(--ink)',
+        whiteSpace: 'nowrap',
       }}
     >
       {t('friend.claim')}
-    </Button>
+    </button>
   );
 }
 
@@ -327,18 +362,23 @@ function EmptyState() {
   return (
     <section
       style={{
-        padding: 'var(--s-6) 0',
+        padding: 'var(--s-5) 0',
         display: 'flex',
         alignItems: 'flex-start',
-        gap: 'var(--s-6)',
+        gap: 'var(--s-5)',
         flexWrap: 'wrap',
       }}
     >
-      <div style={{ flex: 1, minWidth: 240 }}>
-        <p className="display-italic" style={{ fontSize: 22, color: 'var(--ink-2)' }}>
+      <div style={{ flex: 1, minWidth: 200 }}>
+        <p
+          className="display-italic"
+          style={{ fontSize: 'var(--display-s)', color: 'var(--ink-2)', margin: 0 }}
+        >
           {t('friend.emptyList')}
         </p>
-        <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('friend.emptyListBody')}</p>
+        <p style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 'var(--s-2)' }}>
+          {t('friend.emptyListBody')}
+        </p>
       </div>
       <div style={{ opacity: 0.85 }}>
         <SittingRat size={72} />

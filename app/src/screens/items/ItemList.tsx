@@ -1,6 +1,12 @@
 /**
- * `<ItemList>` — tabular layout of items: thumbnail · title+note · maker ·
- * occasion · price. Rows use a CSS grid for crisp alignment.
+ * `<ItemList>` — image-row list of items. Each row is a small photo on
+ * the left and a stacked title + maker + note + occasion + actions on
+ * the right.
+ *
+ * Layout works the same on mobile and desktop (the row is naturally
+ * compact). On desktop it reads more like an editorial inventory than
+ * the wide grid; on mobile it replaces the grid entirely (the user
+ * shouldn't see 240px-wide cards crammed into a 375px viewport).
  */
 import { useI18n } from '../../i18n/useI18n';
 import type { MyItem } from '../../items/useMyItems';
@@ -14,84 +20,144 @@ interface ItemListProps {
   onDelete: (id: string) => void;
 }
 
-const COLUMNS = '54px 1fr 180px 130px 90px 110px';
-
 export function ItemList({ items, onEdit, onDelete }: ItemListProps) {
+  return (
+    <div>
+      {items.map((item, i) => (
+        <ItemRow
+          key={item.id}
+          item={item}
+          index={i}
+          onEdit={() => onEdit(item)}
+          onDelete={() => onDelete(item.id)}
+          last={i === items.length - 1}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────── row ───────────────────────────
+
+interface ItemRowProps {
+  item: MyItem;
+  index: number;
+  onEdit: () => void;
+  onDelete: () => void;
+  last: boolean;
+}
+
+function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
   const { t } = useI18n();
 
   return (
-    <div>
-      {/* header */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: COLUMNS,
-          gap: 'var(--s-4)',
-          padding: '0 0 var(--s-3)',
-          borderBottom: '1px solid var(--hair-strong)',
-        }}
-      >
-        {['', t('list.item'), t('list.maker'), 'occasion', t('list.price'), ''].map((h, i) => (
-          <div
-            key={i}
-            className="mono-meta"
-            style={{ fontSize: 10, textAlign: i === 4 ? 'right' : 'left' }}
-          >
-            {h}
-          </div>
-        ))}
+    <div
+      style={{
+        position: 'relative',
+        padding: 'var(--s-4) 0',
+        borderBottom: last ? 'none' : '1px solid var(--hair)',
+        display: 'flex',
+        gap: 'var(--s-4)',
+      }}
+    >
+      {/* photo + numbered badge */}
+      <div style={{ width: 88, flexShrink: 0, position: 'relative' }}>
+        <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
+        <div
+          style={{
+            position: 'absolute',
+            top: 4,
+            left: 4,
+            fontFamily: 'var(--font-display)',
+            fontStyle: 'italic',
+            fontWeight: 400,
+            fontSize: 11,
+            color: 'var(--ink)',
+            background: 'rgba(250, 246, 239, 0.85)',
+            padding: '0 4px',
+            letterSpacing: 0.4,
+          }}
+          aria-hidden
+        >
+          {String(index + 1).padStart(2, '0')}
+        </div>
       </div>
 
-      {items.map((item) => (
+      {/* content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div
-          key={item.id}
           style={{
-            display: 'grid',
-            gridTemplateColumns: COLUMNS,
-            gap: 'var(--s-4)',
-            padding: 'var(--s-4) 0',
-            alignItems: 'center',
-            borderBottom: '1px solid var(--hair)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            gap: 'var(--s-2)',
           }}
         >
-          <div style={{ width: 54, height: 40 }}>
-            <ItemPhoto coverUrl={item.cover_url} height={40} alt={item.title} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>{item.title}</div>
-            {item.note && (
-              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>{item.note}</div>
-            )}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>{item.maker ?? ''}</div>
-          <div>
-            <OccasionTag kind={item.occasion as Occasion} />
-          </div>
-          <div
+          <h3
             style={{
-              textAlign: 'right',
-              fontFamily: 'var(--font-display)',
-              fontStyle: 'italic',
-              fontWeight: 500,
-              fontSize: 16,
-              color: 'var(--accent)',
+              margin: 0,
+              fontFamily: 'var(--font-body)',
+              fontWeight: 600,
+              fontSize: 14,
+              color: 'var(--ink)',
+              lineHeight: 1.25,
+              flex: 1,
+              minWidth: 0,
             }}
           >
-            {item.price_text ?? ''}
+            {item.title}
+          </h3>
+          {item.price_text && (
+            <div
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontStyle: 'italic',
+                fontWeight: 500,
+                fontSize: 16,
+                color: 'var(--accent)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {item.price_text}
+            </div>
+          )}
+        </div>
+
+        {item.maker && (
+          <div style={{ marginTop: 2, fontSize: 11, color: 'var(--ink-3)' }}>
+            {item.maker}
           </div>
+        )}
+
+        {item.note && (
           <div
             style={{
-              textAlign: 'right',
-              display: 'flex',
-              gap: 'var(--s-3)',
-              justifyContent: 'flex-end',
+              marginTop: 'var(--s-1)',
+              fontSize: 12,
+              color: 'var(--ink-2)',
+              lineHeight: 1.4,
             }}
           >
-            <RowAction onClick={() => onEdit(item)}>{t('list.edit')}</RowAction>
-            <RowAction onClick={() => onDelete(item.id)}>{t('list.crossOff')}</RowAction>
+            {item.note}
+          </div>
+        )}
+
+        <div
+          style={{
+            marginTop: 'var(--s-2)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 'var(--s-3)',
+          }}
+        >
+          <OccasionTag kind={item.occasion as Occasion} />
+          <div style={{ display: 'flex', gap: 'var(--s-3)' }}>
+            <RowAction onClick={onEdit}>{t('list.edit')}</RowAction>
+            <RowAction onClick={onDelete}>{t('list.crossOff')}</RowAction>
           </div>
         </div>
-      ))}
+      </div>
     </div>
   );
 }

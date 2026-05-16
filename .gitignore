@@ -1,6 +1,6 @@
-# Design handoff bundle — kept locally as reference, not in git
+# Design handoff bundles — kept locally as reference, not in git
 wish-list-app/
-design.tar.gz
+design*.tar.gz
 
 # Node / Vite
 node_modules/

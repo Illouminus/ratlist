@@ -25,7 +25,7 @@ export const en: Translation = {
   },
   list: {
     currentlySaved: 'currently saved',
-    headlineMine: "things i'd actually love",
+    headlineMine: "things i'd\nactually love",
     annotation: '(yes, even at full price)',
     countOfTotal: '{count} of {total}',
     addItem: '+ add item',
@@ -38,11 +38,13 @@ export const en: Translation = {
     search: 'search the list',
     allOccasions: 'all',
     noneForFilter: 'nothing matches this filter.',
+    thatsTheLot: "that's the lot — for now.",
   },
   empty: {
-    title: 'nothing saved here yet.',
-    body: "what's the last thing you screenshotted and never looked at again? that's a good place to start.",
+    title: "what's the last thing you screenshotted and never looked at again?",
+    body: "that's a good place to start. add anything — a mug, a book, a tomato seed. you can fix the details later.",
     sign: 'hello?',
+    orPasteLink: 'or paste a link, it’s faster',
   },
   add: {
     eyebrow: 'new item',
@@ -92,7 +94,8 @@ export const en: Translation = {
   },
   people: {
     eyebrow: 'people',
-    title: "who's in your circles",
+    title: 'your\npeople',
+    annotation: '(they have good taste)',
     sub: "tap a rat to see their list and claim a gift.",
     empty: 'just you in here for now.',
     emptyBody: 'invite someone via a circle or accept an invite link.',

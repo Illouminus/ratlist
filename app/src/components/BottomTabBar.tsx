@@ -1,60 +1,111 @@
 /**
- * `<BottomTabBar>` — fixed-position tab bar at the bottom of the
- * viewport on mobile (< 768px). Four tabs: My list / Circles / People /
- * Santa. Active tab is decided by URL prefix so sub-routes like
- * `/p/:userId` keep "People" active.
+ * `<BottomTabBar>` — fixed bottom strip on mobile (< 768px). Four
+ * primary destinations grouped two-and-two around a centred FAB-style
+ * "+" button. The FAB is a global "add a wish" intent that always
+ * routes to `/?add=1`; `<MyListScreen>` reads the query param on mount
+ * and opens its Add Item drawer.
  *
  * Hidden on desktop via CSS — the `<Sidebar>` covers the same role.
  */
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/useI18n';
 
 interface Tab {
   to: string;
-  /** URL prefixes that should keep this tab active (in addition to `to`). */
+  /** URL prefixes that should keep this tab active. */
   match: (pathname: string) => boolean;
   labelKey: string;
 }
 
-const TABS: Tab[] = [
+const LEFT_TABS: Tab[] = [
   { to: '/', match: (p) => p === '/', labelKey: 'nav.myList' },
   { to: '/groups', match: (p) => p === '/groups' || p.startsWith('/groups/'), labelKey: 'nav.groups' },
+];
+
+const RIGHT_TABS: Tab[] = [
   { to: '/people', match: (p) => p === '/people' || p.startsWith('/p/'), labelKey: 'nav.people' },
   { to: '/santa', match: (p) => p === '/santa' || p.startsWith('/santa/'), labelKey: 'nav.santa' },
 ];
 
 export function BottomTabBar() {
-  const { t } = useI18n();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   return (
     <nav className="app-bottom-bar" aria-label="primary navigation">
-      {TABS.map((tab) => {
-        const active = tab.match(pathname);
-        return (
-          <Link
-            key={tab.to}
-            to={tab.to}
-            className="mono-meta"
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '10px 6px',
-              gap: 4,
-              textDecoration: 'none',
-              color: active ? 'var(--ink)' : 'var(--ink-3)',
-              fontWeight: active ? 600 : 500,
-              borderTop: active ? '2px solid var(--accent)' : '2px solid transparent',
-              transition: 'color var(--motion-fast)',
-            }}
-          >
-            {t(tab.labelKey)}
-          </Link>
-        );
-      })}
+      {LEFT_TABS.map((tab) => (
+        <TabLink key={tab.to} tab={tab} active={tab.match(pathname)} />
+      ))}
+
+      <button
+        type="button"
+        onClick={() => navigate('/?add=1')}
+        aria-label="add a wish"
+        style={{
+          width: 44,
+          height: 44,
+          margin: '0 var(--s-3)',
+          flexShrink: 0,
+          background: 'var(--ink)',
+          color: 'var(--paper)',
+          border: 'none',
+          borderRadius: 'var(--r-1)',
+          cursor: 'pointer',
+          display: 'grid',
+          placeItems: 'center',
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontWeight: 500,
+          fontSize: 26,
+          lineHeight: 1,
+          boxShadow: '0 4px 10px rgba(43, 38, 32, 0.18)',
+          alignSelf: 'center',
+        }}
+      >
+        +
+      </button>
+
+      {RIGHT_TABS.map((tab) => (
+        <TabLink key={tab.to} tab={tab} active={tab.match(pathname)} />
+      ))}
     </nav>
+  );
+}
+
+// ─────────────────────────── tab ───────────────────────────
+
+function TabLink({ tab, active }: { tab: Tab; active: boolean }) {
+  const { t } = useI18n();
+  return (
+    <Link
+      to={tab.to}
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--s-2) var(--s-1)',
+        gap: 4,
+        textDecoration: 'none',
+        color: active ? 'var(--ink)' : 'var(--ink-3)',
+        fontFamily: 'var(--font-body)',
+        fontSize: 11,
+        fontWeight: active ? 700 : 500,
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+      }}
+    >
+      {t(tab.labelKey)}
+      <span
+        aria-hidden
+        style={{
+          width: 4,
+          height: 4,
+          borderRadius: '50%',
+          background: active ? 'var(--accent)' : 'transparent',
+        }}
+      />
+    </Link>
   );
 }

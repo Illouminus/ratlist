@@ -2,22 +2,19 @@
  * `MyListScreen` — the user's own wishlist. The main screen of the app
  * once you're signed in and onboarded.
  *
- * Composition:
- *   TopBar
- *   ├── nav: link to /groups (which we leave in the right-hand cluster)
- *   header eyebrow + title + accent annotation
- *   actions row: filters + "+ add" button
+ * Composition (top to bottom):
+ *   PageHeader — eyebrow + italic title + Caveat annotation + corner rat
+ *   ActionsRow — count, occasion chips, view toggle, "+ add" button
  *   items grid / list / empty state
- *   AddItemDrawer (mounted, slides in when open)
+ *   end-of-list marker ("that's the lot — for now")
+ *   ItemDrawer (mounted, slides in when open)
  *
- * State that lives here (not in a hook):
- *   - open/close of the add drawer
- *   - selected view mode (grid vs list)
- *   - selected occasion filter
- *
- * The items + groups themselves come from hooks (`useMyItems`, `useGroups`).
+ * The screen also responds to a `?add=1` query param by auto-opening the
+ * Add Item drawer. The mobile FAB in BottomTabBar uses this to be a
+ * cross-route "add a wish" intent.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useProfile } from '../../auth/useProfile';
 import { useMyItems } from '../../items/useMyItems';
@@ -25,6 +22,7 @@ import { useGroups } from '../../groups/useGroups';
 import type { Occasion } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
+import { EndOfList } from '../../components/EndOfList';
 import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
 import { ItemFilters, type ViewMode } from './ItemFilters';
@@ -32,19 +30,40 @@ import { ItemDrawer, type ItemDrawerMode } from './ItemDrawer';
 import type { CreateItemInput, MyItem } from '../../items/useMyItems';
 import { SittingRat } from '../../components/rats';
 
+/** Default to list on phone-ish viewports, grid on desktop. */
+function defaultView(): ViewMode {
+  if (typeof window === 'undefined') return 'grid';
+  return window.matchMedia('(max-width: 767px)').matches ? 'list' : 'grid';
+}
+
+/** Was the page opened with `?add=1`? Used to auto-open the drawer. */
+function initialDrawerFromUrl(): ItemDrawerMode {
+  if (typeof window === 'undefined') return { kind: 'closed' };
+  return new URLSearchParams(window.location.search).get('add') === '1'
+    ? { kind: 'create' }
+    : { kind: 'closed' };
+}
+
 export function MyListScreen() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const { query: profileQ } = useProfile();
   const { query: itemsQ, createItem, updateItem, deleteItem } = useMyItems();
   const { query: groupsQ } = useGroups();
 
-  const [view, setView] = useState<ViewMode>('grid');
+  const [view, setView] = useState<ViewMode>(defaultView);
   const [occasion, setOccasion] = useState<Occasion | null>(null);
-  /** Single piece of state covers add / edit / closed — exhaustive in TS. */
-  const [drawer, setDrawer] = useState<ItemDrawerMode>({ kind: 'closed' });
+  const [drawer, setDrawer] = useState<ItemDrawerMode>(initialDrawerFromUrl);
 
-  // Derive filtered list in a single memo so the dependency is the stable
-  // `itemsQ` reference, not a freshly-constructed `[]` per render.
+  // If we opened via ?add=1 (the mobile FAB intent), clean the URL so a
+  // refresh doesn't keep re-opening the drawer. `navigate` is imperative,
+  // not a setState — safe to call from an effect.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('add')) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate]);
+
   const filteredItems = useMemo(() => {
     const items = itemsQ.status === 'ready' ? itemsQ.items : [];
     return occasion ? items.filter((i) => i.occasion === occasion) : items;
@@ -53,7 +72,6 @@ export function MyListScreen() {
   const totalCount = itemsQ.status === 'ready' ? itemsQ.items.length : 0;
 
   // `RequireAuth` guarantees the profile is ready by the time we render.
-  // Called *after* the hooks above so we never short-circuit them.
   if (profileQ.status !== 'ready') return null;
 
   const handleSubmit = (input: CreateItemInput) => {
@@ -121,6 +139,7 @@ export function MyListScreen() {
               {t('list.noneForFilter')}
             </p>
           )}
+          {filteredItems.length > 0 && <EndOfList />}
         </>
       )}
 
@@ -142,45 +161,47 @@ function Header() {
 
   return (
     <div style={{ position: 'relative', marginBottom: 'var(--s-5)' }}>
-      <div className="mono-meta" style={{ marginBottom: 'var(--s-3)' }}>
+      <div className="mono-meta" style={{ marginBottom: 'var(--s-2)' }}>
         {t('list.currentlySaved')} · {now}
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-4)', flexWrap: 'wrap' }}>
-        <h2
-          className="display-italic"
-          style={{
-            fontSize: 'var(--display-l)',
-            margin: 0,
-            lineHeight: 1.05,
-            letterSpacing: -1.5,
-          }}
-        >
-          {t('list.headlineMine')}
-        </h2>
-        <div
-          className="marginalia"
-          style={{
-            fontSize: 22,
-            color: 'var(--accent)',
-            transform: 'rotate(-2deg)',
-            marginBottom: 8,
-          }}
-        >
-          {t('list.annotation')}
-        </div>
+      <h2
+        className="display-italic"
+        style={{
+          fontSize: 'var(--display-l)',
+          margin: 0,
+          lineHeight: 1.02,
+          letterSpacing: -1.2,
+          /* Leave room for the corner rat so a long title doesn't collide. */
+          paddingRight: 56,
+          whiteSpace: 'pre-line',
+        }}
+      >
+        {t('list.headlineMine')}
+      </h2>
+      <div
+        className="marginalia"
+        style={{
+          fontSize: 18,
+          color: 'var(--accent)',
+          marginTop: 'var(--s-2)',
+          transform: 'rotate(-1.5deg)',
+          display: 'inline-block',
+        }}
+      >
+        {t('list.annotation')}
       </div>
-      {/* tiny rat tucked in the far right margin */}
+      {/* tiny rat tucked top-right, aligned with the eyebrow row */}
       <div
         aria-hidden
         style={{
           position: 'absolute',
-          right: -8,
-          top: -4,
+          top: 8,
+          right: 0,
           opacity: 0.7,
           pointerEvents: 'none',
         }}
       >
-        <SittingRat size={44} />
+        <SittingRat size={40} />
       </div>
     </div>
   );
@@ -210,19 +231,19 @@ function ActionsRow({
   const { t } = useI18n();
   return (
     <>
-      <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-5)' }} />
+      <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-4)' }} />
 
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 'var(--s-5)',
+          gap: 'var(--s-4)',
           marginBottom: 'var(--s-5)',
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ flex: 1, minWidth: 300 }}>
+        <div style={{ flex: 1, minWidth: 240 }}>
           <ItemFilters
             countShown={countShown}
             countTotal={countTotal}
@@ -247,43 +268,55 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <section
       style={{
-        padding: 'var(--s-7) 0',
+        paddingTop: 'var(--s-6)',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: 'var(--s-5)',
+        alignItems: 'stretch',
+        gap: 'var(--s-4)',
       }}
     >
-      <div
+      <p
         className="display-italic"
         style={{
           fontSize: 'var(--display-s)',
           color: 'var(--ink)',
-          lineHeight: 1.2,
-          maxWidth: 480,
+          lineHeight: 1.4,
+          margin: 0,
+          maxWidth: 520,
         }}
       >
         {t('empty.title')}
-        <div
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontStyle: 'normal',
-            fontWeight: 400,
-            fontSize: 14,
-            color: 'var(--ink-2)',
-            marginTop: 'var(--s-4)',
-            lineHeight: 1.55,
-          }}
-        >
-          {t('empty.body')}
-        </div>
+      </p>
+      <p
+        style={{
+          fontSize: 13,
+          color: 'var(--ink-2)',
+          lineHeight: 1.55,
+          margin: 0,
+          maxWidth: 520,
+        }}
+      >
+        {t('empty.body')}
+      </p>
+
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--s-5)' }}>
+        <SittingRat size={110} sign signText={t('empty.sign')} />
       </div>
-      <div style={{ marginLeft: 'var(--s-7)' }}>
-        <SittingRat size={92} sign signText={t('empty.sign')} />
-      </div>
-      <Button variant="dark" onClick={onAdd}>
+
+      <Button variant="dark" onClick={onAdd} style={{ marginTop: 'var(--s-5)', width: '100%' }}>
         {t('list.addFirst')}
       </Button>
+      <p
+        className="marginalia"
+        style={{
+          fontSize: 14,
+          color: 'var(--ink-3)',
+          textAlign: 'center',
+          margin: 0,
+        }}
+      >
+        {t('empty.orPasteLink')}
+      </p>
     </section>
   );
 }

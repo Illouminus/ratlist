@@ -16,30 +16,63 @@ export function PeopleScreen() {
 
   return (
     <PaperLayout>
-      <header style={{ marginBottom: 'var(--s-6)' }}>
-        <div className="mono-meta" style={{ marginBottom: 'var(--s-3)' }}>
+      <header style={{ position: 'relative', marginBottom: 'var(--s-5)' }}>
+        <div className="mono-meta" style={{ marginBottom: 'var(--s-2)' }}>
           {t('people.eyebrow')}
         </div>
         <h2
           className="display-italic"
-          style={{ fontSize: 'var(--display-m)', margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
+          style={{
+            fontSize: 'var(--display-l)',
+            margin: 0,
+            lineHeight: 1.02,
+            letterSpacing: -1.2,
+            paddingRight: 56,
+            whiteSpace: 'pre-line',
+          }}
         >
           {t('people.title')}
         </h2>
         <p
+          className="marginalia"
           style={{
-            fontSize: 14,
-            color: 'var(--ink-2)',
-            marginTop: 'var(--s-3)',
-            maxWidth: 560,
-            lineHeight: 1.55,
+            fontSize: 18,
+            color: 'var(--accent)',
+            marginTop: 'var(--s-2)',
+            transform: 'rotate(-1.5deg)',
+            display: 'inline-block',
           }}
         >
-          {t('people.sub')}
+          {t('people.annotation')}
         </p>
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 0,
+            opacity: 0.7,
+            pointerEvents: 'none',
+          }}
+        >
+          <SittingRat size={40} />
+        </div>
       </header>
 
-      <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-5)' }} />
+      <p
+        style={{
+          fontSize: 13,
+          color: 'var(--ink-2)',
+          marginTop: 0,
+          marginBottom: 'var(--s-4)',
+          maxWidth: 560,
+          lineHeight: 1.55,
+        }}
+      >
+        {t('people.sub')}
+      </p>
+
+      <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-2)' }} />
 
       {query.status === 'loading' && (
         <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
@@ -73,38 +106,64 @@ export function PeopleScreen() {
 
 function PersonRow({ person }: { person: Person }) {
   const { t } = useI18n();
+  // Link the whole row so the tap target spans the full width on mobile,
+  // not just the small "open list →" link in the corner.
   return (
-    <li
-      style={{
-        padding: 'var(--s-4) 0',
-        borderBottom: '1px solid var(--hair)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--s-4)',
-      }}
-    >
-      <Avatar name={person.display_name} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="display-italic" style={{ fontSize: 22, lineHeight: 1.2 }}>
-          {person.display_name}
-        </div>
-        <div style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'baseline', marginTop: 2 }}>
-          {person.handle && (
-            <span className="mono-meta" style={{ color: 'var(--ink-3)' }}>
-              @{person.handle}
-            </span>
-          )}
-          <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-            {t('people.sharedGroups', { count: person.shared_group_count })}
-          </span>
-        </div>
-      </div>
+    <li style={{ borderBottom: '1px solid var(--hair)' }}>
       <Link
         to={`/p/${person.id}`}
-        className="mono-meta"
-        style={{ color: 'var(--accent)', textDecoration: 'none' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--s-4)',
+          padding: 'var(--s-4) 0',
+          textDecoration: 'none',
+          color: 'inherit',
+        }}
       >
-        {t('people.openList')}
+        <Avatar name={person.display_name} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: 'var(--s-2)',
+            }}
+          >
+            <h3
+              className="display-italic"
+              style={{
+                margin: 0,
+                fontSize: 'var(--display-xs)',
+                lineHeight: 1.1,
+                color: 'var(--ink)',
+              }}
+            >
+              {person.handle ? `${person.handle}'s list` : person.display_name}
+            </h3>
+            <span
+              className="mono-meta"
+              style={{ color: 'var(--ink-3)', fontFeatureSettings: '"tnum"' }}
+            >
+              {t('people.sharedGroups', { count: person.shared_group_count })}
+            </span>
+          </div>
+          {person.handle && (
+            <div
+              style={{
+                marginTop: 2,
+                fontSize: 12,
+                color: 'var(--ink-3)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {person.display_name}
+            </div>
+          )}
+        </div>
       </Link>
     </li>
   );
