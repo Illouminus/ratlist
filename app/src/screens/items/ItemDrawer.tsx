@@ -1,68 +1,86 @@
 /**
- * `<AddItemDrawer>` — the slide-in form for adding a new wishlist item.
+ * `<ItemDrawer>` — slide-in form for both creating and editing a wishlist
+ * item. The same shape backs both flows: in create mode the form starts
+ * blank with all of the user's groups pre-selected; in edit mode the form
+ * is seeded from the item being edited and `group_ids` reflects its
+ * current publication set.
  *
- * Fields mirror the design (title, maker, price, occasion, note). v0.1
- * adds two:
- *   - `url`   — the source URL of the item, kept as plain text for now;
- *                metadata auto-fetch is planned as an Edge Function.
- *   - groups  — which circles to publish to. Default-on for all of the
- *                user's groups so the typical case ("share with everyone")
- *                is zero-click.
+ * Open the drawer in create mode by passing `mode={{ kind: 'create' }}`,
+ * in edit mode by passing `mode={{ kind: 'edit', item: MyItem }}`. The
+ * parent decides which mutation runs via `onSubmit`.
  *
- * The drawer itself (animation, scroll lock, escape-to-close) lives in
- * the generic `<Drawer>` atom.
+ * The form is mounted only while the drawer is open, so we use plain
+ * `useState` initialisers — closing then re-opening remounts with fresh
+ * state derived from the new mode.
  */
 import { useState, type FormEvent } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { OCCASIONS, type Occasion } from '../../lib/db';
 import type { MyGroup } from '../../groups/useGroups';
-import type { CreateItemInput, UseMyItemsResult } from '../../items/useMyItems';
+import type { CreateItemInput, MyItem } from '../../items/useMyItems';
 import { Drawer } from '../../components/Drawer';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 
-interface AddItemDrawerProps {
-  open: boolean;
+/** Discriminated mode prop — keeps the create vs edit split explicit. */
+export type ItemDrawerMode =
+  | { kind: 'closed' }
+  | { kind: 'create' }
+  | { kind: 'edit'; item: MyItem };
+
+interface ItemDrawerProps {
+  mode: ItemDrawerMode;
   onClose: () => void;
   groups: MyGroup[];
-  onCreate: UseMyItemsResult['createItem'];
+  /**
+   * Save handler — receives the form input and returns either the saved
+   * item or an error message. The parent decides whether this is a create
+   * or update call based on the `mode` it passed in.
+   */
+  onSubmit: (input: CreateItemInput) => Promise<{ item: MyItem } | { error: string }>;
 }
 
-export function AddItemDrawer({ open, onClose, groups, onCreate }: AddItemDrawerProps) {
+export function ItemDrawer({ mode, onClose, groups, onSubmit }: ItemDrawerProps) {
   return (
-    <Drawer open={open} onClose={onClose} ariaLabel="add item">
-      {open && <AddItemForm groups={groups} onCreate={onCreate} onClose={onClose} />}
+    <Drawer
+      open={mode.kind !== 'closed'}
+      onClose={onClose}
+      ariaLabel={mode.kind === 'edit' ? 'edit item' : 'add item'}
+    >
+      {mode.kind !== 'closed' && (
+        <ItemForm mode={mode} groups={groups} onSubmit={onSubmit} onClose={onClose} />
+      )}
     </Drawer>
   );
 }
 
 // ─────────────────────────── form ───────────────────────────
 
-interface AddItemFormProps {
+interface ItemFormProps {
+  mode: Exclude<ItemDrawerMode, { kind: 'closed' }>;
   groups: MyGroup[];
-  onCreate: UseMyItemsResult['createItem'];
+  onSubmit: ItemDrawerProps['onSubmit'];
   onClose: () => void;
 }
 
-/**
- * The form is mounted only while the drawer is open, so we can use plain
- * `useState` initialisers (no useEffect for reset). Closing then re-opening
- * the drawer remounts the form with a fresh blank state.
- */
-function AddItemForm({ groups, onCreate, onClose }: AddItemFormProps) {
+function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
   const { t } = useI18n();
-  const [title, setTitle] = useState('');
-  const [maker, setMaker] = useState('');
-  const [url, setUrl] = useState('');
-  const [priceText, setPriceText] = useState('');
-  const [occasion, setOccasion] = useState<Occasion>('anytime');
-  const [note, setNote] = useState('');
-  // Default-on: all of the user's groups at mount time. If a group is
-  // created in another tab while the drawer is open we won't auto-select
-  // it — the user can close and re-open to refresh.
+  const isEdit = mode.kind === 'edit';
+  const initial = mode.kind === 'edit' ? mode.item : null;
+
+  const [title, setTitle] = useState<string>(initial?.title ?? '');
+  const [maker, setMaker] = useState<string>(initial?.maker ?? '');
+  const [url, setUrl] = useState<string>(initial?.url ?? '');
+  const [priceText, setPriceText] = useState<string>(initial?.price_text ?? '');
+  const [occasion, setOccasion] = useState<Occasion>(
+    (initial?.occasion as Occasion | undefined) ?? 'anytime',
+  );
+  const [note, setNote] = useState<string>(initial?.note ?? '');
+  // In create mode: default-on for all groups. In edit mode: use the
+  // item's current publication set.
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(
-    () => new Set(groups.map((g) => g.id)),
+    () => new Set(initial ? initial.group_ids : groups.map((g) => g.id)),
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +112,7 @@ function AddItemForm({ groups, onCreate, onClose }: AddItemFormProps) {
       group_ids: Array.from(selectedGroups),
     };
 
-    const result = await onCreate(input);
+    const result = await onSubmit(input);
     if ('error' in result) {
       setError(result.error);
       setSubmitting(false);
@@ -103,6 +121,11 @@ function AddItemForm({ groups, onCreate, onClose }: AddItemFormProps) {
     setSubmitting(false);
     onClose();
   }
+
+  const headlineTitle = isEdit ? t('add.editTitle') : t('add.title');
+  const headlineSub = isEdit ? t('add.editSub') : t('add.sub');
+  const submitLabel = isEdit ? t('add.saveChanges') : t('add.save');
+  const eyebrow = isEdit ? t('add.editEyebrow') : t('add.eyebrow');
 
   return (
     <form onSubmit={handleSubmit} noValidate>
@@ -114,7 +137,7 @@ function AddItemForm({ groups, onCreate, onClose }: AddItemFormProps) {
           marginBottom: 'var(--s-4)',
         }}
       >
-        <div className="mono-meta">{t('add.title')}</div>
+        <div className="mono-meta">{eyebrow}</div>
         <button
           type="button"
           onClick={onClose}
@@ -137,13 +160,13 @@ function AddItemForm({ groups, onCreate, onClose }: AddItemFormProps) {
           className="display-italic"
           style={{ margin: 0, fontSize: 32, lineHeight: 1.1, letterSpacing: -0.8 }}
         >
-          {t('add.title')}
+          {headlineTitle}
         </h2>
         <p
           className="marginalia"
           style={{ marginTop: 'var(--s-2)', fontSize: 16, color: 'var(--accent)' }}
         >
-          {t('add.sub')}
+          {headlineSub}
         </p>
       </div>
 
@@ -255,7 +278,7 @@ function AddItemForm({ groups, onCreate, onClose }: AddItemFormProps) {
           variant="primary"
           disabled={submitting || title.trim().length === 0}
         >
-          {submitting ? t('auth.sending') : t('add.save')}
+          {submitting ? t('auth.sending') : submitLabel}
         </Button>
       </div>
 

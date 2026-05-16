@@ -14,10 +14,11 @@ import type { Occasion } from '../../lib/db';
 interface ItemCardProps {
   item: MyItem;
   index: number;
+  onEdit: () => void;
   onDelete: () => void;
 }
 
-export function ItemCard({ item, index, onDelete }: ItemCardProps) {
+export function ItemCard({ item, index, onEdit, onDelete }: ItemCardProps) {
   const { t } = useI18n();
   const [hover, setHover] = useState(false);
 
@@ -115,28 +116,50 @@ export function ItemCard({ item, index, onDelete }: ItemCardProps) {
           }}
         >
           <OccasionTag kind={item.occasion as Occasion} />
-          <button
-            type="button"
-            onClick={onDelete}
+          <div
             style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              fontFamily: 'var(--font-body)',
-              fontSize: 11,
-              fontWeight: 500,
-              color: 'var(--ink-3)',
-              letterSpacing: 0.06,
-              textTransform: 'uppercase',
+              display: 'flex',
+              gap: 'var(--s-3)',
               opacity: hover ? 1 : 0,
               transition: 'opacity var(--motion-fast) ease-out',
             }}
           >
-            {t('list.crossOff')}
-          </button>
+            <CardAction onClick={onEdit}>{t('list.edit')}</CardAction>
+            <CardAction onClick={onDelete}>{t('list.crossOff')}</CardAction>
+          </div>
         </div>
       </div>
     </article>
+  );
+}
+
+// ─────────────────────────── action ───────────────────────────
+
+interface CardActionProps {
+  onClick: () => void;
+  children: React.ReactNode;
+}
+
+/** Small uppercase text button used for the hover actions on a card. */
+function CardAction({ onClick, children }: CardActionProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 0,
+        fontFamily: 'var(--font-body)',
+        fontSize: 11,
+        fontWeight: 500,
+        color: 'var(--ink-3)',
+        letterSpacing: 0.06,
+        textTransform: 'uppercase',
+      }}
+    >
+      {children}
+    </button>
   );
 }

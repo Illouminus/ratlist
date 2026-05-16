@@ -41,6 +41,12 @@ export interface UseMyItemsResult {
   query: ItemsQuery;
   refresh: () => Promise<void>;
   createItem: (input: CreateItemInput) => Promise<{ item: MyItem } | { error: string }>;
+  /**
+   * Replace an existing item's editable fields AND the full set of groups it
+   * is published to. group_ids is treated as a full replacement, not a diff
+   * — pass every group the item should be visible in.
+   */
+  updateItem: (id: string, input: CreateItemInput) => Promise<{ item: MyItem } | { error: string }>;
   deleteItem: (itemId: string) => Promise<{ ok: true } | { error: string }>;
   updateStatus: (itemId: string, status: ItemStatus) => Promise<{ ok: true } | { error: string }>;
 }
@@ -153,6 +159,52 @@ export function useMyItems(): UseMyItemsResult {
     [user],
   );
 
+  const updateItem = useCallback(
+    async (
+      id: string,
+      input: CreateItemInput,
+    ): Promise<{ item: MyItem } | { error: string }> => {
+      if (!user) return { error: 'not authenticated' };
+
+      const { error: updateError } = await supabase
+        .from('items')
+        .update({
+          title: input.title,
+          maker: input.maker ?? null,
+          url: input.url ?? null,
+          price_text: input.price_text ?? null,
+          occasion: input.occasion,
+          note: input.note ?? null,
+          priority: input.priority ?? 2,
+        })
+        .eq('id', id);
+
+      if (updateError) return { error: updateError.message };
+
+      // Re-sync group memberships: drop all and re-insert. For small N
+      // (a handful of groups per item) the overhead is negligible and the
+      // logic is much simpler than computing a diff.
+      const { error: delError } = await supabase
+        .from('item_groups')
+        .delete()
+        .eq('item_id', id);
+      if (delError) return { error: delError.message };
+
+      if (input.group_ids.length > 0) {
+        const rows = input.group_ids.map((gid) => ({ item_id: id, group_id: gid }));
+        const { error: insError } = await supabase.from('item_groups').insert(rows);
+        if (insError) return { error: insError.message };
+      }
+
+      const state = await loadItems(user.id);
+      setFetched(state);
+      const updated = state.kind === 'loaded' ? state.items.find((i) => i.id === id) : undefined;
+      if (!updated) return { error: 'failed to reload item' };
+      return { item: updated };
+    },
+    [user],
+  );
+
   const deleteItem = useCallback(
     async (itemId: string): Promise<{ ok: true } | { error: string }> => {
       if (!user) return { error: 'not authenticated' };
@@ -177,5 +229,5 @@ export function useMyItems(): UseMyItemsResult {
     [user],
   );
 
-  return { query, refresh, createItem, deleteItem, updateStatus };
+  return { query, refresh, createItem, updateItem, deleteItem, updateStatus };
 }

@@ -7,10 +7,11 @@ import { ItemCard } from './ItemCard';
 
 interface ItemGridProps {
   items: MyItem[];
+  onEdit: (item: MyItem) => void;
   onDelete: (id: string) => void;
 }
 
-export function ItemGrid({ items, onDelete }: ItemGridProps) {
+export function ItemGrid({ items, onEdit, onDelete }: ItemGridProps) {
   return (
     <div
       style={{
@@ -20,7 +21,13 @@ export function ItemGrid({ items, onDelete }: ItemGridProps) {
       }}
     >
       {items.map((item, i) => (
-        <ItemCard key={item.id} item={item} index={i} onDelete={() => onDelete(item.id)} />
+        <ItemCard
+          key={item.id}
+          item={item}
+          index={i}
+          onEdit={() => onEdit(item)}
+          onDelete={() => onDelete(item.id)}
+        />
       ))}
     </div>
   );

@@ -30,17 +30,19 @@ import { Button } from '../../components/Button';
 import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
 import { ItemFilters, type ViewMode } from './ItemFilters';
-import { AddItemDrawer } from './AddItemDrawer';
+import { ItemDrawer, type ItemDrawerMode } from './ItemDrawer';
+import type { CreateItemInput, MyItem } from '../../items/useMyItems';
 
 export function MyListScreen() {
   const { t } = useI18n();
   const { query: profileQ } = useProfile();
-  const { query: itemsQ, createItem, deleteItem } = useMyItems();
+  const { query: itemsQ, createItem, updateItem, deleteItem } = useMyItems();
   const { query: groupsQ } = useGroups();
 
   const [view, setView] = useState<ViewMode>('grid');
   const [occasion, setOccasion] = useState<Occasion | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
+  /** Single piece of state covers add / edit / closed — exhaustive in TS. */
+  const [drawer, setDrawer] = useState<ItemDrawerMode>({ kind: 'closed' });
 
   // Derive filtered list in a single memo so the dependency is the stable
   // `itemsQ` reference, not a freshly-constructed `[]` per render.
@@ -55,6 +57,17 @@ export function MyListScreen() {
   // Called *after* the hooks above so we never short-circuit them.
   if (profileQ.status !== 'ready') return null;
 
+  const handleSubmit = (input: CreateItemInput) => {
+    if (drawer.kind === 'edit') {
+      return updateItem(drawer.item.id, input);
+    }
+    return createItem(input);
+  };
+
+  const handleEdit = (item: MyItem) => setDrawer({ kind: 'edit', item });
+  const handleOpenCreate = () => setDrawer({ kind: 'create' });
+  const handleCloseDrawer = () => setDrawer({ kind: 'closed' });
+
   return (
     <PaperLayout>
       <TopBar nav={<TopBarNav />} />
@@ -68,7 +81,7 @@ export function MyListScreen() {
         onOccasion={setOccasion}
         view={view}
         onView={setView}
-        onAdd={() => setAddOpen(true)}
+        onAdd={handleOpenCreate}
       />
 
       {itemsQ.status === 'loading' && (
@@ -82,15 +95,23 @@ export function MyListScreen() {
       )}
 
       {itemsQ.status === 'ready' && totalCount === 0 && (
-        <EmptyState onAdd={() => setAddOpen(true)} />
+        <EmptyState onAdd={handleOpenCreate} />
       )}
 
       {itemsQ.status === 'ready' && totalCount > 0 && (
         <>
           {view === 'grid' ? (
-            <ItemGrid items={filteredItems} onDelete={(id) => void deleteItem(id)} />
+            <ItemGrid
+              items={filteredItems}
+              onEdit={handleEdit}
+              onDelete={(id) => void deleteItem(id)}
+            />
           ) : (
-            <ItemList items={filteredItems} onDelete={(id) => void deleteItem(id)} />
+            <ItemList
+              items={filteredItems}
+              onEdit={handleEdit}
+              onDelete={(id) => void deleteItem(id)}
+            />
           )}
           {filteredItems.length === 0 && (
             <p
@@ -106,11 +127,11 @@ export function MyListScreen() {
         </>
       )}
 
-      <AddItemDrawer
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
+      <ItemDrawer
+        mode={drawer}
+        onClose={handleCloseDrawer}
         groups={groupsQ.status === 'ready' ? groupsQ.groups : []}
-        onCreate={createItem}
+        onSubmit={handleSubmit}
       />
     </PaperLayout>
   );

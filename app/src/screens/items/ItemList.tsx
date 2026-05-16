@@ -10,12 +10,13 @@ import type { Occasion } from '../../lib/db';
 
 interface ItemListProps {
   items: MyItem[];
+  onEdit: (item: MyItem) => void;
   onDelete: (id: string) => void;
 }
 
-const COLUMNS = '54px 1fr 180px 130px 90px 80px';
+const COLUMNS = '54px 1fr 180px 130px 90px 110px';
 
-export function ItemList({ items, onDelete }: ItemListProps) {
+export function ItemList({ items, onEdit, onDelete }: ItemListProps) {
   const { t } = useI18n();
 
   return (
@@ -78,24 +79,45 @@ export function ItemList({ items, onDelete }: ItemListProps) {
           >
             {item.price_text ?? ''}
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <button
-              type="button"
-              onClick={() => onDelete(item.id)}
-              className="mono-meta"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                color: 'var(--ink-3)',
-              }}
-            >
-              {t('list.crossOff')}
-            </button>
+          <div
+            style={{
+              textAlign: 'right',
+              display: 'flex',
+              gap: 'var(--s-3)',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <RowAction onClick={() => onEdit(item)}>{t('list.edit')}</RowAction>
+            <RowAction onClick={() => onDelete(item.id)}>{t('list.crossOff')}</RowAction>
           </div>
         </div>
       ))}
     </div>
+  );
+}
+
+// ─────────────────────────── action ───────────────────────────
+
+interface RowActionProps {
+  onClick: () => void;
+  children: React.ReactNode;
+}
+
+function RowAction({ onClick, children }: RowActionProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mono-meta"
+      style={{
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 0,
+        color: 'var(--ink-3)',
+      }}
+    >
+      {children}
+    </button>
   );
 }
