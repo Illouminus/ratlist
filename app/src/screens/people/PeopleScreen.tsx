@@ -7,6 +7,7 @@
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { usePeople, type Person } from '../../people/usePeople';
+import { formatRelativeTime } from '../../lib/relativeTime';
 import { PaperLayout } from '../../components/PaperLayout';
 import { SittingRat } from '../../components/rats';
 
@@ -105,9 +106,16 @@ export function PeopleScreen() {
 // ─────────────────────────── row ───────────────────────────
 
 function PersonRow({ person }: { person: Person }) {
-  const { t } = useI18n();
-  // Link the whole row so the tap target spans the full width on mobile,
-  // not just the small "open list →" link in the corner.
+  const { t, lang } = useI18n();
+  // Mirrors the design-v2 friend row: avatar + italic "{handle}'s list",
+  // item count on the right (tnum), a single line of `·`-joined recent
+  // titles, then a Caveat "updated X" stamp.
+  const headline = person.handle ? `${person.handle}'s list` : person.display_name;
+  const updated = formatRelativeTime(person.latest_at, lang);
+  const previewLine = person.preview_titles.length > 0
+    ? person.preview_titles.join(' · ')
+    : t('people.emptyList');
+
   return (
     <li style={{ borderBottom: '1px solid var(--hair)' }}>
       <Link
@@ -138,29 +146,45 @@ function PersonRow({ person }: { person: Person }) {
                 fontSize: 'var(--display-xs)',
                 lineHeight: 1.1,
                 color: 'var(--ink)',
-              }}
-            >
-              {person.handle ? `${person.handle}'s list` : person.display_name}
-            </h3>
-            <span
-              className="mono-meta"
-              style={{ color: 'var(--ink-3)', fontFeatureSettings: '"tnum"' }}
-            >
-              {t('people.sharedGroups', { count: person.shared_group_count })}
-            </span>
-          </div>
-          {person.handle && (
-            <div
-              style={{
-                marginTop: 2,
-                fontSize: 12,
-                color: 'var(--ink-3)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}
             >
-              {person.display_name}
+              {headline}
+            </h3>
+            <span
+              className="mono-meta"
+              style={{ color: 'var(--ink-3)', fontFeatureSettings: '"tnum"', flexShrink: 0 }}
+              title={t('people.sharedGroups', { count: person.shared_group_count })}
+            >
+              {person.item_count}
+            </span>
+          </div>
+
+          <div
+            style={{
+              marginTop: 2,
+              fontSize: 11,
+              color: 'var(--ink-3)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {previewLine}
+          </div>
+
+          {updated && (
+            <div
+              className="marginalia"
+              style={{
+                marginTop: 4,
+                fontSize: 13,
+                color: 'var(--accent)',
+              }}
+            >
+              {t('people.updatedAgo', { when: updated })}
             </div>
           )}
         </div>

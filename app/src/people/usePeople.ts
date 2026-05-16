@@ -14,6 +14,12 @@ export interface Person {
   handle: string | null;
   avatar_url: string | null;
   shared_group_count: number;
+  /** Total items by this user visible to the caller (excluding archived). */
+  item_count: number;
+  /** Timestamp of the most-recently-added visible item, or null if none. */
+  latest_at: string | null;
+  /** Up to 3 most-recent visible item titles, freshest first. */
+  preview_titles: string[];
 }
 
 export type PeopleQuery =
@@ -36,16 +42,33 @@ async function loadPeople(userId: string): Promise<FetchState> {
   const { data, error } = await supabase.rpc('get_people');
   if (error) return { kind: 'failed', userId, error: error.message };
 
-  // RPC returns columns as non-null but in practice handle/avatar_url can
-  // be null. Cast through a shape that matches reality.
-  const rows = (data ?? []) as Array<{
+  // RPC return columns are typed as non-null at the SQL level, but the
+  // join columns (handle, avatar_url) and the new aggregate fields
+  // (latest_at, preview_titles) can be null/empty in practice. Cast
+  // through a shape that mirrors reality.
+  type Row = {
     id: string;
     display_name: string;
     handle: string | null;
     avatar_url: string | null;
     shared_group_count: number;
-  }>;
-  return { kind: 'loaded', userId, people: rows };
+    item_count: number | null;
+    latest_at: string | null;
+    preview_titles: string[] | null;
+  };
+
+  const people: Person[] = ((data ?? []) as Row[]).map((r) => ({
+    id: r.id,
+    display_name: r.display_name,
+    handle: r.handle,
+    avatar_url: r.avatar_url,
+    shared_group_count: r.shared_group_count,
+    item_count: r.item_count ?? 0,
+    latest_at: r.latest_at,
+    preview_titles: r.preview_titles ?? [],
+  }));
+
+  return { kind: 'loaded', userId, people };
 }
 
 export function usePeople(): UsePeopleResult {
