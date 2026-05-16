@@ -40,6 +40,8 @@ export type AppErrorCode =
   | 'inviteNotFound'
   | 'inviteExpired'
   | 'inviteUsed'
+  // groups
+  | 'lastAdmin'
   // santa
   | 'santaTooFew'
   | 'santaNoValid'
@@ -118,6 +120,8 @@ function matchMessage(message: string): AppErrorCode {
   if (m.includes('invite_not_found')) return 'inviteNotFound';
   if (m.includes('invite_expired')) return 'inviteExpired';
   if (m.includes('invite_already_used')) return 'inviteUsed';
+
+  if (m.includes('last_admin')) return 'lastAdmin';
 
   if (m.includes('too_few_participants')) return 'santaTooFew';
   if (m.includes('no_valid_assignment')) return 'santaNoValid';
