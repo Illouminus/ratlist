@@ -61,7 +61,7 @@ export function MyListScreen() {
     <PaperLayout>
       {showList && (
         <>
-          <Header />
+          <Header onAdd={goAdd} />
           <ActionsRow
             countShown={filteredItems.length}
             countTotal={totalCount}
@@ -69,7 +69,6 @@ export function MyListScreen() {
             onOccasion={setOccasion}
             view={view}
             onView={setView}
-            onAdd={goAdd}
           />
         </>
       )}
@@ -113,44 +112,78 @@ export function MyListScreen() {
 
 // ─────────────────────────── header ───────────────────────────
 
-function Header() {
+/**
+ * Page header: eyebrow + italic title + Caveat annotation, with a
+ * desktop-only "+ добавить" button anchored to the right of the title.
+ * Mobile gets the FAB in BottomTabBar instead — keeps the eyebrow row
+ * uncluttered on small viewports.
+ */
+function Header({ onAdd }: { onAdd: () => void }) {
   const { t } = useI18n();
   const now = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   return (
     <div style={{ position: 'relative', marginBottom: 'var(--s-5)' }}>
-      <div className="mono-meta" style={{ marginBottom: 'var(--s-2)' }}>
-        {t('list.currentlySaved')} · {now}
-      </div>
-      <h2
-        className="display-italic"
-        style={{
-          fontSize: 'var(--display-l)',
-          margin: 0,
-          lineHeight: 1.02,
-          letterSpacing: -1.2,
-          /* Leave room for the corner rat so a long title doesn't collide. */
-          paddingRight: 56,
-          whiteSpace: 'pre-line',
-        }}
-      >
-        {t('list.headlineMine')}
-      </h2>
       <div
-        className="marginalia"
         style={{
-          fontSize: 18,
-          color: 'var(--accent)',
-          marginTop: 'var(--s-2)',
-          transform: 'rotate(-1.5deg)',
-          display: 'inline-block',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 'var(--s-4)',
         }}
       >
-        {t('list.annotation')}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="mono-meta" style={{ marginBottom: 'var(--s-2)' }}>
+            {t('list.currentlySaved')} · {now}
+          </div>
+          <h2
+            className="display-italic"
+            style={{
+              fontSize: 'var(--display-l)',
+              margin: 0,
+              lineHeight: 1.02,
+              letterSpacing: -1.2,
+              whiteSpace: 'pre-line',
+              /* Leave room on mobile for the corner rat. On desktop the
+                 add-button takes that slot so the rat is also tucked
+                 next to it via the absolute-positioned wrapper below. */
+              paddingRight: 56,
+            }}
+          >
+            {t('list.headlineMine')}
+          </h2>
+          <div
+            className="marginalia"
+            style={{
+              fontSize: 18,
+              color: 'var(--accent)',
+              marginTop: 'var(--s-2)',
+              transform: 'rotate(-1.5deg)',
+              display: 'inline-block',
+            }}
+          >
+            {t('list.annotation')}
+          </div>
+        </div>
+
+        {/* Desktop: add button sits next to the title, above the hairline
+            that separates header from filters. Hidden on mobile where the
+            FAB in BottomTabBar covers the same intent. */}
+        <Button
+          variant="primary"
+          onClick={onAdd}
+          className="hide-on-mobile"
+          style={{ marginTop: 'var(--s-3)' }}
+        >
+          {t('list.addItem')}
+        </Button>
       </div>
-      {/* tiny rat tucked top-right, aligned with the eyebrow row */}
+
+      {/* Small rat tucked top-right corner — mobile only, since on
+          desktop the add button occupies that slot. */}
       <div
         aria-hidden
+        className="hide-on-desktop"
         style={{
           position: 'absolute',
           top: 8,
@@ -174,19 +207,12 @@ interface ActionsRowProps {
   onOccasion: (next: Occasion | null) => void;
   view: ViewMode;
   onView: (next: ViewMode) => void;
-  onAdd: () => void;
 }
 
-function ActionsRow({
-  countShown,
-  countTotal,
-  occasion,
-  onOccasion,
-  view,
-  onView,
-  onAdd,
-}: ActionsRowProps) {
-  const { t } = useI18n();
+/** Filters + view toggle, sitting under the page-level hairline. The
+ *  add button used to live here too but moved up into the Header so
+ *  it sits above the rule, matching the design v2 mockup. */
+function ActionsRow({ countShown, countTotal, occasion, onOccasion, view, onView }: ActionsRowProps) {
   return (
     <>
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-4)' }} />
@@ -195,27 +221,18 @@ function ActionsRow({
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
           gap: 'var(--s-4)',
           marginBottom: 'var(--s-5)',
-          flexWrap: 'wrap',
         }}
       >
-        <div style={{ flex: 1, minWidth: 240 }}>
-          <ItemFilters
-            countShown={countShown}
-            countTotal={countTotal}
-            occasionFilter={occasion}
-            onOccasionFilter={onOccasion}
-            view={view}
-            onView={onView}
-          />
-        </div>
-        {/* Add button is desktop-only; on mobile the FAB in the bottom
-            tab bar already routes to /add. */}
-        <Button variant="primary" onClick={onAdd} className="hide-on-mobile">
-          {t('list.addItem')}
-        </Button>
+        <ItemFilters
+          countShown={countShown}
+          countTotal={countTotal}
+          occasionFilter={occasion}
+          onOccasionFilter={onOccasion}
+          view={view}
+          onView={onView}
+        />
       </div>
     </>
   );

@@ -91,6 +91,21 @@ function Header({
 
   return (
     <div style={{ marginBottom: 'var(--s-4)' }}>
+      {/* Breadcrumb back to /people — the route is reachable from
+          People (tap a friend) but also via shareable URL, so we
+          always render the link rather than try to detect intent. */}
+      <Link
+        to="/people"
+        className="mono-meta"
+        style={{
+          color: 'var(--ink-2)',
+          textDecoration: 'none',
+          display: 'inline-block',
+          marginBottom: 'var(--s-3)',
+        }}
+      >
+        {t('friend.backToPeople')}
+      </Link>
       <div className="mono-meta" style={{ marginBottom: 'var(--s-2)' }}>
         {profile.display_name}
         {profile.handle && profile.handle !== profile.display_name && (
