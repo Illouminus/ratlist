@@ -589,6 +589,7 @@ export type Database = {
           shared_group_count: number
         }[]
       }
+      group_admin_count: { Args: { _group_id: string }; Returns: number }
       is_group_admin: { Args: { _group_id: string }; Returns: boolean }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       is_santa_organiser: { Args: { _event_id: string }; Returns: boolean }
