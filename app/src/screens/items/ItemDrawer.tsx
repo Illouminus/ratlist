@@ -23,6 +23,7 @@ import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { PhotoField } from './PhotoField';
+import { fetchUrlMeta } from '../../items/fetchUrlMeta';
 
 /** Discriminated mode prop — keeps the create vs edit split explicit. */
 export type ItemDrawerMode =
@@ -79,6 +80,7 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
   );
   const [note, setNote] = useState<string>(initial?.note ?? '');
   const [coverUrl, setCoverUrl] = useState<string | null>(initial?.cover_url ?? null);
+  const [metaStatus, setMetaStatus] = useState<MetaFetchStatus>({ kind: 'idle' });
   // In create mode: default-on for all groups. In edit mode: use the
   // item's current publication set.
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(
@@ -94,6 +96,48 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
       else next.add(id);
       return next;
     });
+  }
+
+  /**
+   * Pull og: metadata for the current URL via the Edge Function, then
+   * fill any *empty* form fields from the result. We never overwrite
+   * what the user has already typed — paste link first, then refine.
+   */
+  async function handleFetchMeta(): Promise<void> {
+    const trimmed = url.trim();
+    if (trimmed.length === 0) return;
+    setMetaStatus({ kind: 'fetching' });
+
+    const result = await fetchUrlMeta(trimmed);
+    if (result.kind === 'error') {
+      setMetaStatus({ kind: 'error' });
+      return;
+    }
+
+    const filled: string[] = [];
+    const { data } = result;
+    if (data.title && title.trim().length === 0) {
+      setTitle(data.title);
+      filled.push('title');
+    }
+    if (data.site_name && maker.trim().length === 0) {
+      setMaker(data.site_name);
+      filled.push('maker');
+    }
+    if (data.image_url && coverUrl === null) {
+      setCoverUrl(data.image_url);
+      filled.push('photo');
+    }
+    if (data.price_text && priceText.trim().length === 0) {
+      setPriceText(data.price_text);
+      filled.push('price');
+    }
+    if (data.description && note.trim().length === 0) {
+      setNote(data.description);
+      filled.push('note');
+    }
+
+    setMetaStatus(filled.length > 0 ? { kind: 'ok', filled } : { kind: 'empty' });
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
@@ -199,13 +243,31 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
       </Field>
 
       <Field label={t('add.urlLabel')}>
-        <SketchInput
-          type="url"
-          inputMode="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder={t('add.urlPh')}
-        />
+        <div style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
+            <SketchInput
+              type="url"
+              inputMode="url"
+              value={url}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (metaStatus.kind !== 'idle' && metaStatus.kind !== 'fetching') {
+                  setMetaStatus({ kind: 'idle' });
+                }
+              }}
+              placeholder={t('add.urlPh')}
+            />
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => void handleFetchMeta()}
+            disabled={url.trim().length === 0 || metaStatus.kind === 'fetching'}
+            style={{ color: 'var(--accent)', padding: '0 0 4px 0', whiteSpace: 'nowrap' }}
+          >
+            {metaStatus.kind === 'fetching' ? t('add.fetchingMeta') : t('add.fetchMeta')}
+          </Button>
+        </div>
+        <MetaFeedback status={metaStatus} t={t} />
       </Field>
 
       <Field label={t('add.priceLabel')}>
@@ -293,6 +355,45 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
         </p>
       )}
     </form>
+  );
+}
+
+// ─────────────────────────── meta fetch feedback ───────────────────────────
+
+type MetaFetchStatus =
+  | { kind: 'idle' }
+  | { kind: 'fetching' }
+  | { kind: 'ok'; filled: string[] }
+  | { kind: 'empty' }
+  | { kind: 'error' };
+
+interface MetaFeedbackProps {
+  status: MetaFetchStatus;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}
+
+/** One-liner under the URL field reporting what we just pulled in. */
+function MetaFeedback({ status, t }: MetaFeedbackProps) {
+  if (status.kind === 'idle' || status.kind === 'fetching') return null;
+
+  if (status.kind === 'ok') {
+    return (
+      <p style={{ marginTop: 'var(--s-2)', fontSize: 12, color: 'var(--ink-3)' }}>
+        {t('add.metaFetchedNote', { fields: status.filled.join(', ') })}
+      </p>
+    );
+  }
+  if (status.kind === 'empty') {
+    return (
+      <p style={{ marginTop: 'var(--s-2)', fontSize: 12, color: 'var(--ink-3)' }}>
+        {t('add.metaFetchEmpty')}
+      </p>
+    );
+  }
+  return (
+    <p style={{ marginTop: 'var(--s-2)', fontSize: 12, color: 'var(--accent-deep)' }}>
+      {t('add.metaFetchError')}
+    </p>
   );
 }
 
