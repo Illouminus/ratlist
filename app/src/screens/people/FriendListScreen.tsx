@@ -176,6 +176,16 @@ interface FriendItemRowProps {
   last: boolean;
 }
 
+/** Same line-clamp helper as in ItemList — keep rows visually even. */
+const CLAMP_2_LINES = {
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical' as const,
+  overflow: 'hidden',
+} as const;
+
+const FRIEND_ROW_MIN_HEIGHT = 96;
+
 function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemRowProps) {
   const myClaim = myUserId ? item.claims.find((c) => c.user_id === myUserId) : undefined;
   const othersClaim = item.claims.find((c) => c.user_id !== myUserId);
@@ -190,20 +200,28 @@ function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemR
         opacity: dimmed ? 0.55 : 1,
         display: 'flex',
         gap: 'var(--s-4)',
-        alignItems: 'center',
+        alignItems: 'stretch',
+        minHeight: FRIEND_ROW_MIN_HEIGHT,
       }}
     >
       <div style={{ width: 56, flexShrink: 0 }}>
         <ItemPhoto coverUrl={item.cover_url} aspectRatio="1 / 1" alt={item.title} />
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             gap: 'var(--s-2)',
-            alignItems: 'baseline',
+            alignItems: 'flex-start',
           }}
         >
           <h3
@@ -217,6 +235,7 @@ function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemR
               flex: 1,
               minWidth: 0,
               textDecoration: dimmed ? 'line-through' : 'none',
+              ...CLAMP_2_LINES,
             }}
           >
             {item.title}
@@ -238,12 +257,24 @@ function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemR
         </div>
 
         {item.maker && (
-          <div style={{ marginTop: 1, fontSize: 11, color: 'var(--ink-3)' }}>{item.maker}</div>
+          <div
+            style={{
+              marginTop: 1,
+              fontSize: 11,
+              color: 'var(--ink-3)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {item.maker}
+          </div>
         )}
 
         <div
           style={{
-            marginTop: 'var(--s-2)',
+            marginTop: 'auto',
+            paddingTop: 'var(--s-2)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',

@@ -47,6 +47,21 @@ interface ItemRowProps {
   last: boolean;
 }
 
+/** Multi-line clamp via the line-clamp / -webkit-box trick. Widely
+ *  supported (Firefox added support in 2023). Stable in both Chromium
+ *  and Safari for years. */
+const CLAMP_2_LINES = {
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical' as const,
+  overflow: 'hidden',
+} as const;
+
+/** Total reserved height for a row. Calibrated so a row with a 2-line
+ *  title and a 2-line note still fits, AND rows with no note look
+ *  airy rather than tiny. Keeps the list visually regular. */
+const ROW_MIN_HEIGHT = 132;
+
 function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
   const { t } = useI18n();
 
@@ -58,6 +73,7 @@ function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
         borderBottom: last ? 'none' : '1px solid var(--hair)',
         display: 'flex',
         gap: 'var(--s-4)',
+        minHeight: ROW_MIN_HEIGHT,
       }}
     >
       {/* photo + numbered badge */}
@@ -84,12 +100,19 @@ function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
       </div>
 
       {/* content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'baseline',
+            alignItems: 'flex-start',
             gap: 'var(--s-2)',
           }}
         >
@@ -103,6 +126,7 @@ function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
               lineHeight: 1.25,
               flex: 1,
               minWidth: 0,
+              ...CLAMP_2_LINES,
             }}
           >
             {item.title}
@@ -124,7 +148,16 @@ function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
         </div>
 
         {item.maker && (
-          <div style={{ marginTop: 2, fontSize: 11, color: 'var(--ink-3)' }}>
+          <div
+            style={{
+              marginTop: 2,
+              fontSize: 11,
+              color: 'var(--ink-3)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {item.maker}
           </div>
         )}
@@ -136,15 +169,20 @@ function ItemRow({ item, index, onEdit, onDelete, last }: ItemRowProps) {
               fontSize: 12,
               color: 'var(--ink-2)',
               lineHeight: 1.4,
+              ...CLAMP_2_LINES,
             }}
           >
             {item.note}
           </div>
         )}
 
+        {/* The actions row is pushed to the bottom of the cell via
+            margin-top: auto, so all rows align their controls on the
+            same baseline regardless of how much content is above. */}
         <div
           style={{
-            marginTop: 'var(--s-2)',
+            marginTop: 'auto',
+            paddingTop: 'var(--s-2)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
