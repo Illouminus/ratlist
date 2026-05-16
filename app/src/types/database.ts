@@ -595,7 +595,14 @@ export type Database = {
       is_santa_organiser: { Args: { _event_id: string }; Returns: boolean }
       is_santa_participant: { Args: { _event_id: string }; Returns: boolean }
       owns_item: { Args: { _item_id: string }; Returns: boolean }
-      redeem_invite: { Args: { _token: string }; Returns: string }
+      redeem_invite: {
+        Args: { _token: string }
+        Returns: {
+          group_emoji: string
+          group_id: string
+          group_name: string
+        }[]
+      }
       reveal_santa_event: { Args: { _event_id: string }; Returns: undefined }
       run_santa_draw: { Args: { _event_id: string }; Returns: undefined }
       shares_group_with: { Args: { _other_user: string }; Returns: boolean }

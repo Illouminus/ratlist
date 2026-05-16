@@ -16,9 +16,14 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
 import { LangToggle } from '../../components/LangToggle';
 
+interface JoinedGroup {
+  name: string;
+  emoji: string | null;
+}
+
 type State =
   | { kind: 'pending' }
-  | { kind: 'success' }
+  | { kind: 'success'; group: JoinedGroup }
   | { kind: 'error'; message: string };
 
 export function InviteAcceptScreen() {
@@ -33,13 +38,25 @@ export function InviteAcceptScreen() {
 
     void supabase
       .rpc('redeem_invite', { _token: token })
-      .then(({ error }) => {
+      .then(({ data, error }) => {
         if (cancelled) return;
         if (error) {
           setState({ kind: 'error', message: errorMessage(t, error) });
-        } else {
-          setState({ kind: 'success' });
+          return;
         }
+        // redeem_invite returns a SETOF with one row. PostgREST hands
+        // us the array, so we take the first element. If the function
+        // somehow returns empty (shouldn't happen — we'd have raised
+        // earlier), surface as a generic error.
+        const row = Array.isArray(data) ? data[0] : null;
+        if (!row || typeof row.group_name !== 'string') {
+          setState({ kind: 'error', message: t('errors.generic') });
+          return;
+        }
+        setState({
+          kind: 'success',
+          group: { name: row.group_name, emoji: row.group_emoji ?? null },
+        });
       });
 
     return () => {
@@ -86,9 +103,17 @@ export function InviteAcceptScreen() {
         <div>
           <p
             className="display-italic"
-            style={{ fontSize: 'var(--display-xs)', color: 'var(--ink)', marginBottom: 'var(--s-4)' }}
+            style={{
+              fontSize: 'var(--display-xs)',
+              color: 'var(--ink)',
+              marginBottom: 'var(--s-4)',
+            }}
           >
-            {t('invite.success', { group: '' })}
+            {t('invite.success', {
+              group: state.group.emoji
+                ? `${state.group.emoji} ${state.group.name}`
+                : `«${state.group.name}»`,
+            })}
           </p>
           <Link to="/" style={{ textDecoration: 'none' }}>
             <Button variant="primary">{t('invite.successCta')}</Button>
