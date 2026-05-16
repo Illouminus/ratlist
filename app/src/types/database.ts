@@ -370,6 +370,16 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_people: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          handle: string
+          id: string
+          shared_group_count: number
+        }[]
+      }
       is_group_admin: { Args: { _group_id: string }; Returns: boolean }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       owns_item: { Args: { _item_id: string }; Returns: boolean }

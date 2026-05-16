@@ -16,6 +16,8 @@ import { OnboardingScreen } from './screens/OnboardingScreen';
 import { MyListScreen } from './screens/items/MyListScreen';
 import { GroupsScreen } from './screens/groups/GroupsScreen';
 import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
+import { PeopleScreen } from './screens/people/PeopleScreen';
+import { FriendListScreen } from './screens/people/FriendListScreen';
 
 export function AppRouter() {
   return (
@@ -50,6 +52,22 @@ export function AppRouter() {
           element={
             <RequireAuth>
               <GroupsScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/people"
+          element={
+            <RequireAuth>
+              <PeopleScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/p/:userId"
+          element={
+            <RequireAuth>
+              <FriendListScreen />
             </RequireAuth>
           }
         />

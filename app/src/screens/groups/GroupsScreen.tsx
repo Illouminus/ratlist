@@ -17,6 +17,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { pluralForm } from '../../i18n/plural';
 import { PaperLayout } from '../../components/PaperLayout';
 import { TopBar } from '../../components/TopBar';
+import { TopBarNav } from '../../components/TopBarNav';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
@@ -28,7 +29,7 @@ export function GroupsScreen() {
 
   return (
     <PaperLayout>
-      <TopBar />
+      <TopBar nav={<TopBarNav />} />
 
       <header style={{ marginBottom: 'var(--s-6)' }}>
         <div className="mono-meta" style={{ marginBottom: 'var(--s-3)' }}>
