@@ -18,6 +18,7 @@ import type { CreateItemInput, MyItem } from '../../items/useMyItems';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
+import { PriorityDots } from '../../components/PriorityDots';
 import { PhotoField } from './PhotoField';
 import { fetchUrlMeta } from '../../items/fetchUrlMeta';
 import { errorMessage } from '../../lib/errors';
@@ -59,6 +60,11 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
   const [priceText, setPriceText] = useState<string>(initial?.price_text ?? '');
   const [occasion, setOccasion] = useState<Occasion>(
     (initial?.occasion as Occasion | undefined) ?? 'anytime',
+  );
+  // priority is stored as 1..3 in the DB (1 = "really want", 3 = "nice
+  // to have"). Default to 2 (the DB default) for fresh items.
+  const [priority, setPriority] = useState<1 | 2 | 3>(
+    initial?.priority === 1 || initial?.priority === 3 ? initial.priority : 2,
   );
   const [note, setNote] = useState<string>(initial?.note ?? '');
   const [coverUrl, setCoverUrl] = useState<string | null>(initial?.cover_url ?? null);
@@ -145,6 +151,7 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
       url: url.trim() || null,
       price_text: priceText.trim() || null,
       occasion,
+      priority,
       note: note.trim() || null,
       cover_url: coverUrl,
       group_ids: Array.from(selectedGroups),
@@ -232,6 +239,19 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
               kind={occ}
               active={occasion === occ}
               onClick={() => setOccasion(occ)}
+            />
+          ))}
+        </div>
+      </Field>
+
+      <Field label={t('add.priorityLabel')}>
+        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+          {([1, 2, 3] as const).map((p) => (
+            <PriorityChip
+              key={p}
+              level={p}
+              active={priority === p}
+              onClick={() => setPriority(p)}
             />
           ))}
         </div>
@@ -373,6 +393,48 @@ function OccasionChip({ kind, active, onClick }: OccasionChipProps) {
       }}
     >
       {t(`occasion.${kind}`)}
+    </button>
+  );
+}
+
+interface PriorityChipProps {
+  level: 1 | 2 | 3;
+  active: boolean;
+  onClick: () => void;
+}
+
+/** Same chip shape as OccasionChip, but with a leading dot cluster
+ *  (•••, ••, •) that mirrors the row-level priority marker. The chip's
+ *  label translates to the long-form ("очень хочу" / "хочу" / "если
+ *  найдётся") so the meaning is clear in the form even before the
+ *  reader learns the dot convention. */
+function PriorityChip({ level, active, onClick }: PriorityChipProps) {
+  const { t } = useI18n();
+  const label =
+    level === 1 ? t('item.priorityHigh') : level === 2 ? t('item.priorityMid') : t('item.priorityLow');
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: active ? 'var(--ink)' : 'transparent',
+        color: active ? 'var(--paper)' : 'var(--ink)',
+        border: `1px solid ${active ? 'var(--ink)' : 'var(--hair-strong)'}`,
+        padding: '6px 12px',
+        borderRadius: 'var(--r-pill)',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-body)',
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: 0.06,
+        textTransform: 'uppercase',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+      }}
+    >
+      <PriorityDots level={level} muted={!active} />
+      {label}
     </button>
   );
 }

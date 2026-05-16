@@ -72,6 +72,7 @@ export const en: Translation = {
     priceLabel: 'price (roughly)',
     pricePh: '€25 or €25–40',
     occasionLabel: 'for what occasion',
+    priorityLabel: 'how badly',
     noteLabel: 'a note (optional)',
     notePh: 'color, size, where you saw it…',
     groupsLabel: 'visible in circles',

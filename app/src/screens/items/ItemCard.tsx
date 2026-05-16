@@ -13,6 +13,7 @@ import { useI18n } from '../../i18n/useI18n';
 import type { MyItem } from '../../items/useMyItems';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
+import { PriorityDots } from '../../components/PriorityDots';
 import type { Occasion } from '../../lib/db';
 
 interface ItemCardProps {
@@ -120,6 +121,11 @@ export function ItemCard({ item, index }: ItemCardProps) {
           }}
         >
           <OccasionTag kind={item.occasion as Occasion} />
+          {/* Skip the default level (2) — only ☆☆☆ / ☆ rows carry a
+              marker, so the eye picks them out at a glance. */}
+          {item.priority !== 2 && (
+            <PriorityDots level={item.priority === 1 ? 1 : 3} />
+          )}
           {item.group_ids.length === 0 && <PrivateBadge />}
         </div>
       </div>

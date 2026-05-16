@@ -24,6 +24,7 @@ import type { Profile } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
+import { PriorityDots } from '../../components/PriorityDots';
 import { SittingRat, RunningRat } from '../../components/rats';
 
 export function FriendListScreen() {
@@ -309,7 +310,15 @@ function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemR
               flexWrap: 'wrap',
             }}
           >
-            <OccasionTag kind={item.occasion as Occasion} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
+              <OccasionTag kind={item.occasion as Occasion} />
+              {/* Friend's priority — useful "do they want this hard?"
+                  signal for whoever's deciding what to claim. Same
+                  rule as my-list: only show non-default levels. */}
+              {item.priority !== 2 && (
+                <PriorityDots level={item.priority === 1 ? 1 : 3} />
+              )}
+            </div>
             <ClaimControl
               myClaim={myClaim ?? null}
               othersClaim={othersClaim ?? null}

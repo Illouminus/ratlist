@@ -77,6 +77,7 @@ export const ru: Translation = {
     priceLabel: 'цена (примерно)',
     pricePh: '€25 или €25–40',
     occasionLabel: 'для чего',
+    priorityLabel: 'насколько хочешь',
     noteLabel: 'заметка (по желанию)',
     notePh: 'цвет, размер, где видел…',
     groupsLabel: 'видно в кругах',

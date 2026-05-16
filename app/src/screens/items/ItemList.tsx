@@ -15,6 +15,7 @@ import { useI18n } from '../../i18n/useI18n';
 import type { MyItem } from '../../items/useMyItems';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
+import { PriorityDots } from '../../components/PriorityDots';
 import type { Occasion } from '../../lib/db';
 
 interface ItemListProps {
@@ -179,6 +180,12 @@ function ItemRow({ item, index, last }: ItemRowProps) {
           }}
         >
           <OccasionTag kind={item.occasion as Occasion} />
+          {/* Only render the priority dots for non-default levels —
+              otherwise every row would carry a "•• хочу" marker that
+              just adds visual noise without saying anything new. */}
+          {item.priority !== 2 && (
+            <PriorityDots level={item.priority === 1 ? 1 : 3} />
+          )}
           {item.group_ids.length === 0 && <PrivateBadge />}
         </div>
       </div>
