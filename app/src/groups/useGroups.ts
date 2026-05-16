@@ -41,15 +41,36 @@ export interface CreateGroupInput {
   description?: string | null;
 }
 
+/** Fields the admin can edit. All optional — only sent fields change. */
+export interface UpdateGroupInput {
+  name?: string;
+  emoji?: string | null;
+  description?: string | null;
+}
+
 export interface UseGroupsResult {
   query: GroupsQuery;
   refresh: () => Promise<void>;
   /**
    * Create a new group. The creating user is auto-added as an admin via
-   * the `bootstrap_group_admin` trigger. Returns the new group on success
-   * or an error string.
+   * the `create_group` RPC. Returns the new group on success or an
+   * error string.
    */
   createGroup: (input: CreateGroupInput) => Promise<{ group: MyGroup } | { error: string }>;
+  /**
+   * Update the editable fields of an existing group. RLS lets admins
+   * through; non-admins get a permissionDenied error.
+   */
+  updateGroup: (
+    groupId: string,
+    input: UpdateGroupInput,
+  ) => Promise<{ ok: true } | { error: string }>;
+  /**
+   * Delete the group. The DB CASCADE'es group_members, invites, and
+   * item_groups; items themselves stay (just unpublished from the
+   * deleted group). RLS limits this to admins.
+   */
+  deleteGroup: (groupId: string) => Promise<{ ok: true } | { error: string }>;
 }
 
 type FetchState =
@@ -148,5 +169,47 @@ export function useGroups(): UseGroupsResult {
     [user],
   );
 
-  return { query, refresh, createGroup };
+  const updateGroup = useCallback(
+    async (
+      groupId: string,
+      input: UpdateGroupInput,
+    ): Promise<{ ok: true } | { error: string }> => {
+      if (!user) return { error: 'not authenticated' };
+
+      // Build a partial update payload — only fields the caller passed
+      // are sent. The typed shape matches the groups Update type the
+      // generated database types expect.
+      const patch: { name?: string; emoji?: string | null; description?: string | null } = {};
+      if (input.name !== undefined) patch.name = input.name.trim();
+      if (input.emoji !== undefined) patch.emoji = input.emoji?.trim() || null;
+      if (input.description !== undefined)
+        patch.description = input.description?.trim() || null;
+
+      if (Object.keys(patch).length === 0) return { ok: true };
+
+      const { error } = await supabase.from('groups').update(patch).eq('id', groupId);
+      if (error) return { error: error.message };
+
+      const state = await loadGroups(user.id);
+      setFetched(state);
+      return { ok: true };
+    },
+    [user],
+  );
+
+  const deleteGroup = useCallback(
+    async (groupId: string): Promise<{ ok: true } | { error: string }> => {
+      if (!user) return { error: 'not authenticated' };
+
+      const { error } = await supabase.from('groups').delete().eq('id', groupId);
+      if (error) return { error: error.message };
+
+      const state = await loadGroups(user.id);
+      setFetched(state);
+      return { ok: true };
+    },
+    [user],
+  );
+
+  return { query, refresh, createGroup, updateGroup, deleteGroup };
 }
