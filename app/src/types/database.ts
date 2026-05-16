@@ -307,6 +307,7 @@ export type Database = {
           handle: string | null
           id: string
           onboarded_at: string | null
+          share_token: string | null
           updated_at: string
         }
         Insert: {
@@ -317,6 +318,7 @@ export type Database = {
           handle?: string | null
           id: string
           onboarded_at?: string | null
+          share_token?: string | null
           updated_at?: string
         }
         Update: {
@@ -327,6 +329,7 @@ export type Database = {
           handle?: string | null
           id?: string
           onboarded_at?: string | null
+          share_token?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -517,6 +520,7 @@ export type Database = {
           handle: string | null
           id: string
           onboarded_at: string | null
+          share_token: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -589,6 +593,13 @@ export type Database = {
           shared_group_count: number
         }[]
       }
+      get_public_list: {
+        Args: { _token: string }
+        Returns: {
+          items: Database["public"]["CompositeTypes"]["public_item"][]
+          owner: Database["public"]["CompositeTypes"]["public_owner"]
+        }[]
+      }
       group_admin_count: { Args: { _group_id: string }; Returns: number }
       is_group_admin: { Args: { _group_id: string }; Returns: boolean }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
@@ -605,13 +616,29 @@ export type Database = {
       }
       reveal_santa_event: { Args: { _event_id: string }; Returns: undefined }
       run_santa_draw: { Args: { _event_id: string }; Returns: undefined }
+      set_share_token: { Args: { _enabled: boolean }; Returns: string }
       shares_group_with: { Args: { _other_user: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
     }
     CompositeTypes: {
-      [_ in never]: never
+      public_item: {
+        id: string | null
+        title: string | null
+        maker: string | null
+        url: string | null
+        price_text: string | null
+        occasion: string | null
+        note: string | null
+        cover_url: string | null
+        created_at: string | null
+      }
+      public_owner: {
+        display_name: string | null
+        handle: string | null
+        avatar_url: string | null
+      }
     }
   }
 }

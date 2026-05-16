@@ -22,6 +22,7 @@ import type { Occasion } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
 import { EndOfList } from '../../components/EndOfList';
+import { ShareDialog } from '../../components/ShareDialog';
 import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
 import { ItemFilters, type ViewMode } from './ItemFilters';
@@ -39,6 +40,7 @@ export function MyListScreen() {
   // list — the wide grid cards don't fit. Desktop users can still pick.
   const effectiveView: ViewMode = isMobile ? 'list' : view;
   const [occasion, setOccasion] = useState<Occasion | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const filteredItems = useMemo(() => {
     const items = itemsQ.status === 'ready' ? itemsQ.items : [];
@@ -61,7 +63,7 @@ export function MyListScreen() {
     <PaperLayout>
       {showList && (
         <>
-          <Header onAdd={goAdd} />
+          <Header onAdd={goAdd} onShare={() => setShareOpen(true)} />
           <ActionsRow
             countShown={filteredItems.length}
             countTotal={totalCount}
@@ -106,6 +108,8 @@ export function MyListScreen() {
           {filteredItems.length > 0 && <EndOfList />}
         </>
       )}
+
+      <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} />
     </PaperLayout>
   );
 }
@@ -118,7 +122,7 @@ export function MyListScreen() {
  * Mobile gets the FAB in BottomTabBar instead — keeps the eyebrow row
  * uncluttered on small viewports.
  */
-function Header({ onAdd }: { onAdd: () => void }) {
+function Header({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) {
   const { t } = useI18n();
   const now = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
@@ -164,6 +168,27 @@ function Header({ onAdd }: { onAdd: () => void }) {
           >
             {t('list.annotation')}
           </div>
+
+          {/* Share-public-list affordance. Subtle text link rather than
+              a primary button — the action is occasional ("показать
+              маме"), not a per-session habit. Shown on all viewports;
+              opens the ShareDialog. */}
+          <button
+            type="button"
+            onClick={onShare}
+            className="mono-meta"
+            style={{
+              marginTop: 'var(--s-3)',
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              color: 'var(--accent)',
+              cursor: 'pointer',
+              display: 'block',
+            }}
+          >
+            {t('share.cta')}
+          </button>
         </div>
 
         {/* Desktop: add button sits next to the title, above the hairline

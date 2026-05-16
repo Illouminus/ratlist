@@ -22,6 +22,7 @@ import { LoginScreen } from './screens/LoginScreen';
 import { AuthCallbackScreen } from './screens/AuthCallbackScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
+import { PublicListScreen } from './screens/PublicListScreen';
 
 /**
  * Helper to lazy-load a module whose export is named rather than
@@ -102,6 +103,7 @@ export function AppRouter() {
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/auth/callback" element={<AuthCallbackScreen />} />
         <Route path="/invite/:token" element={<InviteAcceptScreen />} />
+        <Route path="/share/:token" element={<PublicListScreen />} />
 
         {/* Authenticated but pre-onboarding (no app chrome) */}
         <Route
