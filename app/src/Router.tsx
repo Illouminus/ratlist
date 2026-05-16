@@ -2,8 +2,11 @@
  * App router. Keeps route declarations in one place so adding/removing
  * routes is a quick scan rather than a hunt.
  *
- * Auth-gating is centralised on `<RequireAuth>`. The onboarding route
- * passes `allowPreOnboarding` so the guard doesn't redirect back to itself.
+ * Auth-gating is centralised on `<RequireAuth>`:
+ *   - `/login`, `/auth/callback`, `/invite/:token` are public (the last
+ *     handles its own anonymous-visitor message).
+ *   - `/onboarding` requires auth but allows pre-onboarding users.
+ *   - everything else requires auth + completed onboarding.
  */
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from './auth/RequireAuth';
@@ -11,14 +14,19 @@ import { LoginScreen } from './screens/LoginScreen';
 import { AuthCallbackScreen } from './screens/AuthCallbackScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { HomeScreen } from './screens/HomeScreen';
+import { GroupsScreen } from './screens/groups/GroupsScreen';
+import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
 
 export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public */}
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/auth/callback" element={<AuthCallbackScreen />} />
+        <Route path="/invite/:token" element={<InviteAcceptScreen />} />
 
+        {/* Authenticated but pre-onboarding */}
         <Route
           path="/onboarding"
           element={
@@ -28,11 +36,20 @@ export function AppRouter() {
           }
         />
 
+        {/* Authenticated + onboarded */}
         <Route
           path="/"
           element={
             <RequireAuth>
               <HomeScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/groups"
+          element={
+            <RequireAuth>
+              <GroupsScreen />
             </RequireAuth>
           }
         />

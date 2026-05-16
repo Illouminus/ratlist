@@ -362,6 +362,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_my_groups: {
+        Args: never
+        Returns: {
+          created_at: string
+          created_by: string
+          description: string
+          emoji: string
+          id: string
+          member_count: number
+          name: string
+          role: string
+          updated_at: string
+        }[]
+      }
       is_group_admin: { Args: { _group_id: string }; Returns: boolean }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       owns_item: { Args: { _item_id: string }; Returns: boolean }
