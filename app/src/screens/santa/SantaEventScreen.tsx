@@ -29,6 +29,7 @@ import { TopBarNav } from '../../components/TopBarNav';
 import { Button } from '../../components/Button';
 import { SittingRat } from '../../components/rats';
 import { useAuth } from '../../auth/useAuth';
+import { errorMessage } from '../../lib/errors';
 
 export function SantaEventScreen() {
   const { t } = useI18n();
@@ -223,14 +224,14 @@ function ParticipantsSection({
     setError(null);
     const result = await onJoin();
     setPending(false);
-    if ('error' in result) setError(result.error);
+    if ('error' in result) setError(errorMessage(t, result.error));
   }
   async function handleLeave(): Promise<void> {
     setPending(true);
     setError(null);
     const result = await onLeave();
     setPending(false);
-    if ('error' in result) setError(result.error);
+    if ('error' in result) setError(errorMessage(t, result.error));
   }
 
   const canJoin = eventStatus === 'collecting' && !isParticipant;
@@ -353,16 +354,7 @@ function OrganiserDrawSection({
     setError(null);
     const result = await onDraw();
     setPending(false);
-    if ('error' in result) {
-      // Map known DB exceptions to friendly text; fall back to raw.
-      if (result.error.includes('too_few_participants')) {
-        setError(t('santa.drawTooFew'));
-      } else if (result.error.includes('no_valid_assignment')) {
-        setError(t('santa.drawNoValid'));
-      } else {
-        setError(t('santa.drawErrorOther', { message: result.error }));
-      }
-    }
+    if ('error' in result) setError(errorMessage(t, result.error));
   }
 
   return (
@@ -411,7 +403,7 @@ function OrganiserRevealSection({
     setError(null);
     const result = await onReveal();
     setPending(false);
-    if ('error' in result) setError(result.error);
+    if ('error' in result) setError(errorMessage(t, result.error));
   }
 
   return (

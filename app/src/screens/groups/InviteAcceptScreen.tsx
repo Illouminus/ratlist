@@ -3,16 +3,15 @@
  * `redeem_invite` RPC and reports the outcome. Public route: if the
  * visitor isn't signed in, we point them at `/login` first.
  *
- * The RPC raises one of these exceptions which we map to friendly text:
- *   - `invite_not_found`     — token unknown
- *   - `invite_already_used`  — token was already consumed
- *   - `invite_expired`       — expires_at < now()
+ * Error mapping (invite_not_found / expired / used) is handled by the
+ * central `errorMessage` helper.
  */
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n/useI18n';
+import { errorMessage } from '../../lib/errors';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
 import { LangToggle } from '../../components/LangToggle';
@@ -20,14 +19,7 @@ import { LangToggle } from '../../components/LangToggle';
 type State =
   | { kind: 'pending' }
   | { kind: 'success' }
-  | { kind: 'error'; code: 'notFound' | 'expired' | 'used' | 'generic' };
-
-function mapRpcError(message: string): State['kind'] extends 'error' ? never : 'notFound' | 'expired' | 'used' | 'generic' {
-  if (message.includes('invite_not_found')) return 'notFound';
-  if (message.includes('invite_expired')) return 'expired';
-  if (message.includes('invite_already_used')) return 'used';
-  return 'generic';
-}
+  | { kind: 'error'; message: string };
 
 export function InviteAcceptScreen() {
   const { t } = useI18n();
@@ -44,7 +36,7 @@ export function InviteAcceptScreen() {
       .then(({ error }) => {
         if (cancelled) return;
         if (error) {
-          setState({ kind: 'error', code: mapRpcError(error.message) });
+          setState({ kind: 'error', message: errorMessage(t, error) });
         } else {
           setState({ kind: 'success' });
         }
@@ -53,7 +45,7 @@ export function InviteAcceptScreen() {
     return () => {
       cancelled = true;
     };
-  }, [status, token]);
+  }, [status, token, t]);
 
   return (
     <PaperLayout narrow>
@@ -106,12 +98,7 @@ export function InviteAcceptScreen() {
 
       {status === 'authenticated' && state.kind === 'error' && (
         <div>
-          <p style={{ color: 'var(--accent-deep)', lineHeight: 1.55 }}>
-            {state.code === 'notFound' && t('invite.notFound')}
-            {state.code === 'expired' && t('invite.expired')}
-            {state.code === 'used' && t('invite.used')}
-            {state.code === 'generic' && t('invite.genericError')}
-          </p>
+          <p style={{ color: 'var(--accent-deep)', lineHeight: 1.55 }}>{state.message}</p>
           <div style={{ marginTop: 'var(--s-4)' }}>
             <Link to="/" style={{ textDecoration: 'none' }}>
               <Button variant="ghost">{t('invite.successCta')}</Button>

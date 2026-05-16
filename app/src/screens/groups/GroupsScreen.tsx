@@ -15,6 +15,7 @@ import { useState, type FormEvent } from 'react';
 import { useGroups, type MyGroup } from '../../groups/useGroups';
 import { useI18n } from '../../i18n/useI18n';
 import { pluralForm } from '../../i18n/plural';
+import { errorMessage } from '../../lib/errors';
 import { PaperLayout } from '../../components/PaperLayout';
 import { TopBar } from '../../components/TopBar';
 import { TopBarNav } from '../../components/TopBarNav';
@@ -91,7 +92,7 @@ function CreateGroupForm({ onCreate }: CreateGroupFormProps) {
       description: description.trim() || null,
     });
     if ('error' in result) {
-      setError(result.error);
+      setError(errorMessage(t, result.error));
     } else {
       setName('');
       setEmoji('');

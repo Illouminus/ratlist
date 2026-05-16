@@ -13,6 +13,7 @@ import { useState } from 'react';
 import type { Invite } from '../../lib/db';
 import { useGroupInvites } from '../../groups/useGroupInvites';
 import { useI18n } from '../../i18n/useI18n';
+import { errorMessage } from '../../lib/errors';
 import { Button } from '../../components/Button';
 
 interface InviteListProps {
@@ -29,7 +30,7 @@ export function InviteList({ groupId }: InviteListProps) {
     setGenerating(true);
     setError(null);
     const result = await generate();
-    if ('error' in result) setError(result.error);
+    if ('error' in result) setError(errorMessage(t, result.error));
     setGenerating(false);
   }
 

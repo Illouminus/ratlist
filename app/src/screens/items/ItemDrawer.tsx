@@ -24,6 +24,20 @@ import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { PhotoField } from './PhotoField';
 import { fetchUrlMeta } from '../../items/fetchUrlMeta';
+import { errorMessage } from '../../lib/errors';
+
+/** Hard cap on item title length. Mirrors the DB CHECK constraint. */
+const MAX_TITLE_LENGTH = 200;
+/** Soft cap when auto-filling from a fetched URL. Long page titles
+ *  (GitHub repo descriptions, news article H1s) are usually not what you
+ *  want as a wishlist item title — truncate for the user. They can
+ *  extend up to MAX_TITLE_LENGTH manually if needed. */
+const AUTOFILL_TITLE_LENGTH = 100;
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1).trimEnd() + '…';
+}
 
 /** Discriminated mode prop — keeps the create vs edit split explicit. */
 export type ItemDrawerMode =
@@ -117,7 +131,9 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
     const filled: string[] = [];
     const { data } = result;
     if (data.title && title.trim().length === 0) {
-      setTitle(data.title);
+      // Truncate aggressively — full page titles are rarely good wish-list
+      // item names. User can extend up to MAX_TITLE_LENGTH manually.
+      setTitle(truncate(data.title, AUTOFILL_TITLE_LENGTH));
       filled.push('title');
     }
     if (data.site_name && maker.trim().length === 0) {
@@ -143,7 +159,16 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
   async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
     const trimmedTitle = title.trim();
-    if (trimmedTitle.length === 0) return;
+    if (trimmedTitle.length === 0) {
+      setError(t('errors.titleRequired'));
+      return;
+    }
+    if (trimmedTitle.length > MAX_TITLE_LENGTH) {
+      // Defence in depth: the input has maxLength too, but autofill can
+      // bypass that. Catch it before the DB does.
+      setError(t('errors.titleTooLong'));
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -161,7 +186,7 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
 
     const result = await onSubmit(input);
     if ('error' in result) {
-      setError(result.error);
+      setError(errorMessage(t, result.error));
       setSubmitting(false);
       return;
     }

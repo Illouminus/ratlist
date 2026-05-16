@@ -1,6 +1,6 @@
 /* Russian — source of truth dictionary. All other languages conform to this shape.
  * The shape is recursive: keys can hold either a string leaf or a nested
- * sub-dictionary, so groups like `photo.error.fileTooLarge` are valid. */
+ * sub-dictionary, so groups like `errors.titleTooLong` are valid. */
 
 export interface Translation {
   [key: string]: string | Translation;
@@ -212,8 +212,6 @@ export const ru: Translation = {
     drawCta: 'начать жеребьёвку',
     drawing: 'тянем шапку…',
     drawTooFew: 'нужно минимум двое',
-    drawNoValid: 'не получилось найти валидное распределение. проверь исключения.',
-    drawErrorOther: 'ошибка: {message}',
     drawnHeader: 'кому ты даришь',
     drawnGoToList: 'открыть список →',
     drawnRecipientFallback: 'твой подопечный',
@@ -234,21 +232,39 @@ export const ru: Translation = {
     success: 'добро пожаловать в {group}',
     successCta: 'на главную',
     notSignedIn: 'сначала войди — потом откроется приглашение',
-    notFound: 'ссылка не найдена. возможно, её отозвали.',
-    expired: 'у ссылки истёк срок.',
-    used: 'этой ссылкой уже воспользовались.',
-    alreadyMember: 'ты уже в этом кругу',
-    genericError: 'не получилось присоединиться. попробуй ещё раз?',
   },
   photo: {
     add: '+ загрузить',
     replace: 'заменить',
     remove: 'удалить',
     uploading: 'грузим…',
-    error: {
-      unsupported_type: 'нужен png, jpg или webp',
-      file_too_large: 'слишком тяжёлая (максимум 8 МБ)',
-    },
+  },
+  errors: {
+    generic: 'что-то пошло не так. попробуй ещё раз?',
+    network: 'не удалось связаться с сервером. проверь интернет.',
+    notAuthenticated: 'нужно войти, чтобы это сделать.',
+    permissionDenied: 'нет доступа.',
+    duplicate: 'такое уже существует.',
+    foreignKey: 'связанная запись не найдена.',
+
+    titleTooLong: 'название слишком длинное — максимум 200 символов.',
+    titleRequired: 'нужно ввести название.',
+    handleTaken: 'такое короткое имя уже занято.',
+    handleInvalidFormat: 'только латиница, цифры, дефис и подчёркивание (2-32 символа).',
+    displayNameRequired: 'нужно ввести имя.',
+
+    inviteNotFound: 'ссылка не найдена. возможно, её отозвали.',
+    inviteExpired: 'у ссылки истёк срок.',
+    inviteUsed: 'этой ссылкой уже воспользовались.',
+
+    santaTooFew: 'нужно минимум двое участников.',
+    santaNoValid: 'не вышло найти подходящие пары — проверь исключения.',
+    santaWrongStatus: 'жеребьёвка уже прошла или событие закрыто.',
+    santaNotOrganiser: 'только организатор может это сделать.',
+    santaCannotReveal: 'нельзя открыть результаты сейчас.',
+
+    photoTooLarge: 'картинка слишком тяжёлая — максимум 8 МБ.',
+    photoBadType: 'нужен png, jpg или webp.',
   },
   common: {
     cancel: 'отмена',

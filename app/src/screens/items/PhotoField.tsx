@@ -13,6 +13,7 @@ import { useRef, useState } from 'react';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n/useI18n';
 import { uploadItemImage } from '../../items/uploadItemImage';
+import { errorMessage } from '../../lib/errors';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { Button } from '../../components/Button';
 
@@ -35,7 +36,7 @@ export function PhotoField({ value, onChange }: PhotoFieldProps) {
     const result = await uploadItemImage(file, user.id);
     setUploading(false);
     if ('error' in result) {
-      setError(t(`photo.error.${result.error}`));
+      setError(errorMessage(t, result.error));
       return;
     }
     onChange(result.url);

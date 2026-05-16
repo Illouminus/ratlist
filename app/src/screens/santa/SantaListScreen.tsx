@@ -10,6 +10,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { pluralForm } from '../../i18n/plural';
+import { errorMessage } from '../../lib/errors';
 import { useSantaEvents, type MySantaEvent } from '../../santa/useSantaEvents';
 import { useGroups, type MyGroup } from '../../groups/useGroups';
 import { PaperLayout } from '../../components/PaperLayout';
@@ -102,7 +103,7 @@ function CreateEventForm({ groups, onCreate }: CreateEventFormProps) {
     setSubmitting(false);
 
     if ('error' in result) {
-      setError(result.error);
+      setError(errorMessage(t, result.error));
     } else {
       setName('');
       setBudgetText('');
