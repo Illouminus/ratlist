@@ -24,8 +24,6 @@ import {
   type SantaParticipant,
 } from '../../santa/useSantaEvent';
 import { PaperLayout } from '../../components/PaperLayout';
-import { TopBar } from '../../components/TopBar';
-import { TopBarNav } from '../../components/TopBarNav';
 import { Button } from '../../components/Button';
 import { SittingRat } from '../../components/rats';
 import { useAuth } from '../../auth/useAuth';
@@ -40,7 +38,6 @@ export function SantaEventScreen() {
   if (query.status === 'loading') {
     return (
       <PaperLayout>
-        <TopBar nav={<TopBarNav />} />
         <p className="mono-meta" style={{ color: 'var(--ink-3)' }}>
           …
         </p>
@@ -50,7 +47,6 @@ export function SantaEventScreen() {
   if (query.status === 'error') {
     return (
       <PaperLayout>
-        <TopBar nav={<TopBarNav />} />
         <p style={{ color: 'var(--accent-deep)' }}>{query.error}</p>
       </PaperLayout>
     );
@@ -63,7 +59,6 @@ export function SantaEventScreen() {
 
   return (
     <PaperLayout>
-      <TopBar nav={<TopBarNav />} />
 
       <Header event={event} />
 

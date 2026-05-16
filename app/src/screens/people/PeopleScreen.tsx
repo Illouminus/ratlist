@@ -8,8 +8,6 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { usePeople, type Person } from '../../people/usePeople';
 import { PaperLayout } from '../../components/PaperLayout';
-import { TopBar } from '../../components/TopBar';
-import { TopBarNav } from '../../components/TopBarNav';
 import { SittingRat } from '../../components/rats';
 
 export function PeopleScreen() {
@@ -18,8 +16,6 @@ export function PeopleScreen() {
 
   return (
     <PaperLayout>
-      <TopBar nav={<TopBarNav />} />
-
       <header style={{ marginBottom: 'var(--s-6)' }}>
         <div className="mono-meta" style={{ marginBottom: 'var(--s-3)' }}>
           {t('people.eyebrow')}

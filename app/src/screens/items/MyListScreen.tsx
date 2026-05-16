@@ -24,8 +24,6 @@ import { useMyItems } from '../../items/useMyItems';
 import { useGroups } from '../../groups/useGroups';
 import type { Occasion } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
-import { TopBar } from '../../components/TopBar';
-import { TopBarNav } from '../../components/TopBarNav';
 import { Button } from '../../components/Button';
 import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
@@ -71,8 +69,6 @@ export function MyListScreen() {
 
   return (
     <PaperLayout>
-      <TopBar nav={<TopBarNav />} />
-
       <Header />
 
       <ActionsRow

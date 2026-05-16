@@ -20,8 +20,6 @@ import { useFriendList, type ClaimWithUser, type FriendItem } from '../../people
 import { useI18n } from '../../i18n/useI18n';
 import type { Occasion } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
-import { TopBar } from '../../components/TopBar';
-import { TopBarNav } from '../../components/TopBarNav';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { Button } from '../../components/Button';
@@ -37,7 +35,6 @@ export function FriendListScreen() {
 
   return (
     <PaperLayout>
-      <TopBar nav={<TopBarNav />} />
 
       {query.status === 'loading' && (
         <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>

@@ -14,8 +14,6 @@ import { errorMessage } from '../../lib/errors';
 import { useSantaEvents, type MySantaEvent } from '../../santa/useSantaEvents';
 import { useGroups, type MyGroup } from '../../groups/useGroups';
 import { PaperLayout } from '../../components/PaperLayout';
-import { TopBar } from '../../components/TopBar';
-import { TopBarNav } from '../../components/TopBarNav';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
@@ -28,8 +26,6 @@ export function SantaListScreen() {
 
   return (
     <PaperLayout>
-      <TopBar nav={<TopBarNav />} />
-
       <header style={{ marginBottom: 'var(--s-6)' }}>
         <div className="mono-meta" style={{ marginBottom: 'var(--s-3)' }}>
           {t('santa.eyebrow')}

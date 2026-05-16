@@ -2,14 +2,16 @@
  * App router. Keeps route declarations in one place so adding/removing
  * routes is a quick scan rather than a hunt.
  *
- * Auth-gating is centralised on `<RequireAuth>`:
- *   - `/login`, `/auth/callback`, `/invite/:token` are public (the last
- *     handles its own anonymous-visitor message).
- *   - `/onboarding` requires auth but allows pre-onboarding users.
- *   - everything else requires auth + completed onboarding.
+ * Three layers of chrome:
+ *   1. public        no auth required — login / auth callback / invite
+ *   2. pre-onboarding auth required, but no app chrome — onboarding
+ *   3. full          auth + onboarding done, wrapped in <AppLayout>
+ *                    (sidebar on desktop, bottom tab bar on mobile)
  */
+import { type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from './auth/RequireAuth';
+import { AppLayout } from './components/AppLayout';
 import { LoginScreen } from './screens/LoginScreen';
 import { AuthCallbackScreen } from './screens/AuthCallbackScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
@@ -21,6 +23,15 @@ import { FriendListScreen } from './screens/people/FriendListScreen';
 import { SantaListScreen } from './screens/santa/SantaListScreen';
 import { SantaEventScreen } from './screens/santa/SantaEventScreen';
 
+/** Wrap a screen in the full auth-required + AppLayout chrome. */
+function appRoute(screen: ReactNode): ReactNode {
+  return (
+    <RequireAuth>
+      <AppLayout>{screen}</AppLayout>
+    </RequireAuth>
+  );
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -30,7 +41,7 @@ export function AppRouter() {
         <Route path="/auth/callback" element={<AuthCallbackScreen />} />
         <Route path="/invite/:token" element={<InviteAcceptScreen />} />
 
-        {/* Authenticated but pre-onboarding */}
+        {/* Authenticated but pre-onboarding (no app chrome) */}
         <Route
           path="/onboarding"
           element={
@@ -40,55 +51,13 @@ export function AppRouter() {
           }
         />
 
-        {/* Authenticated + onboarded */}
-        <Route
-          path="/"
-          element={
-            <RequireAuth>
-              <MyListScreen />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/groups"
-          element={
-            <RequireAuth>
-              <GroupsScreen />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/people"
-          element={
-            <RequireAuth>
-              <PeopleScreen />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/p/:userId"
-          element={
-            <RequireAuth>
-              <FriendListScreen />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/santa"
-          element={
-            <RequireAuth>
-              <SantaListScreen />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/santa/:eventId"
-          element={
-            <RequireAuth>
-              <SantaEventScreen />
-            </RequireAuth>
-          }
-        />
+        {/* Authenticated + onboarded (full app chrome) */}
+        <Route path="/" element={appRoute(<MyListScreen />)} />
+        <Route path="/groups" element={appRoute(<GroupsScreen />)} />
+        <Route path="/people" element={appRoute(<PeopleScreen />)} />
+        <Route path="/p/:userId" element={appRoute(<FriendListScreen />)} />
+        <Route path="/santa" element={appRoute(<SantaListScreen />)} />
+        <Route path="/santa/:eventId" element={appRoute(<SantaEventScreen />)} />
 
         {/* Unknown path → home (and let RequireAuth decide where they go). */}
         <Route path="*" element={<Navigate to="/" replace />} />

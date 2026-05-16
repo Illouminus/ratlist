@@ -1,7 +1,16 @@
 /**
- * `<PaperLayout>` — page-level wrapper that gives a screen the editorial
- * paper feel: centered content, generous padding, max-width column. Use it
- * once per top-level screen as the outermost element.
+ * `<PaperLayout>` — page-level wrapper that handles inner padding +
+ * max-width column.
+ *
+ * Used by:
+ *   - authed screens, where the outer chrome (sidebar, bottom bar) is
+ *     supplied by `<AppLayout>`. PaperLayout just centres + pads the
+ *     content.
+ *   - pre-auth screens (login, onboarding, invite accept) where it's
+ *     the only wrapper — passes `narrow` for a tighter column.
+ *
+ * Responsive padding via the `--page-pad-*` CSS variables (clamp-based);
+ * the wrapper doesn't fight the responsive scale set in tokens.css.
  */
 import type { CSSProperties, ReactNode } from 'react';
 
@@ -20,8 +29,7 @@ export function PaperLayout({ children, maxWidth, narrow = false, style }: Paper
   return (
     <div
       style={{
-        minHeight: '100vh',
-        padding: 'var(--s-7) var(--s-6)',
+        padding: 'var(--page-pad-y) var(--page-pad-x)',
         ...style,
       }}
     >

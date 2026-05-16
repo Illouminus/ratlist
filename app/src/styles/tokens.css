@@ -52,9 +52,27 @@
   --motion:      220ms;
 
   /* ── Layout ───────────────────────────────────────────── */
-  --sidebar-w:   260px;
-  --content-max: 1080px;
-  --toolbar-h:   56px;
+  --sidebar-w:    260px;
+  --content-max:  1080px;
+  --toolbar-h:    56px;
+  --bottom-bar-h: 64px;
+  /** Breakpoint mirrored in media queries. Update both. */
+  --bp-tablet:    768px;
+
+  /* ── Responsive page padding ───────────────────────────── */
+  /* clamp(min, fluid, max) — fluid value scales with viewport width,
+     bounded so we never go too cramped on phones or too airy on huge screens. */
+  --page-pad-y: clamp(20px, 4vw, 48px);
+  --page-pad-x: clamp(16px, 4vw, 32px);
+
+  /* ── Responsive display sizes ──────────────────────────── */
+  /* Used for page titles, wordmarks, section headers. Pair with
+     `font-family: var(--font-display)` and italic for the editorial feel. */
+  --display-xl: clamp(34px, 4vw + 18px, 56px); /* wordmark, hero */
+  --display-l:  clamp(28px, 3vw + 16px, 48px); /* page title h1 */
+  --display-m:  clamp(24px, 2.5vw + 14px, 40px); /* section h2 */
+  --display-s:  clamp(20px, 1.5vw + 14px, 28px); /* small h3 */
+  --display-xs: clamp(18px, 1vw + 12px, 22px); /* card title display */
 }
 
 /* Accent palette presets — apply to <html data-accent="sage"> etc. */
