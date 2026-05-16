@@ -149,6 +149,32 @@ export function useGroupMembers(groupId: string | null): UseGroupMembersResult {
     setFetched(state);
   }, [groupId]);
 
+  // Realtime: react to any change in this group's membership — new
+  // joiners via invite, role flips (promote/demote), kicks, leaves.
+  // RLS already restricts which events reach us, so we don't need to
+  // double-filter here.
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !user || !groupId) return undefined;
+    const channel = supabase
+      .channel(`group-members:${groupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'group_members',
+          filter: `group_id=eq.${groupId}`,
+        },
+        () => {
+          void refresh();
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [authStatus, user, groupId, refresh]);
+
   const promote = useCallback(
     async (userId: string): Promise<{ ok: true } | { error: string }> => {
       if (!groupId) return { error: 'no group' };

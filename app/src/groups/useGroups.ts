@@ -126,6 +126,27 @@ export function useGroups(): UseGroupsResult {
     setFetched(state);
   }, [user]);
 
+  // Realtime: re-fetch when any group I'm a member of changes, when I
+  // get added to / removed from any group, or when an admin updates a
+  // group's name/description/emoji. We accept all events and let
+  // get_my_groups() decide what we still belong to — much simpler than
+  // patching the local list.
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !user) return undefined;
+    const channel = supabase
+      .channel(`my-groups:${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, () => {
+        void refresh();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, () => {
+        void refresh();
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [authStatus, user, refresh]);
+
   const createGroup = useCallback(
     async (input: CreateGroupInput): Promise<{ group: MyGroup } | { error: string }> => {
       if (!user) return { error: 'not authenticated' };

@@ -210,6 +210,17 @@ export function useFriendList(targetUserId: string | null): UseFriendListResult 
           void refresh();
         },
       )
+      .on(
+        'postgres_changes',
+        // item_groups changes alter what's visible: if the friend
+        // un-publishes an item from a circle we share, it must
+        // disappear from this view. RLS handles the "what we see"
+        // gating, refresh() just reloads.
+        { event: '*', schema: 'public', table: 'item_groups' },
+        () => {
+          void refresh();
+        },
+      )
       .subscribe();
 
     return () => {
