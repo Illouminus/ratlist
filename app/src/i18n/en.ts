@@ -240,6 +240,12 @@ export const en: Translation = {
     leaveConfirm: 'your items stay on your own list but the rats here will no longer see them.',
     leaving: 'leaving…',
     leftGroup: 'you left "{name}"',
+    inviteFromPeopleTitle: 'invite more rats',
+    inviteFromPeopleHint: "from those you already share a circle with. send a link below for someone new.",
+    inviteAdd: '+ add',
+    addingMember: 'adding…',
+    addedMember: '{name} is in',
+    allAlreadyHere: 'all your rats are already here',
   },
   santa: {
     eyebrow: 'secret santa',

@@ -52,6 +52,13 @@ export interface UseGroupMembersResult {
   /** Remove the current user from the group. Refuses if they are the
    *  last admin AND there are other members left. */
   leave: () => Promise<{ ok: true } | { error: string }>;
+  /**
+   * Add an existing rat to this group directly (no invite link).
+   * Admin-only — RLS refuses non-admin writes. Use this only for
+   * people the caller already shares some group with; new outsiders
+   * should still come in via the invite-link flow.
+   */
+  addMember: (userId: string) => Promise<{ ok: true } | { error: string }>;
 }
 
 type FetchState =
@@ -234,6 +241,22 @@ export function useGroupMembers(groupId: string | null): UseGroupMembersResult {
     [groupId, fetched, refresh],
   );
 
+  const addMember = useCallback(
+    async (userId: string): Promise<{ ok: true } | { error: string }> => {
+      if (!groupId) return { error: 'no group' };
+      const { error } = await supabase
+        .from('group_members')
+        .insert({ group_id: groupId, user_id: userId, role: 'member' });
+      // Duplicate (already a member) is a no-op for our purposes — the
+      // UI list filters by membership so the row wouldn't be offered
+      // again, but a stale tab could race. Swallow it.
+      if (error && error.code !== '23505') return { error: error.message };
+      await refresh();
+      return { ok: true };
+    },
+    [groupId, refresh],
+  );
+
   const leave = useCallback(async (): Promise<{ ok: true } | { error: string }> => {
     if (!user || !groupId) return { error: 'not authenticated' };
 
@@ -262,5 +285,5 @@ export function useGroupMembers(groupId: string | null): UseGroupMembersResult {
     return { ok: true };
   }, [user, groupId, fetched]);
 
-  return { query, refresh, promote, demote, kick, leave };
+  return { query, refresh, promote, demote, kick, leave, addMember };
 }

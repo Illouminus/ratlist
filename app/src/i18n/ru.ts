@@ -245,6 +245,12 @@ export const ru: Translation = {
     leaveConfirm: 'твои айтемы останутся в твоём списке, но перестанут быть видны крысятам из этого круга.',
     leaving: 'выходим…',
     leftGroup: 'ты покинул «{name}»',
+    inviteFromPeopleTitle: 'позвать ещё крысят',
+    inviteFromPeopleHint: 'из тех, с кем ты уже в каких-то кругах. совсем нового — ссылкой ниже.',
+    inviteAdd: '+ добавить',
+    addingMember: 'добавляем…',
+    addedMember: '{name} в круге',
+    allAlreadyHere: 'все твои крысята уже тут',
   },
   santa: {
     eyebrow: 'тайный санта',

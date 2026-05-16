@@ -11,10 +11,11 @@
  *     └── list of <GroupCard>
  *           └── <InviteList> (collapsible per card)
  */
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useAuth } from '../../auth/useAuth';
 import { useGroups, type MyGroup, type UpdateGroupInput } from '../../groups/useGroups';
 import { useGroupMembers, type GroupMember } from '../../groups/useGroupMembers';
+import { usePeople, type Person } from '../../people/usePeople';
 import { useI18n } from '../../i18n/useI18n';
 import { pluralForm } from '../../i18n/plural';
 import { errorMessage } from '../../lib/errors';
@@ -511,9 +512,24 @@ function MembersList({ groupId, groupName, viewerIsAdmin }: MembersListProps) {
   const { user } = useAuth();
   const toast = useToast();
   const confirm = useConfirm();
-  const { query, promote, demote, kick, leave } = useGroupMembers(groupId);
+  const { query, promote, demote, kick, leave, addMember } = useGroupMembers(groupId);
+  // Only fetch people when we'll actually render the invite list —
+  // admins of this group. usePeople is lazy under the hood, but we
+  // skip even the auth check by gating here.
+  const { query: peopleQ } = usePeople();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // People the viewer already shares some group with, minus the
+  // members of *this* group. These are safe one-tap invites — they're
+  // not strangers and they're not already here.
+  const inviteCandidates: Person[] = useMemo(() => {
+    if (!viewerIsAdmin) return [];
+    if (query.status !== 'ready') return [];
+    if (peopleQ.status !== 'ready') return [];
+    const memberIds = new Set(query.members.map((m) => m.user_id));
+    return peopleQ.people.filter((p) => !memberIds.has(p.id));
+  }, [viewerIsAdmin, query, peopleQ]);
 
   /** Wraps an action with busy-state + error handling + an optional
    *  success message. Keeps each onClick a one-liner. */
@@ -610,12 +626,177 @@ function MembersList({ groupId, groupName, viewerIsAdmin }: MembersListProps) {
           />
         ))}
       </ul>
+
+      {/* Admin-only: one-tap add from existing rats. Newcomers still
+          come in via the invite-link section above. */}
+      {viewerIsAdmin && (
+        <InviteFromPeople
+          candidates={inviteCandidates}
+          busyKey={busy}
+          onAdd={(p) =>
+            void run(
+              () => addMember(p.id),
+              `add:${p.id}`,
+              t('groups.addedMember', { name: p.handle ?? p.display_name }),
+            )
+          }
+        />
+      )}
+
       {error && (
         <p style={{ marginTop: 'var(--s-3)', color: 'var(--accent-deep)', fontSize: 13 }}>
           {error}
         </p>
       )}
     </div>
+  );
+}
+
+// ─────────────────────────── invite-from-people ───────────────────────────
+
+interface InviteFromPeopleProps {
+  candidates: Person[];
+  busyKey: string | null;
+  onAdd: (person: Person) => void;
+}
+
+/** Sub-section of MembersList: the rats the viewer already shares a
+ *  group with, minus those already in this one. One-tap "+ добавить"
+ *  per row — cheaper than copy-pasting an invite link for someone the
+ *  viewer is already in a circle with. */
+function InviteFromPeople({ candidates, busyKey, onAdd }: InviteFromPeopleProps) {
+  const { t } = useI18n();
+
+  return (
+    <section style={{ marginTop: 'var(--s-5)' }}>
+      <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
+        {t('groups.inviteFromPeopleTitle')}
+      </div>
+      <p
+        style={{
+          margin: 'var(--s-2) 0 var(--s-3)',
+          fontSize: 12,
+          color: 'var(--ink-3)',
+          lineHeight: 1.5,
+        }}
+      >
+        {t('groups.inviteFromPeopleHint')}
+      </p>
+
+      {candidates.length === 0 ? (
+        <p
+          style={{
+            fontSize: 12,
+            color: 'var(--ink-3)',
+            fontStyle: 'italic',
+            margin: 0,
+          }}
+        >
+          {t('groups.allAlreadyHere')}
+        </p>
+      ) : (
+        <ul
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {candidates.map((p) => (
+            <InviteCandidateRow
+              key={p.id}
+              person={p}
+              isBusy={busyKey === `add:${p.id}`}
+              onAdd={() => onAdd(p)}
+            />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function InviteCandidateRow({
+  person,
+  isBusy,
+  onAdd,
+}: {
+  person: Person;
+  isBusy: boolean;
+  onAdd: () => void;
+}) {
+  const { t } = useI18n();
+  const initial = person.display_name.charAt(0).toUpperCase() || '?';
+  const headline = person.handle ?? person.display_name;
+
+  return (
+    <li
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--s-3)',
+        padding: 'var(--s-3) 0',
+        borderBottom: '1px solid var(--hair)',
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 28,
+          height: 28,
+          flexShrink: 0,
+          borderRadius: '50%',
+          background: 'var(--accent-wash)',
+          color: 'var(--ink)',
+          display: 'grid',
+          placeItems: 'center',
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontWeight: 500,
+          fontSize: 13,
+          boxShadow: 'inset 0 0 0 1px var(--hair-strong)',
+        }}
+      >
+        {initial}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--ink)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {headline}
+        </div>
+        {person.handle && person.handle !== person.display_name && (
+          <div className="mono-meta" style={{ color: 'var(--ink-3)', marginTop: 1 }}>
+            {person.display_name}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onAdd}
+        disabled={isBusy}
+        className="mono-meta"
+        style={{
+          background: 'transparent',
+          border: '1px solid var(--hair-strong)',
+          padding: '4px 10px',
+          borderRadius: 'var(--r-2)',
+          cursor: isBusy ? 'default' : 'pointer',
+          color: 'var(--accent)',
+        }}
+      >
+        {isBusy ? t('groups.addingMember') : t('groups.inviteAdd')}
+      </button>
+    </li>
   );
 }
 
