@@ -1,0 +1,78 @@
+/* Design tokens — Крыска
+ * Mirrors the editorial sketchbook design system from the Claude Design handoff.
+ * Colors, type, spacing, motion in one place.
+ */
+
+:root {
+  /* ── Surfaces ───────────────────────────────────────────── */
+  --paper:        #faf6ef;
+  --paper-edge:   #f2ecdc;
+  --paper-deep:   #f3ecde;
+
+  /* ── Ink (text) ────────────────────────────────────────── */
+  --ink:          #2b2620;
+  --ink-2:        #5a5147; /* secondary */
+  --ink-3:        #8a7e6d; /* tertiary, meta */
+
+  /* ── Hairlines ─────────────────────────────────────────── */
+  --hair:         rgba(43, 38, 32, 0.12);
+  --hair-strong:  rgba(43, 38, 32, 0.22);
+
+  /* ── Accents ───────────────────────────────────────────── */
+  /* Default accent is terracotta; can swap to sage/ink/plum at runtime
+     by overriding --accent-* on a parent element. */
+  --accent:       #b86844;
+  --accent-deep:  #934e30;
+  --accent-wash:  #ecccb8;
+  --accent-soft:  #f5e1d2;
+
+  /* ── Type ──────────────────────────────────────────────── */
+  --font-display: 'Newsreader', Georgia, serif;
+  --font-body:    'Public Sans', system-ui, sans-serif;
+  --font-hand:    'Caveat', cursive;
+
+  /* ── Spacing scale (4px base) ──────────────────────────── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* ── Radii ────────────────────────────────────────────── */
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 8px;
+  --r-pill: 999px;
+
+  /* ── Motion ───────────────────────────────────────────── */
+  --motion-fast: 120ms;
+  --motion:      220ms;
+
+  /* ── Layout ───────────────────────────────────────────── */
+  --sidebar-w:   260px;
+  --content-max: 1080px;
+  --toolbar-h:   56px;
+}
+
+/* Accent palette presets — apply to <html data-accent="sage"> etc. */
+:root[data-accent='sage'] {
+  --accent:      #6e8966;
+  --accent-deep: #52684c;
+  --accent-wash: #bdcdb3;
+  --accent-soft: #dde5d4;
+}
+:root[data-accent='plum'] {
+  --accent:      #8a5365;
+  --accent-deep: #6b3d4d;
+  --accent-wash: #d4b7c1;
+  --accent-soft: #e9d3da;
+}
+:root[data-accent='ink'] {
+  --accent:      #2b2620;
+  --accent-deep: #1a1612;
+  --accent-wash: #cbc4b8;
+  --accent-soft: #e3ddd0;
+}

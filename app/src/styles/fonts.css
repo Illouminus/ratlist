@@ -1,0 +1,8 @@
+/* Fonts — Newsreader (editorial italic display), Public Sans (UI/body),
+   Caveat (handwritten marginalia). Loaded from Google Fonts.
+   Cyrillic subset included for Russian UI. */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Public+Sans:wght@300;400;500;600;700&display=swap');
+
+/* Note: Newsreader has very limited Cyrillic coverage. For Russian display
+   text we'll fall back to a serif with good Cyrillic ('Lora', 'Source Serif Pro')
+   added in a follow-up if Newsreader's coverage proves insufficient. */
