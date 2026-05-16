@@ -18,6 +18,8 @@ import { GroupsScreen } from './screens/groups/GroupsScreen';
 import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
 import { PeopleScreen } from './screens/people/PeopleScreen';
 import { FriendListScreen } from './screens/people/FriendListScreen';
+import { SantaListScreen } from './screens/santa/SantaListScreen';
+import { SantaEventScreen } from './screens/santa/SantaEventScreen';
 
 export function AppRouter() {
   return (
@@ -68,6 +70,22 @@ export function AppRouter() {
           element={
             <RequireAuth>
               <FriendListScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/santa"
+          element={
+            <RequireAuth>
+              <SantaListScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/santa/:eventId"
+          element={
+            <RequireAuth>
+              <SantaEventScreen />
             </RequireAuth>
           }
         />

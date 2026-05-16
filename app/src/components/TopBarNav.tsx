@@ -12,6 +12,7 @@ const ITEMS = [
   { to: '/', key: 'nav.myList' },
   { to: '/groups', key: 'nav.groups' },
   { to: '/people', key: 'nav.people' },
+  { to: '/santa', key: 'nav.santa' },
 ] as const;
 
 export function TopBarNav() {
