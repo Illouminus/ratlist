@@ -109,22 +109,26 @@ export function useGroups(): UseGroupsResult {
     async (input: CreateGroupInput): Promise<{ group: MyGroup } | { error: string }> => {
       if (!user) return { error: 'not authenticated' };
 
-      const { data, error } = await supabase
-        .from('groups')
-        .insert({
-          name: input.name,
-          emoji: input.emoji ?? null,
-          description: input.description ?? null,
-          created_by: user.id,
-        })
-        .select('*')
-        .single();
+      // Atomic insert + admin bootstrap via SECURITY DEFINER RPC. The
+      // earlier `INSERT...RETURNING *` flow was broken by RLS ordering
+      // around AFTER triggers (see 20260516131836_create_group_rpc.sql);
+      // routing through the RPC also lets us return a typed `groups` row
+      // straight away.
+      const { data, error } = await supabase.rpc('create_group', {
+        _name: input.name,
+        // RPC args are typed `?: string` (not nullable), so pass undefined
+        // for "not set" rather than null — the function treats both the
+        // same (nullif + btrim) on the SQL side.
+        _emoji: input.emoji ?? undefined,
+        _description: input.description ?? undefined,
+      });
 
       if (error || !data) return { error: error?.message ?? 'unknown error' };
 
-      // The trigger added us as admin. Build the MyGroup shape locally
-      // so the caller can render immediately; the next refresh will
-      // confirm with the canonical row.
+      // The RPC returns the bare `groups` row. We synthesise the
+      // MyGroup shape locally (role=admin, member_count=1) so the
+      // caller can render immediately; the refresh below replaces it
+      // with the canonical aggregate from get_my_groups().
       const group: MyGroup = {
         id: data.id,
         name: data.name,
