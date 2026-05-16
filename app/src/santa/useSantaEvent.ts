@@ -2,11 +2,15 @@
  * `useSantaEvent(id)` — full detail for one Secret Santa event:
  *   - the event row itself
  *   - the list of participants with their basic profile fields
+ *   - exclusion pairs (organiser-only via RLS, but visible to all
+ *     participants once configured — the list is shown so people see
+ *     what constraints the draw will respect)
  *   - the caller's own assignment (if the draw ran)
  *   - all assignments (only if the event is revealed)
  *
  * Plus the mutations a participant or organiser might run:
  *   - join / leave (participant, before draw)
+ *   - addExclusion / removeExclusion (organiser, before draw)
  *   - runDraw (organiser, before draw)
  *   - reveal (organiser, after draw)
  *
@@ -53,6 +57,14 @@ export interface MyAssignment {
   receiver: Pick<Profile, 'id' | 'display_name' | 'handle' | 'avatar_url'>;
 }
 
+/** A "user_a should not draw user_b" rule, joined with both names. */
+export interface SantaExclusion {
+  user_a_id: string;
+  user_b_id: string;
+  user_a: Pick<Profile, 'id' | 'display_name' | 'handle'>;
+  user_b: Pick<Profile, 'id' | 'display_name' | 'handle'>;
+}
+
 export type SantaDetailQuery =
   | { status: 'loading'; data: null; error: null }
   | { status: 'anonymous'; data: null; error: null }
@@ -62,6 +74,7 @@ export type SantaDetailQuery =
       data: {
         event: SantaEvent;
         participants: SantaParticipant[];
+        exclusions: SantaExclusion[];
         myAssignment: MyAssignment | null;
         allAssignments: SantaAssignmentRow[];
       };
@@ -73,6 +86,16 @@ export interface UseSantaEventResult {
   refresh: () => Promise<void>;
   join: () => Promise<{ ok: true } | { error: string }>;
   leave: () => Promise<{ ok: true } | { error: string }>;
+  /**
+   * Add a "userA should not draw userB" rule. If `mutual` is true,
+   * the reverse rule is added too — the typical case for couples.
+   */
+  addExclusion: (
+    userA: string,
+    userB: string,
+    mutual: boolean,
+  ) => Promise<{ ok: true } | { error: string }>;
+  removeExclusion: (userA: string, userB: string) => Promise<{ ok: true } | { error: string }>;
   runDraw: () => Promise<{ ok: true } | { error: string }>;
   reveal: () => Promise<{ ok: true } | { error: string }>;
 }
@@ -92,9 +115,17 @@ interface RawAssignment {
   receiver: Pick<Profile, 'id' | 'display_name' | 'handle'> | null;
 }
 
+interface RawExclusion {
+  user_a: string;
+  user_b: string;
+  profile_a: Pick<Profile, 'id' | 'display_name' | 'handle'> | null;
+  profile_b: Pick<Profile, 'id' | 'display_name' | 'handle'> | null;
+}
+
 interface LoadedData {
   event: SantaEvent;
   participants: SantaParticipant[];
+  exclusions: SantaExclusion[];
   myAssignment: MyAssignment | null;
   allAssignments: SantaAssignmentRow[];
 }
@@ -112,16 +143,25 @@ async function loadEvent(
   if (eventErr) return { kind: 'error', error: eventErr.message };
   if (!eventRow) return { kind: 'error', error: 'event_not_found' };
 
-  // Three queries in parallel — RLS gates each. `allAssignments` is gated
+  // Four queries in parallel — RLS gates each. `allAssignments` is gated
   // server-side: rows are only returned where giver_id = caller OR the
   // event is revealed, so the same query is safe to run at any status.
-  const [participantsRes, myAssignRes, allAssignRes] = await Promise.all([
+  const [participantsRes, exclusionsRes, myAssignRes, allAssignRes] = await Promise.all([
     supabase
       .from('santa_participants')
       .select('user_id, joined_at, user:profiles!santa_participants_user_id_fkey(id, display_name, handle, avatar_url)')
       .eq('event_id', eventId)
       .order('joined_at')
       .returns<RawParticipant[]>(),
+    supabase
+      .from('santa_exclusions')
+      .select(
+        'user_a, user_b, ' +
+          'profile_a:profiles!santa_exclusions_user_a_fkey(id, display_name, handle), ' +
+          'profile_b:profiles!santa_exclusions_user_b_fkey(id, display_name, handle)',
+      )
+      .eq('event_id', eventId)
+      .returns<RawExclusion[]>(),
     supabase
       .from('santa_assignments')
       .select('giver_id, receiver_id, receiver:profiles!santa_assignments_receiver_id_fkey(id, display_name, handle, avatar_url)')
@@ -146,6 +186,7 @@ async function loadEvent(
   ]);
 
   if (participantsRes.error) return { kind: 'error', error: participantsRes.error.message };
+  if (exclusionsRes.error) return { kind: 'error', error: exclusionsRes.error.message };
   if (myAssignRes.error) return { kind: 'error', error: myAssignRes.error.message };
   if (allAssignRes.error) return { kind: 'error', error: allAssignRes.error.message };
 
@@ -174,11 +215,26 @@ async function loadEvent(
       receiver: a.receiver,
     }));
 
+  const exclusions: SantaExclusion[] = (exclusionsRes.data ?? [])
+    .filter(
+      (e): e is RawExclusion & {
+        profile_a: NonNullable<RawExclusion['profile_a']>;
+        profile_b: NonNullable<RawExclusion['profile_b']>;
+      } => e.profile_a !== null && e.profile_b !== null,
+    )
+    .map((e) => ({
+      user_a_id: e.user_a,
+      user_b_id: e.user_b,
+      user_a: e.profile_a,
+      user_b: e.profile_b,
+    }));
+
   return {
     kind: 'ok',
     data: {
       event: eventRow,
       participants,
+      exclusions,
       myAssignment,
       allAssignments,
     },
@@ -262,6 +318,49 @@ export function useSantaEvent(eventId: string | null): UseSantaEventResult {
     return { ok: true };
   }, [user, eventId, reload]);
 
+  const addExclusion = useCallback(
+    async (
+      userA: string,
+      userB: string,
+      mutual: boolean,
+    ): Promise<{ ok: true } | { error: string }> => {
+      if (!eventId) return { error: 'no event' };
+      if (userA === userB) return { error: 'same user' };
+      const rows = mutual
+        ? [
+            { event_id: eventId, user_a: userA, user_b: userB },
+            { event_id: eventId, user_a: userB, user_b: userA },
+          ]
+        : [{ event_id: eventId, user_a: userA, user_b: userB }];
+      // Upsert-style: ignore duplicate-key errors so re-adding a mutual
+      // pair where one direction already exists doesn't fail the whole call.
+      const { error } = await supabase.from('santa_exclusions').upsert(rows, {
+        onConflict: 'event_id,user_a,user_b',
+        ignoreDuplicates: true,
+      });
+      if (error) return { error: error.message };
+      await reload();
+      return { ok: true };
+    },
+    [eventId, reload],
+  );
+
+  const removeExclusion = useCallback(
+    async (userA: string, userB: string): Promise<{ ok: true } | { error: string }> => {
+      if (!eventId) return { error: 'no event' };
+      const { error } = await supabase
+        .from('santa_exclusions')
+        .delete()
+        .eq('event_id', eventId)
+        .eq('user_a', userA)
+        .eq('user_b', userB);
+      if (error) return { error: error.message };
+      await reload();
+      return { ok: true };
+    },
+    [eventId, reload],
+  );
+
   const runDraw = useCallback(async (): Promise<{ ok: true } | { error: string }> => {
     if (!eventId) return { error: 'no event' };
     const { error } = await supabase.rpc('run_santa_draw', { _event_id: eventId });
@@ -278,5 +377,14 @@ export function useSantaEvent(eventId: string | null): UseSantaEventResult {
     return { ok: true };
   }, [eventId, reload]);
 
-  return { query, refresh: reload, join, leave, runDraw, reveal };
+  return {
+    query,
+    refresh: reload,
+    join,
+    leave,
+    addExclusion,
+    removeExclusion,
+    runDraw,
+    reveal,
+  };
 }

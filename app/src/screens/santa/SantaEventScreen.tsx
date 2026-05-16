@@ -21,6 +21,7 @@ import {
   type MyAssignment,
   type SantaAssignmentRow,
   type SantaEvent,
+  type SantaExclusion,
   type SantaParticipant,
 } from '../../santa/useSantaEvent';
 import { PaperLayout } from '../../components/PaperLayout';
@@ -33,7 +34,8 @@ export function SantaEventScreen() {
   const { t } = useI18n();
   const { eventId } = useParams<{ eventId: string }>();
   const { user: me } = useAuth();
-  const { query, join, leave, runDraw, reveal } = useSantaEvent(eventId ?? null);
+  const { query, join, leave, addExclusion, removeExclusion, runDraw, reveal } =
+    useSantaEvent(eventId ?? null);
 
   if (query.status === 'loading') {
     return (
@@ -53,7 +55,7 @@ export function SantaEventScreen() {
   }
   if (query.status === 'anonymous') return null;
 
-  const { event, participants, myAssignment, allAssignments } = query.data;
+  const { event, participants, exclusions, myAssignment, allAssignments } = query.data;
   const isOrganiser = me?.id === event.created_by;
   const isParticipant = participants.some((p) => p.user_id === me?.id);
 
@@ -72,6 +74,16 @@ export function SantaEventScreen() {
         onJoin={join}
         onLeave={leave}
       />
+
+      {event.status === 'collecting' && (
+        <ExclusionsSection
+          exclusions={exclusions}
+          participants={participants}
+          isOrganiser={isOrganiser}
+          onAdd={addExclusion}
+          onRemove={removeExclusion}
+        />
+      )}
 
       {isOrganiser && event.status === 'collecting' && (
         <OrganiserDrawSection
@@ -328,6 +340,249 @@ function ParticipantChip({
         {isMe ? t('friend.you') : participant.user.display_name}
       </span>
     </li>
+  );
+}
+
+// ─────────────────────────── exclusions ───────────────────────────
+
+interface ExclusionsSectionProps {
+  exclusions: SantaExclusion[];
+  participants: SantaParticipant[];
+  isOrganiser: boolean;
+  onAdd: (
+    userA: string,
+    userB: string,
+    mutual: boolean,
+  ) => Promise<{ ok: true } | { error: string }>;
+  onRemove: (userA: string, userB: string) => Promise<{ ok: true } | { error: string }>;
+}
+
+/**
+ * Lists existing "user_a should not draw user_b" rules and lets the
+ * organiser add new ones. Non-organisers can see the list (so they
+ * know what the draw will respect) but can't edit it.
+ */
+function ExclusionsSection({
+  exclusions,
+  participants,
+  isOrganiser,
+  onAdd,
+  onRemove,
+}: ExclusionsSectionProps) {
+  const { t } = useI18n();
+  const [userA, setUserA] = useState<string>('');
+  const [userB, setUserB] = useState<string>('');
+  const [mutual, setMutual] = useState<boolean>(true);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Hide the whole section if there's nothing to show *and* no one can
+  // add anything — keeps the page tidy for non-organisers in groups
+  // without exclusions.
+  if (!isOrganiser && exclusions.length === 0) return null;
+
+  async function handleAdd(): Promise<void> {
+    setError(null);
+    if (!userA || !userB || userA === userB) {
+      setError(t('santa.exclusionPickPair'));
+      return;
+    }
+    setAdding(true);
+    const result = await onAdd(userA, userB, mutual);
+    setAdding(false);
+    if ('error' in result) {
+      setError(errorMessage(t, result.error));
+      return;
+    }
+    setUserA('');
+    setUserB('');
+  }
+
+  return (
+    <section style={{ marginBottom: 'var(--s-6)' }}>
+      <div
+        className="mono-meta"
+        style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-3)' }}
+      >
+        {t('santa.exclusionsTitle')}
+      </div>
+      {isOrganiser && (
+        <p
+          style={{
+            fontSize: 13,
+            color: 'var(--ink-3)',
+            marginBottom: 'var(--s-3)',
+            maxWidth: 560,
+            lineHeight: 1.5,
+          }}
+        >
+          {t('santa.exclusionsSub')}
+        </p>
+      )}
+
+      {exclusions.length === 0 ? (
+        <p style={{ color: 'var(--ink-3)', fontSize: 13, marginBottom: 'var(--s-3)' }}>
+          {t('santa.exclusionEmpty')}
+        </p>
+      ) : (
+        <ul
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: '0 0 var(--s-4)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--s-2)',
+          }}
+        >
+          {exclusions.map((e) => (
+            <li
+              key={`${e.user_a_id}-${e.user_b_id}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--s-3)',
+                padding: 'var(--s-2) 0',
+                borderBottom: '1px solid var(--hair)',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span style={{ fontSize: 14, color: 'var(--ink)' }}>
+                <strong>{e.user_a.display_name}</strong>{' '}
+                <span style={{ color: 'var(--accent)' }}>{t('santa.exclusionGives')}</span>{' '}
+                <strong>{e.user_b.display_name}</strong>
+              </span>
+              {isOrganiser && (
+                <button
+                  type="button"
+                  onClick={() => void onRemove(e.user_a_id, e.user_b_id)}
+                  className="mono-meta"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    color: 'var(--accent-deep)',
+                  }}
+                >
+                  {t('santa.exclusionRemove')}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {isOrganiser && (
+        <div
+          style={{
+            display: 'flex',
+            gap: 'var(--s-3)',
+            alignItems: 'flex-end',
+            flexWrap: 'wrap',
+            background: '#fffdf6',
+            padding: 'var(--s-3) var(--s-4)',
+            border: '1px solid var(--hair)',
+          }}
+        >
+          <ExclusionUserSelect
+            label={t('santa.exclusionFromLabel')}
+            participants={participants}
+            value={userA}
+            onChange={setUserA}
+          />
+          <ExclusionUserSelect
+            label={t('santa.exclusionToLabel')}
+            participants={participants}
+            value={userB}
+            onChange={setUserB}
+            disabledId={userA}
+          />
+          <label
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 13,
+              color: 'var(--ink-2)',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={mutual}
+              onChange={(e) => setMutual(e.target.checked)}
+            />
+            {t('santa.exclusionMutualLabel')}
+          </label>
+          <Button
+            variant="primary"
+            onClick={() => void handleAdd()}
+            disabled={adding || !userA || !userB || userA === userB}
+          >
+            {adding ? t('santa.exclusionAdding') : t('santa.exclusionAdd')}
+          </Button>
+          {error && (
+            <p style={{ width: '100%', color: 'var(--accent-deep)', fontSize: 13, margin: 0 }}>
+              {error}
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ExclusionUserSelect({
+  label,
+  participants,
+  value,
+  onChange,
+  disabledId,
+}: {
+  label: string;
+  participants: SantaParticipant[];
+  value: string;
+  onChange: (next: string) => void;
+  disabledId?: string;
+}) {
+  const { t } = useI18n();
+  return (
+    <label
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        fontSize: 13,
+        minWidth: 140,
+      }}
+    >
+      <span className="mono-meta" style={{ color: 'var(--ink-3)' }}>
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          padding: '6px 0',
+          background: 'transparent',
+          border: 'none',
+          borderBottom: '1px solid var(--hair-strong)',
+          fontFamily: 'var(--font-body)',
+          fontSize: 14,
+          color: 'var(--ink)',
+          outline: 'none',
+        }}
+      >
+        <option value="">{t('santa.exclusionPickPair')}</option>
+        {participants.map((p) => (
+          <option key={p.user_id} value={p.user_id} disabled={p.user_id === disabledId}>
+            {p.user.display_name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
