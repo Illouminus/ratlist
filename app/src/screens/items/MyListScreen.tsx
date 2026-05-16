@@ -19,6 +19,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { useProfile } from '../../auth/useProfile';
 import { useMyItems } from '../../items/useMyItems';
 import { useGroups } from '../../groups/useGroups';
+import { useIsMobile } from '../../lib/useMediaQuery';
 import type { Occasion } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
@@ -29,12 +30,6 @@ import { ItemFilters, type ViewMode } from './ItemFilters';
 import { ItemDrawer, type ItemDrawerMode } from './ItemDrawer';
 import type { CreateItemInput, MyItem } from '../../items/useMyItems';
 import { SittingRat } from '../../components/rats';
-
-/** Default to list on phone-ish viewports, grid on desktop. */
-function defaultView(): ViewMode {
-  if (typeof window === 'undefined') return 'grid';
-  return window.matchMedia('(max-width: 767px)').matches ? 'list' : 'grid';
-}
 
 /** Was the page opened with `?add=1`? Used to auto-open the drawer. */
 function initialDrawerFromUrl(): ItemDrawerMode {
@@ -51,7 +46,11 @@ export function MyListScreen() {
   const { query: itemsQ, createItem, updateItem, deleteItem } = useMyItems();
   const { query: groupsQ } = useGroups();
 
-  const [view, setView] = useState<ViewMode>(defaultView);
+  const isMobile = useIsMobile();
+  const [view, setView] = useState<ViewMode>('grid');
+  // On mobile the toggle is hidden and we always render the compact
+  // list — the wide grid cards don't fit. Desktop users can still pick.
+  const effectiveView: ViewMode = isMobile ? 'list' : view;
   const [occasion, setOccasion] = useState<Occasion | null>(null);
   const [drawer, setDrawer] = useState<ItemDrawerMode>(initialDrawerFromUrl);
 
@@ -115,7 +114,7 @@ export function MyListScreen() {
 
       {itemsQ.status === 'ready' && totalCount > 0 && (
         <>
-          {view === 'grid' ? (
+          {effectiveView === 'grid' ? (
             <ItemGrid
               items={filteredItems}
               onEdit={handleEdit}
@@ -253,7 +252,9 @@ function ActionsRow({
             onView={onView}
           />
         </div>
-        <Button variant="primary" onClick={onAdd}>
+        {/* Add button is desktop-only; on mobile the FAB in the bottom
+            tab bar covers the same intent (it routes here with ?add=1). */}
+        <Button variant="primary" onClick={onAdd} className="hide-on-mobile">
           {t('list.addItem')}
         </Button>
       </div>

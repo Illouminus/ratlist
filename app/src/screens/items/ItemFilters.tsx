@@ -80,8 +80,10 @@ export function ItemFilters({
         </div>
       </div>
 
-      {/* right: view toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {/* right: view toggle — desktop only. On mobile we always render
+          the compact list (the grid cards don't fit), so the choice is
+          meaningless and we hide it to reduce noise. */}
+      <div className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <ViewToggleButton
           active={view === 'grid'}
           onClick={() => onView('grid')}

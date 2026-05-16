@@ -69,6 +69,16 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
+/* ── Responsive visibility utilities ────────────────────── */
+/* Mirror the --bp-tablet breakpoint used elsewhere. Use sparingly —
+   prefer responsive design tokens where possible. */
+@media (max-width: 767px) {
+  .hide-on-mobile { display: none !important; }
+}
+@media (min-width: 768px) {
+  .hide-on-desktop { display: none !important; }
+}
+
 /* ── App chrome (sidebar + bottom-tab-bar) ──────────────── */
 
 .app-layout {
