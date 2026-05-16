@@ -526,6 +526,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_group: {
+        Args: { _description?: string; _emoji?: string; _name: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          description: string | null
+          emoji: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "groups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_my_groups: {
         Args: never
         Returns: {
@@ -565,6 +583,9 @@ export type Database = {
           display_name: string
           handle: string
           id: string
+          item_count: number
+          latest_at: string
+          preview_titles: string[]
           shared_group_count: number
         }[]
       }
