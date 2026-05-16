@@ -7,30 +7,89 @@
  *   2. pre-onboarding auth required, but no app chrome — onboarding
  *   3. full          auth + onboarding done, wrapped in <AppLayout>
  *                    (sidebar on desktop, bottom tab bar on mobile)
+ *
+ * Code-splitting: every authenticated route is loaded via React.lazy
+ * so the initial JS bundle stays small. The pre-auth screens
+ * (LoginScreen, AuthCallback, OnboardingScreen, InviteAcceptScreen)
+ * stay eager because they're tiny and on the critical path — the user
+ * lands on `/login` first and we don't want a spinner there.
  */
-import { type ReactNode } from 'react';
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from './auth/RequireAuth';
 import { AppLayout } from './components/AppLayout';
 import { LoginScreen } from './screens/LoginScreen';
 import { AuthCallbackScreen } from './screens/AuthCallbackScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
-import { MyListScreen } from './screens/items/MyListScreen';
-import { ItemDetailScreen } from './screens/items/ItemDetailScreen';
-import { AddItemScreen } from './screens/items/AddItemScreen';
-import { EditItemScreen } from './screens/items/EditItemScreen';
-import { GroupsScreen } from './screens/groups/GroupsScreen';
 import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
-import { PeopleScreen } from './screens/people/PeopleScreen';
-import { FriendListScreen } from './screens/people/FriendListScreen';
-import { SantaListScreen } from './screens/santa/SantaListScreen';
-import { SantaEventScreen } from './screens/santa/SantaEventScreen';
 
-/** Wrap a screen in the full auth-required + AppLayout chrome. */
+/**
+ * Helper to lazy-load a module whose export is named rather than
+ * default. React.lazy expects `{ default: Component }`; our screens
+ * are named exports so each loader re-wraps the module shape.
+ *
+ * Inlined here rather than imported from a util — it's a one-liner
+ * and used only at the route declaration site.
+ */
+function lazyNamed<T extends ComponentType<object>>(
+  loader: () => Promise<Record<string, ComponentType<object>>>,
+  exportName: string,
+) {
+  return lazy(async () => {
+    const m = await loader();
+    return { default: m[exportName] as T };
+  });
+}
+
+// One lazy import per route — Vite/rolldown creates a separate chunk
+// per `import()` call, so this directly controls the chunk graph.
+const MyListScreen = lazyNamed(() => import('./screens/items/MyListScreen'), 'MyListScreen');
+const ItemDetailScreen = lazyNamed(
+  () => import('./screens/items/ItemDetailScreen'),
+  'ItemDetailScreen',
+);
+const AddItemScreen = lazyNamed(() => import('./screens/items/AddItemScreen'), 'AddItemScreen');
+const EditItemScreen = lazyNamed(
+  () => import('./screens/items/EditItemScreen'),
+  'EditItemScreen',
+);
+const GroupsScreen = lazyNamed(() => import('./screens/groups/GroupsScreen'), 'GroupsScreen');
+const PeopleScreen = lazyNamed(() => import('./screens/people/PeopleScreen'), 'PeopleScreen');
+const FriendListScreen = lazyNamed(
+  () => import('./screens/people/FriendListScreen'),
+  'FriendListScreen',
+);
+const SantaListScreen = lazyNamed(
+  () => import('./screens/santa/SantaListScreen'),
+  'SantaListScreen',
+);
+const SantaEventScreen = lazyNamed(
+  () => import('./screens/santa/SantaEventScreen'),
+  'SantaEventScreen',
+);
+
+/** Render a small "…" while a lazy chunk is loading. Sits inside the
+ *  AppLayout so the surrounding chrome doesn't blink. */
+function ChunkFallback() {
+  return (
+    <div
+      className="mono-meta"
+      style={{ color: 'var(--ink-3)', padding: 'var(--page-pad-y) var(--page-pad-x)' }}
+    >
+      …
+    </div>
+  );
+}
+
+/** Wrap a screen in the full auth-required + AppLayout chrome.
+ *  Suspense lives inside the layout so the sidebar/bottom-bar are
+ *  visible during the chunk fetch. */
 function appRoute(screen: ReactNode): ReactNode {
   return (
     <RequireAuth>
-      <AppLayout>{screen}</AppLayout>
+      <AppLayout>
+        <Suspense fallback={<ChunkFallback />}>{screen}</Suspense>
+      </AppLayout>
     </RequireAuth>
   );
 }
