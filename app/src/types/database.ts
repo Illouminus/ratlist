@@ -548,6 +548,8 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_my_account: { Args: never; Returns: undefined }
+      export_my_data: { Args: never; Returns: Json }
       get_my_groups: {
         Args: never
         Returns: {
