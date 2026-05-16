@@ -246,14 +246,12 @@ export type Database = {
         Row: {
           cover_url: string | null
           created_at: string
-          currency: string
           id: string
           maker: string | null
           note: string | null
           occasion: string
           owner_id: string
-          price_max: number | null
-          price_min: number | null
+          price_text: string | null
           priority: number
           status: string
           title: string
@@ -263,14 +261,12 @@ export type Database = {
         Insert: {
           cover_url?: string | null
           created_at?: string
-          currency?: string
           id?: string
           maker?: string | null
           note?: string | null
           occasion?: string
           owner_id: string
-          price_max?: number | null
-          price_min?: number | null
+          price_text?: string | null
           priority?: number
           status?: string
           title: string
@@ -280,14 +276,12 @@ export type Database = {
         Update: {
           cover_url?: string | null
           created_at?: string
-          currency?: string
           id?: string
           maker?: string | null
           note?: string | null
           occasion?: string
           owner_id?: string
-          price_max?: number | null
-          price_min?: number | null
+          price_text?: string | null
           priority?: number
           status?: string
           title?: string

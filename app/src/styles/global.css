@@ -58,3 +58,13 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .fade-up { animation: fadeUp var(--motion) ease-out both; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}

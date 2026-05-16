@@ -13,7 +13,7 @@ import { RequireAuth } from './auth/RequireAuth';
 import { LoginScreen } from './screens/LoginScreen';
 import { AuthCallbackScreen } from './screens/AuthCallbackScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
-import { HomeScreen } from './screens/HomeScreen';
+import { MyListScreen } from './screens/items/MyListScreen';
 import { GroupsScreen } from './screens/groups/GroupsScreen';
 import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
 
@@ -41,7 +41,7 @@ export function AppRouter() {
           path="/"
           element={
             <RequireAuth>
-              <HomeScreen />
+              <MyListScreen />
             </RequireAuth>
           }
         />

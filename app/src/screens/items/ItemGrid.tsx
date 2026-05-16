@@ -1,0 +1,27 @@
+/**
+ * `<ItemGrid>` — 3-column grid of `<ItemCard>`s with generous gutters.
+ * On narrow viewports the grid collapses to 2 columns and then 1.
+ */
+import type { MyItem } from '../../items/useMyItems';
+import { ItemCard } from './ItemCard';
+
+interface ItemGridProps {
+  items: MyItem[];
+  onDelete: (id: string) => void;
+}
+
+export function ItemGrid({ items, onDelete }: ItemGridProps) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+        gap: '40px 32px',
+      }}
+    >
+      {items.map((item, i) => (
+        <ItemCard key={item.id} item={item} index={i} onDelete={() => onDelete(item.id)} />
+      ))}
+    </div>
+  );
+}
