@@ -92,7 +92,7 @@ function Header({ displayName }: { displayName: string }) {
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-4)', flexWrap: 'wrap' }}>
         <h2
           className="display-italic"
-          style={{ fontSize: 44, margin: 0, lineHeight: 1.05, letterSpacing: -1.4 }}
+          style={{ fontSize: 'var(--display-l)', margin: 0, lineHeight: 1.05, letterSpacing: -1.4 }}
         >
           {displayName}
         </h2>

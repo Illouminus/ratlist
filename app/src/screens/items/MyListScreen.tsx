@@ -149,7 +149,7 @@ function Header() {
         <h2
           className="display-italic"
           style={{
-            fontSize: 48,
+            fontSize: 'var(--display-l)',
             margin: 0,
             lineHeight: 1.05,
             letterSpacing: -1.5,
@@ -257,7 +257,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       <div
         className="display-italic"
         style={{
-          fontSize: 28,
+          fontSize: 'var(--display-s)',
           color: 'var(--ink)',
           lineHeight: 1.2,
           maxWidth: 480,

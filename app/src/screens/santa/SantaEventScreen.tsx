@@ -122,7 +122,7 @@ function Header({ event }: { event: SantaEvent }) {
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-4)', flexWrap: 'wrap' }}>
         <h2
           className="display-italic"
-          style={{ fontSize: 44, margin: 0, lineHeight: 1.05, letterSpacing: -1.4 }}
+          style={{ fontSize: 'var(--display-l)', margin: 0, lineHeight: 1.05, letterSpacing: -1.4 }}
         >
           {event.name}
         </h2>
@@ -458,7 +458,7 @@ function AssignmentSection({
         </div>
         <div
           className="display-italic"
-          style={{ fontSize: 28, color: 'var(--ink)', lineHeight: 1.1 }}
+          style={{ fontSize: 'var(--display-s)', color: 'var(--ink)', lineHeight: 1.1 }}
         >
           {assignment.receiver.display_name}
         </div>

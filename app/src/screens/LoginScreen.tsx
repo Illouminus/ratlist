@@ -82,7 +82,7 @@ export function LoginScreen() {
         </div>
         <h1
           className="display-italic"
-          style={{ fontSize: 44, margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
+          style={{ fontSize: 'var(--display-l)', margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
         >
           {t('auth.pageTitle')}
         </h1>
@@ -131,7 +131,7 @@ function SentNotice({ email }: { email: string }) {
     <div className="fade-up">
       <p
         className="display-italic"
-        style={{ fontSize: 24, margin: 0, lineHeight: 1.3, color: 'var(--ink)' }}
+        style={{ fontSize: 'var(--display-s)', margin: 0, lineHeight: 1.3, color: 'var(--ink)' }}
       >
         {t('auth.magicSent')}
       </p>

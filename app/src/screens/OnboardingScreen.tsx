@@ -132,7 +132,7 @@ function OnboardingForm({ profile, onComplete }: OnboardingFormProps) {
         </div>
         <h1
           className="display-italic"
-          style={{ fontSize: 40, margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
+          style={{ fontSize: 'var(--display-m)', margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
         >
           {t('onboarding.title')}
         </h1>

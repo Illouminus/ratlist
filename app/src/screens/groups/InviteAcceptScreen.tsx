@@ -59,7 +59,7 @@ export function InviteAcceptScreen() {
         </div>
         <h1
           className="display-italic"
-          style={{ fontSize: 36, margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
+          style={{ fontSize: 'var(--display-m)', margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
         >
           {t('invite.title')}
         </h1>
@@ -86,7 +86,7 @@ export function InviteAcceptScreen() {
         <div>
           <p
             className="display-italic"
-            style={{ fontSize: 22, color: 'var(--ink)', marginBottom: 'var(--s-4)' }}
+            style={{ fontSize: 'var(--display-xs)', color: 'var(--ink)', marginBottom: 'var(--s-4)' }}
           >
             {t('invite.success', { group: '' })}
           </p>

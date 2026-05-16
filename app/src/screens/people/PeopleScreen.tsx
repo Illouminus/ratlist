@@ -22,7 +22,7 @@ export function PeopleScreen() {
         </div>
         <h2
           className="display-italic"
-          style={{ fontSize: 40, margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
+          style={{ fontSize: 'var(--display-m)', margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
         >
           {t('people.title')}
         </h2>

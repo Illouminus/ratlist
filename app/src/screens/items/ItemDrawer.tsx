@@ -230,7 +230,7 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
       <div style={{ marginBottom: 'var(--s-5)' }}>
         <h2
           className="display-italic"
-          style={{ margin: 0, fontSize: 32, lineHeight: 1.1, letterSpacing: -0.8 }}
+          style={{ margin: 0, fontSize: 'var(--display-m)', lineHeight: 1.1, letterSpacing: -0.8 }}
         >
           {headlineTitle}
         </h2>
