@@ -14,22 +14,20 @@ import { I18nContext, type I18nContextValue, type Lang } from './i18n-context';
 const dictionaries: Record<Lang, Translation> = { ru, en };
 const STORAGE_KEY = 'kryska.lang';
 
-/** Walks a dot-path through a dictionary and returns the leaf string if any. */
+/**
+ * Walks a dot-path through a (possibly nested) dictionary, returning the
+ * leaf string at the end or `undefined` if any segment is missing or the
+ * leaf isn't a string. Supports arbitrary nesting depth.
+ */
 function lookup(dict: Translation, path: string[]): string | undefined {
-  if (path.length < 2) return undefined;
-  const sectionKey = path[0];
-  if (sectionKey === undefined) return undefined;
-  const section = dict[sectionKey];
-  if (!section) return undefined;
-  let cur: string | undefined;
-  for (let i = 1; i < path.length; i++) {
-    const key = path[i];
-    if (key === undefined) return undefined;
-    const value = section[key];
-    if (value === undefined) return undefined;
-    cur = value;
+  let cur: string | Translation = dict;
+  for (const segment of path) {
+    if (typeof cur === 'string') return undefined;
+    const next: string | Translation | undefined = cur[segment];
+    if (next === undefined) return undefined;
+    cur = next;
   }
-  return cur;
+  return typeof cur === 'string' ? cur : undefined;
 }
 
 /** Substitutes `{name}` placeholders with values from `vars`. */

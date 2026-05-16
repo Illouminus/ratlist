@@ -22,7 +22,7 @@ import type { Occasion } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
 import { TopBar } from '../../components/TopBar';
 import { TopBarNav } from '../../components/TopBarNav';
-import { PhotoPlaceholder } from '../../components/PhotoPlaceholder';
+import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { Button } from '../../components/Button';
 
@@ -186,7 +186,7 @@ function FriendItemRow({ item, myUserId, onClaim, onRelease }: FriendItemRowProp
       }}
     >
       <div style={{ width: 64, height: 48 }}>
-        <PhotoPlaceholder height={48} />
+        <ItemPhoto coverUrl={item.cover_url} height={48} alt={item.title} />
       </div>
 
       <div>

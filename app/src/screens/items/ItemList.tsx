@@ -4,7 +4,7 @@
  */
 import { useI18n } from '../../i18n/useI18n';
 import type { MyItem } from '../../items/useMyItems';
-import { PhotoPlaceholder } from '../../components/PhotoPlaceholder';
+import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import type { Occasion } from '../../lib/db';
 
@@ -55,7 +55,7 @@ export function ItemList({ items, onEdit, onDelete }: ItemListProps) {
           }}
         >
           <div style={{ width: 54, height: 40 }}>
-            <PhotoPlaceholder height={40} />
+            <ItemPhoto coverUrl={item.cover_url} height={40} alt={item.title} />
           </div>
           <div>
             <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>{item.title}</div>

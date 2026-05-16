@@ -51,6 +51,7 @@ export const en: Translation = {
     editTitle: 'tweak this thing',
     editSub: "update what's stale",
     saveChanges: 'save changes',
+    photoLabel: 'cover photo',
     thing: 'the thing itself',
     thingPh: 'e.g. falcon enamel mug',
     makerLabel: 'maker / where',
@@ -179,6 +180,16 @@ export const en: Translation = {
     used: 'this invite has already been used.',
     alreadyMember: "you're already in this circle",
     genericError: "couldn't join. try again?",
+  },
+  photo: {
+    add: '+ upload',
+    replace: 'replace',
+    remove: 'remove',
+    uploading: 'uploading…',
+    error: {
+      unsupported_type: 'png, jpg or webp only',
+      file_too_large: 'file is too big (max 8 MB)',
+    },
   },
   common: {
     cancel: 'cancel',

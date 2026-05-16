@@ -1,13 +1,12 @@
-/* Russian — source of truth dictionary. All other languages conform to this shape. */
+/* Russian — source of truth dictionary. All other languages conform to this shape.
+ * The shape is recursive: keys can hold either a string leaf or a nested
+ * sub-dictionary, so groups like `photo.error.fileTooLarge` are valid. */
 
-interface Section {
-  [key: string]: string;
-}
-interface Dict {
-  [section: string]: Section;
+export interface Translation {
+  [key: string]: string | Translation;
 }
 
-export const ru: Dict = {
+export const ru: Translation = {
   app: {
     name: 'Крысиные желания',
     nameShort: 'крысиное',
@@ -57,6 +56,7 @@ export const ru: Dict = {
     editTitle: 'поправить штучку',
     editSub: 'обнови что нужно',
     saveChanges: 'сохранить',
+    photoLabel: 'картинка',
     thing: 'сама штука',
     thingPh: 'например, эмалированная кружка',
     makerLabel: 'марка / где',
@@ -186,6 +186,16 @@ export const ru: Dict = {
     alreadyMember: 'ты уже в этом кругу',
     genericError: 'не получилось присоединиться. попробуй ещё раз?',
   },
+  photo: {
+    add: '+ загрузить',
+    replace: 'заменить',
+    remove: 'удалить',
+    uploading: 'грузим…',
+    error: {
+      unsupported_type: 'нужен png, jpg или webp',
+      file_too_large: 'слишком тяжёлая (максимум 8 МБ)',
+    },
+  },
   common: {
     cancel: 'отмена',
     save: 'сохранить',
@@ -196,5 +206,3 @@ export const ru: Dict = {
     no: 'нет',
   },
 };
-
-export type Translation = Dict;

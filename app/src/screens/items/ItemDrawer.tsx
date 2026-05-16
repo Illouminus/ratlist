@@ -22,6 +22,7 @@ import { Drawer } from '../../components/Drawer';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
+import { PhotoField } from './PhotoField';
 
 /** Discriminated mode prop — keeps the create vs edit split explicit. */
 export type ItemDrawerMode =
@@ -77,6 +78,7 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
     (initial?.occasion as Occasion | undefined) ?? 'anytime',
   );
   const [note, setNote] = useState<string>(initial?.note ?? '');
+  const [coverUrl, setCoverUrl] = useState<string | null>(initial?.cover_url ?? null);
   // In create mode: default-on for all groups. In edit mode: use the
   // item's current publication set.
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(
@@ -109,6 +111,7 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
       price_text: priceText.trim() || null,
       occasion,
       note: note.trim() || null,
+      cover_url: coverUrl,
       group_ids: Array.from(selectedGroups),
     };
 
@@ -171,6 +174,8 @@ function ItemForm({ mode, groups, onSubmit, onClose }: ItemFormProps) {
       </div>
 
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-4)' }} />
+
+      <PhotoField value={coverUrl} onChange={setCoverUrl} />
 
       <Field label={t('add.thing')}>
         <SketchInput

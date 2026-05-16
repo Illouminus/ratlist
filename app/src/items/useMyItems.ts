@@ -33,6 +33,8 @@ export interface CreateItemInput {
   occasion: Occasion;
   note?: string | null;
   priority?: 1 | 2 | 3;
+  /** Public URL of the uploaded cover image, or null for the placeholder. */
+  cover_url?: string | null;
   /** IDs of groups to publish the item to. Empty = private to owner. */
   group_ids: string[];
 }
@@ -132,6 +134,7 @@ export function useMyItems(): UseMyItemsResult {
           occasion: input.occasion,
           note: input.note ?? null,
           priority: input.priority ?? 2,
+          cover_url: input.cover_url ?? null,
         })
         .select('*')
         .single();
@@ -176,6 +179,7 @@ export function useMyItems(): UseMyItemsResult {
           occasion: input.occasion,
           note: input.note ?? null,
           priority: input.priority ?? 2,
+          cover_url: input.cover_url ?? null,
         })
         .eq('id', id);
 

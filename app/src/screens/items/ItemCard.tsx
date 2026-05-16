@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import type { MyItem } from '../../items/useMyItems';
-import { PhotoPlaceholder } from '../../components/PhotoPlaceholder';
+import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import type { Occasion } from '../../lib/db';
 
@@ -29,7 +29,7 @@ export function ItemCard({ item, index, onEdit, onDelete }: ItemCardProps) {
       style={{ position: 'relative' }}
     >
       <div style={{ position: 'relative' }}>
-        <PhotoPlaceholder aspectRatio="4 / 3" />
+        <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
         {/* index badge top-left */}
         <div
           style={{
