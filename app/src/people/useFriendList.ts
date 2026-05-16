@@ -176,6 +176,47 @@ export function useFriendList(targetUserId: string | null): UseFriendListResult 
     setFetched(state);
   }, [targetUserId]);
 
+  // Realtime: items owned by the friend (so a new item or edit shows
+  // up live), plus all claim changes (RLS already hides the friend's
+  // own view; for the caller it surfaces appearance/release in real
+  // time). We refresh on any event rather than reconciling locally —
+  // simpler, and the join shape is tricky to update piecewise.
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !user || !targetUserId) return undefined;
+    const friendId = targetUserId;
+
+    const channel = supabase
+      .channel(`friend-list:${friendId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'items',
+          filter: `owner_id=eq.${friendId}`,
+        },
+        () => {
+          void refresh();
+        },
+      )
+      .on(
+        'postgres_changes',
+        // We can't filter `claims` by friend's items easily (the
+        // filter clause only supports a single column). Accept all
+        // claim events; we won't get many. Since RLS gates which
+        // claim rows reach this client at all, the load is small.
+        { event: '*', schema: 'public', table: 'claims' },
+        () => {
+          void refresh();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [authStatus, user, targetUserId, refresh]);
+
   const claim = useCallback(
     async (itemId: string): Promise<{ ok: true } | { error: string }> => {
       if (!user || !targetUserId) return { error: 'not authenticated' };

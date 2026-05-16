@@ -142,5 +142,35 @@ export function useItem(itemId: string | null): UseItemResult {
     setFetched(state);
   }, [user, itemId]);
 
+  // Realtime — react to changes on this specific item (own or friend's),
+  // plus its group publication (item_groups). Detail page benefits the
+  // most: if the owner edits while a viewer has it open, the viewer's
+  // page reflects the change without a manual reload.
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !user || !itemId) return undefined;
+
+    const channel = supabase
+      .channel(`item:${itemId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items', filter: `id=eq.${itemId}` },
+        () => {
+          void refresh();
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'item_groups', filter: `item_id=eq.${itemId}` },
+        () => {
+          void refresh();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [authStatus, user, itemId, refresh]);
+
   return { query, refresh };
 }

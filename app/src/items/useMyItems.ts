@@ -119,6 +119,49 @@ export function useMyItems(): UseMyItemsResult {
     setFetched(state);
   }, [user]);
 
+  // Realtime: subscribe to any change to the caller's own items, and
+  // any change to item_groups (publishing / un-publishing). Each event
+  // is debounced into a single refresh — cheaper than reconciling row
+  // patches client-side, and the round-trip is small (<1KB per item).
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !user) return undefined;
+    const userId = user.id;
+
+    const channel = supabase
+      .channel(`my-items:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'items',
+          // RLS on items.SELECT already restricts what reaches us, but
+          // narrowing here saves traffic for items we wouldn't display
+          // on this screen anyway (the My List is owner-only).
+          filter: `owner_id=eq.${userId}`,
+        },
+        () => {
+          void refresh();
+        },
+      )
+      .on(
+        'postgres_changes',
+        // item_groups changes are visible whenever the caller can see
+        // the items row — there's no easy server-side filter for "rows
+        // owned by me", so we accept all events and let refresh()
+        // dedupe via the next loadItems() call.
+        { event: '*', schema: 'public', table: 'item_groups' },
+        () => {
+          void refresh();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [authStatus, user, refresh]);
+
   const createItem = useCallback(
     async (input: CreateItemInput): Promise<{ item: MyItem } | { error: string }> => {
       if (!user) return { error: 'not authenticated' };
