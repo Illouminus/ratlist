@@ -10,6 +10,7 @@ import { usePeople, type Person } from '../../people/usePeople';
 import { PaperLayout } from '../../components/PaperLayout';
 import { TopBar } from '../../components/TopBar';
 import { TopBarNav } from '../../components/TopBarNav';
+import { SittingRat } from '../../components/rats';
 
 export function PeopleScreen() {
   const { t } = useI18n();
@@ -118,14 +119,26 @@ function PersonRow({ person }: { person: Person }) {
 function EmptyState() {
   const { t } = useI18n();
   return (
-    <section>
-      <p
-        className="display-italic"
-        style={{ fontSize: 22, color: 'var(--ink-2)', marginBottom: 'var(--s-2)' }}
-      >
-        {t('people.empty')}
-      </p>
-      <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('people.emptyBody')}</p>
+    <section
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 'var(--s-6)',
+        flexWrap: 'wrap',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 240 }}>
+        <p
+          className="display-italic"
+          style={{ fontSize: 22, color: 'var(--ink-2)', marginBottom: 'var(--s-2)' }}
+        >
+          {t('people.empty')}
+        </p>
+        <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('people.emptyBody')}</p>
+      </div>
+      <div style={{ opacity: 0.85 }}>
+        <SittingRat size={72} signText="alone?" />
+      </div>
     </section>
   );
 }

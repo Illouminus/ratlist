@@ -4,6 +4,7 @@
  */
 import type { MyItem } from '../../items/useMyItems';
 import { ItemCard } from './ItemCard';
+import { RunningRat } from '../../components/rats';
 
 interface ItemGridProps {
   items: MyItem[];
@@ -18,6 +19,7 @@ export function ItemGrid({ items, onEdit, onDelete }: ItemGridProps) {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
         gap: '40px 32px',
+        position: 'relative',
       }}
     >
       {items.map((item, i) => (
@@ -29,6 +31,22 @@ export function ItemGrid({ items, onEdit, onDelete }: ItemGridProps) {
           onDelete={() => onDelete(item.id)}
         />
       ))}
+      {/* a tiny rat scampering between the cards once the grid has weight */}
+      {items.length >= 5 && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: '33%',
+            top: '50%',
+            transform: 'translate(-50%, 12px)',
+            opacity: 0.4,
+            pointerEvents: 'none',
+          }}
+        >
+          <RunningRat size={36} />
+        </div>
+      )}
     </div>
   );
 }

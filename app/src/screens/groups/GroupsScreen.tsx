@@ -21,6 +21,7 @@ import { TopBarNav } from '../../components/TopBarNav';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
+import { SittingRat } from '../../components/rats';
 import { InviteList } from './InviteList';
 
 export function GroupsScreen() {
@@ -175,14 +176,26 @@ function GroupsList({ query }: { query: ReturnType<typeof useGroups>['query'] })
 
   if (query.groups.length === 0) {
     return (
-      <section>
-        <p
-          className="display-italic"
-          style={{ fontSize: 22, color: 'var(--ink-2)', marginBottom: 'var(--s-2)' }}
-        >
-          {t('groups.empty')}
-        </p>
-        <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('groups.emptyBody')}</p>
+      <section
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 'var(--s-6)',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <p
+            className="display-italic"
+            style={{ fontSize: 22, color: 'var(--ink-2)', marginBottom: 'var(--s-2)' }}
+          >
+            {t('groups.empty')}
+          </p>
+          <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('groups.emptyBody')}</p>
+        </div>
+        <div style={{ opacity: 0.85 }}>
+          <SittingRat size={72} />
+        </div>
       </section>
     );
   }

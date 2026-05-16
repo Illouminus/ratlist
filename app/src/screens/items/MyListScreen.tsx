@@ -32,6 +32,7 @@ import { ItemList } from './ItemList';
 import { ItemFilters, type ViewMode } from './ItemFilters';
 import { ItemDrawer, type ItemDrawerMode } from './ItemDrawer';
 import type { CreateItemInput, MyItem } from '../../items/useMyItems';
+import { SittingRat } from '../../components/rats';
 
 export function MyListScreen() {
   const { t } = useI18n();
@@ -144,7 +145,7 @@ function Header() {
   const now = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   return (
-    <div style={{ marginBottom: 'var(--s-5)' }}>
+    <div style={{ position: 'relative', marginBottom: 'var(--s-5)' }}>
       <div className="mono-meta" style={{ marginBottom: 'var(--s-3)' }}>
         {t('list.currentlySaved')} · {now}
       </div>
@@ -171,6 +172,19 @@ function Header() {
         >
           {t('list.annotation')}
         </div>
+      </div>
+      {/* tiny rat tucked in the far right margin */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          right: -8,
+          top: -4,
+          opacity: 0.7,
+          pointerEvents: 'none',
+        }}
+      >
+        <SittingRat size={44} />
       </div>
     </div>
   );
@@ -267,6 +281,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         >
           {t('empty.body')}
         </div>
+      </div>
+      <div style={{ marginLeft: 'var(--s-7)' }}>
+        <SittingRat size={92} sign signText={t('empty.sign')} />
       </div>
       <Button variant="dark" onClick={onAdd}>
         {t('list.addFirst')}

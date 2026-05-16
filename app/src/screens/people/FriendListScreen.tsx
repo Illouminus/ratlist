@@ -25,6 +25,7 @@ import { TopBarNav } from '../../components/TopBarNav';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { Button } from '../../components/Button';
+import { SittingRat, RunningRat } from '../../components/rats';
 
 const COLUMNS = '64px 1fr 180px 130px 90px 130px';
 
@@ -157,6 +158,21 @@ function ItemsTable({ items, myUserId, onClaim, onRelease }: ItemsTableProps) {
           onRelease={() => onRelease(item.id)}
         />
       ))}
+      {/* a small rat trailing the table */}
+      {items.length > 0 && (
+        <div
+          aria-hidden
+          style={{
+            marginTop: 'var(--s-6)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            opacity: 0.5,
+            pointerEvents: 'none',
+          }}
+        >
+          <RunningRat size={36} flip />
+        </div>
+      )}
     </div>
   );
 }
@@ -316,18 +332,20 @@ function EmptyState() {
       style={{
         padding: 'var(--s-6) 0',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'flex-start',
-        gap: 'var(--s-3)',
+        gap: 'var(--s-6)',
+        flexWrap: 'wrap',
       }}
     >
-      <p
-        className="display-italic"
-        style={{ fontSize: 22, color: 'var(--ink-2)' }}
-      >
-        {t('friend.emptyList')}
-      </p>
-      <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('friend.emptyListBody')}</p>
+      <div style={{ flex: 1, minWidth: 240 }}>
+        <p className="display-italic" style={{ fontSize: 22, color: 'var(--ink-2)' }}>
+          {t('friend.emptyList')}
+        </p>
+        <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('friend.emptyListBody')}</p>
+      </div>
+      <div style={{ opacity: 0.85 }}>
+        <SittingRat size={72} />
+      </div>
     </section>
   );
 }
