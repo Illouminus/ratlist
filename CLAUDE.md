@@ -1,13 +1,19 @@
 # Крысиные желания / Rat List — agent handoff
 
-A private wishlist + Secret Santa app for a closed circle of friends.
-Built end-to-end in this session; v0.1 is feature-complete locally, not
-yet deployed.
+A wishlist + Secret Santa app — started as a private tool for one
+friend group, now positioned as something that could go public. v0.2
+is feature-complete locally: groups, items, public share URLs, Secret
+Santa, realtime, priority levels, an editorial landing page. Not yet
+deployed.
 
 > Start here. Then read [ARCHITECTURE.md](ARCHITECTURE.md) for the data
 > model and [README.md](README.md) for one-paragraph context. Memory at
 > `~/.claude/projects/-Users-edouard-dev-wishlist/memory/MEMORY.md` adds
 > user-preference context that's auto-loaded.
+>
+> **Going public?** → see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md). It owns
+> the deployment + monetization roadmap; this file only covers
+> conventions and what's already shipped locally.
 
 ## Stack at a glance
 
@@ -153,7 +159,6 @@ Visual atoms (`app/src/components/`):
 - `AppLayout` — chrome (sidebar on desktop, mobile top + bottom tab bar
   on mobile). Wraps authed routes via `Router.appRoute()`.
 - `Sidebar` / `BottomTabBar` / `MobileTopBar` — the chrome pieces
-- `Drawer` — generic right-slide-in panel (esc + scroll lock)
 - `Button` — primary / dark / ghost variants
 - `Field` — label + input wrapper
 - `SketchInput` — text input with underline only
@@ -161,48 +166,71 @@ Visual atoms (`app/src/components/`):
 - `ItemPhoto` — `<img>` if cover_url, else `PhotoPlaceholder`
 - `PhotoPlaceholder` — watercolour fallback
 - `OccasionTag` — dot + uppercase label
+- `PriorityDots` — •/••/••• priority marker
 - `EndOfList` — "that's the lot — for now." marker with tail doodle
+- `Toast` + `useToast()` — transient bottom-of-viewport notice
+- `ConfirmDialog` + `useConfirm()` — promise-based modal confirm
+  (replaces window.confirm everywhere)
+- `ShareDialog` — controls the public share token (`/share/<token>`)
 - `rats/` — five SVG illustrations (Sitting, Running, Peeking, Tail,
   RatDefs filter)
 
 ### Screens
 
-`/` → `MyListScreen` (items grid/list, drawer for create+edit)
-`/groups` → `GroupsScreen` (circles + invite tokens)
-`/people` → `PeopleScreen` (directory of shared-group friends)
-`/p/:userId` → `FriendListScreen` (their list + claim/release)
-`/santa` → `SantaListScreen` (events)
-`/santa/:eventId` → `SantaEventScreen` (participants, exclusions, draw,
-   reveal, your assignment)
-`/login`, `/auth/callback`, `/onboarding`, `/invite/:token` — auth flow
+Public (no auth):
+- `/` for anonymous → `LandingScreen` (editorial marketing page)
+- `/login`, `/auth/callback`, `/invite/:token` — auth flow
+- `/share/:token` → `PublicListScreen` (view-only, anon allowed)
+- `/onboarding` — authed but pre-onboarding
 
-`MyListScreen` reads `?add=1` on mount and opens the Add drawer (used
-by the mobile FAB in BottomTabBar).
+Authed (full chrome via `appRoute`):
+- `/` for authed → `MyListScreen` (items grid/list)
+- `/add` → `AddItemScreen` (full-screen create form)
+- `/i/:itemId` → `ItemDetailScreen` (works for own + friend's items)
+- `/i/:itemId/edit` → `EditItemScreen` (full-screen edit form)
+- `/groups` → `GroupsScreen` (circles + members + invites)
+- `/people` → `PeopleScreen` (directory with preview titles)
+- `/p/:userId` → `FriendListScreen` (their list + claim/release)
+- `/santa` → `SantaListScreen` (events)
+- `/santa/:eventId` → `SantaEventScreen` (participants, exclusions,
+  draw, reveal)
+
+All authed routes are lazy-loaded via `React.lazy` — see
+`Router.lazyNamed()`. Landing + auth screens are eager (critical path).
 
 ## Feature status
 
-| Feature                                  | Status |
-| ---------------------------------------- | ------ |
-| Magic-link auth + onboarding             | ✅      |
-| Multiple groups + invite tokens          | ✅      |
-| Items CRUD (create, edit, delete)        | ✅      |
-| Per-group publishing                     | ✅      |
-| Cover photo upload (Supabase Storage)    | ✅      |
-| URL metadata auto-fetch (og: + JSON-LD + Amazon-specific) | ✅ |
-| People directory                         | ✅      |
-| Friend's list with claim/release (RLS-hidden from owner) | ✅ |
-| Secret Santa: create / join / draw / reveal | ✅   |
-| Santa exclusions UI                      | ✅      |
-| Hand-drawn rats sprinkled in margins     | ✅      |
-| i18n RU + EN                             | ✅      |
-| Centralised error mapping                | ✅      |
-| Responsive sidebar/bottom-tab layout     | ✅      |
-| **Deploy**                               | ⬜      |
-| Item detail page (`/i/:itemId`)          | ⬜      |
-| Realtime updates (Supabase channels)     | ⬜      |
-| Share % (partial claims)                 | ⬜ (schema has `share`, no UI) |
-| Anonymous Santa chat                     | ⬜      |
-| Notifications (email/push)               | ⬜      |
+| Feature                                                  | Status |
+| -------------------------------------------------------- | ------ |
+| Magic-link auth + onboarding                             | ✅      |
+| Multiple groups + invite tokens                          | ✅      |
+| Group management (rename / delete / promote / kick / leave) | ✅   |
+| One-tap "invite from existing rats"                      | ✅      |
+| Items CRUD (create, edit, delete)                        | ✅      |
+| Item detail page (`/i/:itemId`) — own + friend's         | ✅      |
+| Full-screen add/edit forms (`/add`, `/i/:itemId/edit`)   | ✅      |
+| Per-group publishing + "приват" badge                    | ✅      |
+| Cover photo upload (Supabase Storage)                    | ✅      |
+| URL metadata auto-fetch (og: + JSON-LD + Amazon-specific)| ✅      |
+| Priority chips + •/••/••• marker                         | ✅      |
+| People directory with preview titles + "updated X"       | ✅      |
+| Friend's list with claim/release (RLS-hidden from owner) | ✅      |
+| Secret Santa: create / join / draw / reveal              | ✅      |
+| Santa exclusions UI                                      | ✅      |
+| Public view-only share URLs (`/share/<token>`)           | ✅      |
+| Realtime updates (Supabase channels — items / groups / claims) | ✅ |
+| Editorial landing page (`/` for anonymous)               | ✅      |
+| Toast + ConfirmDialog primitives                         | ✅      |
+| Hand-drawn rats sprinkled in margins                     | ✅      |
+| i18n RU + EN                                             | ✅      |
+| Centralised error mapping                                | ✅      |
+| Responsive sidebar/bottom-tab layout                     | ✅      |
+| Code-split routes via React.lazy                         | ✅      |
+| **Deploy**                                               | ⬜ — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
+| **OAuth + email transactional**                          | ⬜ — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
+| **Legal: Privacy / Terms / account deletion**            | ⬜ — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
+| Share % (partial claims)                                 | ⬜ (schema has `share`, no UI) |
+| Anonymous Santa chat                                     | ⬜      |
 
 ## Known gotchas
 
@@ -284,8 +312,13 @@ The first session's commit messages have full examples — search
 - Don't break the editorial aesthetic — paper, ink, terracotta,
   hairlines, italic Newsreader, Caveat marginalia, rat doodles in
   margins
-- The next-up wishlist: **deploy** (so friends can try) → Item detail
-  page → Realtime → share % → anonymous Santa chat
+- The user explicitly de-prioritised deploy multiple times — "успеем
+  задеплоить когда все сделаем локально". Don't lead with deploy in
+  recommendations; finish the product first
+- Latest direction (2026-05): product is being positioned for public
+  launch with eventual affiliate monetization. The deployment +
+  marketing work lives in [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md), to be
+  picked up in a future dedicated session
 
 ## Commit conventions
 
