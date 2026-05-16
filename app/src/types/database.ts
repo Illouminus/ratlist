@@ -331,6 +331,176 @@ export type Database = {
         }
         Relationships: []
       }
+      santa_assignments: {
+        Row: {
+          created_at: string
+          event_id: string
+          giver_id: string
+          receiver_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          giver_id: string
+          receiver_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          giver_id?: string
+          receiver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "santa_assignments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "santa_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "santa_assignments_giver_id_fkey"
+            columns: ["giver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "santa_assignments_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      santa_events: {
+        Row: {
+          budget_text: string | null
+          created_at: string
+          created_by: string
+          draw_deadline: string | null
+          gift_date: string | null
+          group_id: string
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget_text?: string | null
+          created_at?: string
+          created_by: string
+          draw_deadline?: string | null
+          gift_date?: string | null
+          group_id: string
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget_text?: string | null
+          created_at?: string
+          created_by?: string
+          draw_deadline?: string | null
+          gift_date?: string | null
+          group_id?: string
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "santa_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "santa_events_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      santa_exclusions: {
+        Row: {
+          event_id: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          event_id: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          event_id?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "santa_exclusions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "santa_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "santa_exclusions_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "santa_exclusions_user_b_fkey"
+            columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      santa_participants: {
+        Row: {
+          event_id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          event_id: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          event_id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "santa_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "santa_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "santa_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -370,6 +540,24 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_my_santa_events: {
+        Args: never
+        Returns: {
+          budget_text: string
+          created_at: string
+          created_by: string
+          draw_deadline: string
+          gift_date: string
+          group_id: string
+          group_name: string
+          id: string
+          is_organiser: boolean
+          is_participant: boolean
+          name: string
+          participant_count: number
+          status: string
+        }[]
+      }
       get_people: {
         Args: never
         Returns: {
@@ -382,8 +570,12 @@ export type Database = {
       }
       is_group_admin: { Args: { _group_id: string }; Returns: boolean }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
+      is_santa_organiser: { Args: { _event_id: string }; Returns: boolean }
+      is_santa_participant: { Args: { _event_id: string }; Returns: boolean }
       owns_item: { Args: { _item_id: string }; Returns: boolean }
       redeem_invite: { Args: { _token: string }; Returns: string }
+      reveal_santa_event: { Args: { _event_id: string }; Returns: undefined }
+      run_santa_draw: { Args: { _event_id: string }; Returns: undefined }
       shares_group_with: { Args: { _other_user: string }; Returns: boolean }
     }
     Enums: {
