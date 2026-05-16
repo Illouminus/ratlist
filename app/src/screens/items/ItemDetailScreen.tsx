@@ -28,6 +28,7 @@ import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { Button } from '../../components/Button';
 import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { SittingRat } from '../../components/rats';
 
 /** ISO → "Apr 12" / "12 апр". Mirrors the eyebrow in the mockup. */
@@ -50,6 +51,7 @@ export function ItemDetailScreen() {
   // of an extra profile fetch.
   const { query: peopleQ } = usePeople();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +94,14 @@ export function ItemDetailScreen() {
   const ownerName = owner?.handle ?? owner?.display_name ?? null;
 
   async function handleDelete(): Promise<void> {
-    if (!window.confirm(t('item.confirmDelete'))) return;
+    const ok = await confirm({
+      title: t('item.confirmDeleteTitle', { title: item.title }),
+      body: t('item.confirmDelete'),
+      confirmLabel: t('item.delete'),
+      cancelLabel: t('groups.cancel'),
+      danger: true,
+    });
+    if (!ok) return;
     setDeleting(true);
     const result = await deleteItem(itemId);
     setDeleting(false);
@@ -100,26 +109,30 @@ export function ItemDetailScreen() {
       setError(errorMessage(t, result.error));
       return;
     }
+    toast.show(t('item.deletedToast'));
     navigate('/', { replace: true });
   }
 
   async function handleShare(): Promise<void> {
     const url = `${window.location.origin}/i/${itemId}`;
-    // Web Share API on mobile, clipboard fallback elsewhere. We swallow
-    // user-cancellation rejections and only react to actual outcomes.
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: item.title, url });
-      } catch {
-        /* user cancelled */
-      }
-      return;
-    }
+    // Always copy + toast. We used to call navigator.share first but
+    // on desktop it either silently does nothing or opens the OS
+    // share sheet (macOS Big Sur+), neither of which signals to the
+    // user "your link is ready". One predictable path is better.
     try {
       await navigator.clipboard.writeText(url);
       toast.show(t('item.shareCopied'));
     } catch {
-      /* clipboard blocked */
+      // Clipboard blocked (private mode / very old browser). Fall
+      // back to the native share sheet if available, otherwise show
+      // a "couldn't copy" tip so the user knows to try again.
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: item.title, url });
+        } catch {
+          /* user cancelled the share sheet */
+        }
+      }
     }
   }
 
@@ -146,7 +159,10 @@ export function ItemDetailScreen() {
             })}`}
       </div>
 
-      <div style={{ position: 'relative' }}>
+      {/* Cap the photo block so it never balloons past ~520px on
+          desktop. PaperLayout already centers content but ItemPhoto
+          itself wants to fill the column, so we clamp here. */}
+      <div style={{ position: 'relative', maxWidth: 520 }}>
         <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
         {number && (
           <div

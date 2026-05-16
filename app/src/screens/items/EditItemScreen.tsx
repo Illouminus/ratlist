@@ -11,12 +11,14 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useMyItems } from '../../items/useMyItems';
 import { useGroups } from '../../groups/useGroups';
+import { useToast } from '../../components/Toast';
 import { PaperLayout } from '../../components/PaperLayout';
 import { ItemForm } from './ItemForm';
 
 export function EditItemScreen() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const toast = useToast();
   const { itemId = '' } = useParams<{ itemId: string }>();
   const { query, updateItem } = useMyItems();
   const { query: groupsQ } = useGroups();
@@ -86,7 +88,10 @@ export function EditItemScreen() {
         groups={groups}
         onSubmit={async (input) => {
           const result = await updateItem(item.id, input);
-          if ('item' in result) navigate(`/i/${item.id}`, { replace: true });
+          if ('item' in result) {
+            toast.show(t('item.savedToast'));
+            navigate(`/i/${item.id}`, { replace: true });
+          }
           return result;
         }}
         onCancel={() => navigate(`/i/${item.id}`)}

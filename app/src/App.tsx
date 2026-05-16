@@ -7,6 +7,7 @@ import { AuthProvider } from './auth/AuthProvider';
 import { AppRouter } from './Router';
 import { RatDefs } from './components/rats';
 import { ToastProvider } from './components/Toast';
+import { ConfirmProvider } from './components/ConfirmDialog';
 
 export default function App() {
   return (
@@ -15,7 +16,9 @@ export default function App() {
           references. Mount once near the root so it's always available. */}
       <RatDefs />
       <ToastProvider>
-        <AppRouter />
+        <ConfirmProvider>
+          <AppRouter />
+        </ConfirmProvider>
       </ToastProvider>
     </AuthProvider>
   );

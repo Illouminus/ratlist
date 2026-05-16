@@ -22,6 +22,8 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
+import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { SittingRat } from '../../components/rats';
 import { InviteList } from './InviteList';
 
@@ -71,6 +73,7 @@ interface CreateGroupFormProps {
 
 function CreateGroupForm({ onCreate }: CreateGroupFormProps) {
   const { t } = useI18n();
+  const toast = useToast();
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('');
   const [description, setDescription] = useState('');
@@ -92,6 +95,7 @@ function CreateGroupForm({ onCreate }: CreateGroupFormProps) {
     if ('error' in result) {
       setError(errorMessage(t, result.error));
     } else {
+      toast.show(t('groups.createdToast', { name: result.group.name }));
       setName('');
       setEmoji('');
       setDescription('');
@@ -235,6 +239,8 @@ interface GroupCardProps {
  *  queries up front. */
 function GroupCard({ group, onUpdate, onDelete }: GroupCardProps) {
   const { t, lang } = useI18n();
+  const toast = useToast();
+  const confirm = useConfirm();
   const isAdmin = group.role === 'admin';
   const [showInvites, setShowInvites] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -249,12 +255,23 @@ function GroupCard({ group, onUpdate, onDelete }: GroupCardProps) {
   });
 
   async function handleDelete(): Promise<void> {
-    if (!window.confirm(t('groups.deleteConfirm', { name: group.name }))) return;
+    const ok = await confirm({
+      title: t('groups.deleteConfirmTitle', { name: group.name }),
+      body: t('groups.deleteConfirm'),
+      confirmLabel: t('groups.confirmYes'),
+      cancelLabel: t('groups.cancel'),
+      danger: true,
+    });
+    if (!ok) return;
     setDeleting(true);
     setError(null);
     const result = await onDelete(group.id);
     setDeleting(false);
-    if ('error' in result) setError(errorMessage(t, result.error));
+    if ('error' in result) {
+      setError(errorMessage(t, result.error));
+      return;
+    }
+    toast.show(t('groups.deleted'));
   }
 
   return (
@@ -270,7 +287,10 @@ function GroupCard({ group, onUpdate, onDelete }: GroupCardProps) {
           group={group}
           onSave={async (input) => {
             const r = await onUpdate(group.id, input);
-            if ('ok' in r) setEditing(false);
+            if ('ok' in r) {
+              setEditing(false);
+              toast.show(t('groups.saved'));
+            }
             return r;
           }}
           onCancel={() => setEditing(false)}
@@ -385,7 +405,9 @@ function GroupCard({ group, onUpdate, onDelete }: GroupCardProps) {
       )}
 
       {showInvites && <InviteList groupId={group.id} />}
-      {showMembers && <MembersList groupId={group.id} groupName={group.name} />}
+      {showMembers && (
+        <MembersList groupId={group.id} groupName={group.name} viewerIsAdmin={isAdmin} />
+      )}
     </article>
   );
 }
@@ -474,22 +496,41 @@ function GroupEditForm({ group, onSave, onCancel }: GroupEditFormProps) {
 
 // ─────────────────────────── members section ───────────────────────────
 
-function MembersList({ groupId, groupName }: { groupId: string; groupName: string }) {
+interface MembersListProps {
+  groupId: string;
+  groupName: string;
+  /** True if the *viewer* is an admin of this group. Determines whether
+   *  promote / demote / kick buttons are even shown for other members.
+   *  RLS would refuse the writes anyway, but no point exposing the
+   *  buttons to someone who isn't supposed to use them. */
+  viewerIsAdmin: boolean;
+}
+
+function MembersList({ groupId, groupName, viewerIsAdmin }: MembersListProps) {
   const { t } = useI18n();
   const { user } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const { query, promote, demote, kick, leave } = useGroupMembers(groupId);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /** Wraps an action with busy-state + error handling + an optional
+   *  success message. Keeps each onClick a one-liner. */
   async function run(
     op: () => Promise<{ ok: true } | { error: string }>,
     key: string,
+    successMessage?: string,
   ): Promise<void> {
     setBusy(key);
     setError(null);
     const r = await op();
     setBusy(null);
-    if ('error' in r) setError(errorMessage(t, r.error));
+    if ('error' in r) {
+      setError(errorMessage(t, r.error));
+      return;
+    }
+    if (successMessage) toast.show(successMessage);
   }
 
   if (query.status === 'loading') {
@@ -524,16 +565,47 @@ function MembersList({ groupId, groupName }: { groupId: string; groupName: strin
             key={m.user_id}
             member={m}
             isSelf={m.user_id === user?.id}
+            viewerIsAdmin={viewerIsAdmin}
             busyKey={busy}
-            onPromote={() => void run(() => promote(m.user_id), `promote:${m.user_id}`)}
-            onDemote={() => void run(() => demote(m.user_id), `demote:${m.user_id}`)}
-            onKick={() => {
-              if (!window.confirm(t('groups.kickConfirm', { name: m.display_name, group: groupName }))) return;
-              void run(() => kick(m.user_id), `kick:${m.user_id}`);
+            onPromote={() =>
+              void run(
+                () => promote(m.user_id),
+                `promote:${m.user_id}`,
+                t('groups.promoted', { name: m.display_name }),
+              )
+            }
+            onDemote={() =>
+              void run(
+                () => demote(m.user_id),
+                `demote:${m.user_id}`,
+                t('groups.demoted', { name: m.display_name }),
+              )
+            }
+            onKick={async () => {
+              const ok = await confirm({
+                title: t('groups.kickConfirmTitle', { name: m.display_name }),
+                body: t('groups.kickConfirm', { group: groupName }),
+                confirmLabel: t('groups.kick'),
+                cancelLabel: t('groups.cancel'),
+                danger: true,
+              });
+              if (!ok) return;
+              void run(
+                () => kick(m.user_id),
+                `kick:${m.user_id}`,
+                t('groups.kicked', { name: m.display_name }),
+              );
             }}
-            onLeave={() => {
-              if (!window.confirm(t('groups.leaveConfirm', { name: groupName }))) return;
-              void run(leave, `leave:${m.user_id}`);
+            onLeave={async () => {
+              const ok = await confirm({
+                title: t('groups.leaveConfirmTitle', { name: groupName }),
+                body: t('groups.leaveConfirm'),
+                confirmLabel: t('groups.leave'),
+                cancelLabel: t('groups.cancel'),
+                danger: true,
+              });
+              if (!ok) return;
+              void run(leave, `leave:${m.user_id}`, t('groups.leftGroup', { name: groupName }));
             }}
           />
         ))}
@@ -550,6 +622,7 @@ function MembersList({ groupId, groupName }: { groupId: string; groupName: strin
 interface MemberRowProps {
   member: GroupMember;
   isSelf: boolean;
+  viewerIsAdmin: boolean;
   busyKey: string | null;
   onPromote: () => void;
   onDemote: () => void;
@@ -560,6 +633,7 @@ interface MemberRowProps {
 function MemberRow({
   member,
   isSelf,
+  viewerIsAdmin,
   busyKey,
   onPromote,
   onDemote,
@@ -567,10 +641,6 @@ function MemberRow({
   onLeave,
 }: MemberRowProps) {
   const { t } = useI18n();
-  // `viewerIsAdmin` is derived from the parent group's role; we pass it
-  // here implicitly via which controls render — admins see promote /
-  // demote / kick on others, the current user always sees "leave" on
-  // their own row. Non-admin rows show no controls.
   const initial = member.display_name.charAt(0).toUpperCase() || '?';
   const isBusy = busyKey?.endsWith(`:${member.user_id}`);
 
@@ -633,6 +703,7 @@ function MemberRow({
       <MemberActions
         member={member}
         isSelf={isSelf}
+        viewerIsAdmin={viewerIsAdmin}
         isBusy={!!isBusy}
         onPromote={onPromote}
         onDemote={onDemote}
@@ -646,6 +717,7 @@ function MemberRow({
 interface MemberActionsProps {
   member: GroupMember;
   isSelf: boolean;
+  viewerIsAdmin: boolean;
   isBusy: boolean;
   onPromote: () => void;
   onDemote: () => void;
@@ -653,14 +725,20 @@ interface MemberActionsProps {
   onLeave: () => void;
 }
 
-/** Splits the role/relationship into the right small set of buttons.
- *  Kept in its own component to keep MemberRow's render tree flat. The
- *  viewer-is-admin signal is implicit: we wouldn't even mount these
- *  actions for non-admins on rows other than their own (the row only
- *  ever shows `Leave` to non-admins, see below). */
+/** Picks the right small set of buttons based on (viewer role, target row):
+ *
+ *    self       → "leave circle" (always shown to the current user)
+ *    other, admin viewer → promote/demote + kick
+ *    other, member viewer → nothing
+ *
+ *  Non-admins used to see the admin controls and just hit an RLS
+ *  refusal on click; now the controls are hidden entirely so the UI
+ *  matches what's actually permitted.
+ */
 function MemberActions({
   member,
   isSelf,
+  viewerIsAdmin,
   isBusy,
   onPromote,
   onDemote,
@@ -689,13 +767,9 @@ function MemberActions({
     );
   }
 
-  // Buttons for someone else's row. These only render if the parent
-  // group is one where the viewer is admin — see GroupCard, which
-  // mounts `MembersList` regardless of role but the underlying RLS
-  // would refuse non-admin writes. We still show the buttons so the
-  // server-side denial path is visible during development; in
-  // practice non-admin viewers never reach this branch since they
-  // wouldn't see the controls in their own view.
+  // Someone else's row — only admins get the management controls.
+  if (!viewerIsAdmin) return null;
+
   return (
     <div style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'center' }}>
       {member.role === 'member' ? (
