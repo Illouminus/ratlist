@@ -14,7 +14,7 @@
  *       · claimed by you  → "you're getting it" + release
  *       · claimed by them → "{name} got it ✓" (item struck through)
  */
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useFriendList, type ClaimWithUser, type FriendItem } from '../../people/useFriendList';
 import { useI18n } from '../../i18n/useI18n';
@@ -192,105 +192,118 @@ function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemR
   const isClaimed = item.claims.length > 0;
   const dimmed = isClaimed && !myClaim;
 
+  // The whole row is a `<Link>` to the item detail page, except for the
+  // claim button which sits on top with its own click handler. We
+  // prevent the link from receiving clicks that originate on the
+  // claim control via `stopPropagation` inside ClaimControl below.
   return (
     <div
       style={{
-        padding: 'var(--s-3) 0',
+        position: 'relative',
         borderBottom: last ? 'none' : '1px solid var(--hair)',
         opacity: dimmed ? 0.55 : 1,
-        display: 'flex',
-        gap: 'var(--s-4)',
-        alignItems: 'stretch',
         minHeight: FRIEND_ROW_MIN_HEIGHT,
       }}
     >
-      <div style={{ width: 56, flexShrink: 0 }}>
-        <ItemPhoto coverUrl={item.cover_url} aspectRatio="1 / 1" alt={item.title} />
-      </div>
-
-      <div
+      <Link
+        to={`/i/${item.id}`}
         style={{
-          flex: 1,
-          minWidth: 0,
           display: 'flex',
-          flexDirection: 'column',
+          gap: 'var(--s-4)',
+          alignItems: 'stretch',
+          padding: 'var(--s-3) 0',
+          textDecoration: 'none',
+          color: 'inherit',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: 'var(--s-2)',
-            alignItems: 'flex-start',
-          }}
-        >
-          <h3
-            style={{
-              margin: 0,
-              fontFamily: 'var(--font-body)',
-              fontWeight: 600,
-              fontSize: 13.5,
-              color: 'var(--ink)',
-              lineHeight: 1.3,
-              flex: 1,
-              minWidth: 0,
-              textDecoration: dimmed ? 'line-through' : 'none',
-              ...CLAMP_2_LINES,
-            }}
-          >
-            {item.title}
-          </h3>
-          {item.price_text && (
-            <div
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontStyle: 'italic',
-                fontWeight: 500,
-                fontSize: 14,
-                color: 'var(--accent)',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {item.price_text}
-            </div>
-          )}
+        <div style={{ width: 56, flexShrink: 0 }}>
+          <ItemPhoto coverUrl={item.cover_url} aspectRatio="1 / 1" alt={item.title} />
         </div>
 
-        {item.maker && (
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           <div
             style={{
-              marginTop: 1,
-              fontSize: 11,
-              color: 'var(--ink-3)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 'var(--s-2)',
+              alignItems: 'flex-start',
             }}
           >
-            {item.maker}
+            <h3
+              style={{
+                margin: 0,
+                fontFamily: 'var(--font-body)',
+                fontWeight: 600,
+                fontSize: 13.5,
+                color: 'var(--ink)',
+                lineHeight: 1.3,
+                flex: 1,
+                minWidth: 0,
+                textDecoration: dimmed ? 'line-through' : 'none',
+                ...CLAMP_2_LINES,
+              }}
+            >
+              {item.title}
+            </h3>
+            {item.price_text && (
+              <div
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontStyle: 'italic',
+                  fontWeight: 500,
+                  fontSize: 14,
+                  color: 'var(--accent)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item.price_text}
+              </div>
+            )}
           </div>
-        )}
 
-        <div
-          style={{
-            marginTop: 'auto',
-            paddingTop: 'var(--s-2)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 'var(--s-2)',
-            flexWrap: 'wrap',
-          }}
-        >
-          <OccasionTag kind={item.occasion as Occasion} />
-          <ClaimControl
-            myClaim={myClaim ?? null}
-            othersClaim={othersClaim ?? null}
-            onClaim={onClaim}
-            onRelease={onRelease}
-          />
+          {item.maker && (
+            <div
+              style={{
+                marginTop: 1,
+                fontSize: 11,
+                color: 'var(--ink-3)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {item.maker}
+            </div>
+          )}
+
+          <div
+            style={{
+              marginTop: 'auto',
+              paddingTop: 'var(--s-2)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 'var(--s-2)',
+              flexWrap: 'wrap',
+            }}
+          >
+            <OccasionTag kind={item.occasion as Occasion} />
+            <ClaimControl
+              myClaim={myClaim ?? null}
+              othersClaim={othersClaim ?? null}
+              onClaim={onClaim}
+              onRelease={onRelease}
+            />
+          </div>
         </div>
-      </div>
+      </Link>
     </div>
   );
 }
@@ -306,6 +319,17 @@ interface ClaimControlProps {
 
 function ClaimControl({ myClaim, othersClaim, onClaim, onRelease }: ClaimControlProps) {
   const { t } = useI18n();
+
+  // The row itself is now a `<Link>`, so every button inside it needs
+  // to stop click propagation — otherwise tapping "i'll get it" would
+  // both claim *and* navigate to the detail page.
+  function intercept(handler: () => void) {
+    return (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handler();
+    };
+  }
 
   if (myClaim) {
     return (
@@ -329,7 +353,7 @@ function ClaimControl({ myClaim, othersClaim, onClaim, onRelease }: ClaimControl
         </span>
         <button
           type="button"
-          onClick={onRelease}
+          onClick={intercept(onRelease)}
           className="mono-meta"
           style={{
             background: 'transparent',
@@ -365,7 +389,7 @@ function ClaimControl({ myClaim, othersClaim, onClaim, onRelease }: ClaimControl
   return (
     <button
       type="button"
-      onClick={onClaim}
+      onClick={intercept(onClaim)}
       style={{
         background: 'transparent',
         border: '1px solid var(--ink)',

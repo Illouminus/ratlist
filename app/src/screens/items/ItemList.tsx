@@ -11,6 +11,7 @@
  * the wide grid; on mobile it replaces the grid entirely.
  */
 import { Link } from 'react-router-dom';
+import { useI18n } from '../../i18n/useI18n';
 import type { MyItem } from '../../items/useMyItems';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
@@ -168,10 +169,39 @@ function ItemRow({ item, index, last }: ItemRowProps) {
           </div>
         )}
 
-        <div style={{ marginTop: 'auto', paddingTop: 'var(--s-2)' }}>
+        <div
+          style={{
+            marginTop: 'auto',
+            paddingTop: 'var(--s-2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--s-3)',
+          }}
+        >
           <OccasionTag kind={item.occasion as Occasion} />
+          {item.group_ids.length === 0 && <PrivateBadge />}
         </div>
       </div>
     </Link>
+  );
+}
+
+/** Tiny "приват" pill rendered on rows/cards whose item isn't published
+ *  into any group — owner-only visibility. Keeps the privacy posture
+ *  visible at a glance instead of hiding it on the detail page. */
+function PrivateBadge() {
+  const { t } = useI18n();
+  return (
+    <span
+      className="mono-meta"
+      style={{
+        color: 'var(--ink-3)',
+        border: '1px solid var(--hair-strong)',
+        padding: '1px 6px',
+        borderRadius: 'var(--r-2)',
+      }}
+    >
+      {t('list.privateBadge')}
+    </span>
   );
 }

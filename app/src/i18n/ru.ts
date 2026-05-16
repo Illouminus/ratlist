@@ -32,6 +32,7 @@ export const ru: Translation = {
     currentlySaved: 'сейчас в списке',
     headlineMine: 'то, что я бы\nреально хотел',
     annotation: '(да, даже по полной цене)',
+    privateBadge: 'приват',
     countOfTotal: '{count} из {total}',
     addItem: '+ добавить',
     addFirst: 'добавить первое',
@@ -85,6 +86,8 @@ export const ru: Translation = {
   },
   item: {
     eyebrowNumbered: 'позиция #{n}',
+    eyebrowFriend: 'из списка {name}',
+    backToFriend: '‹ к списку {name}',
     added: 'добавлено {date}',
     back: '‹ к списку',
     edit: 'править',

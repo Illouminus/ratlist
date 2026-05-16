@@ -9,6 +9,7 @@
  * list either).
  */
 import { Link } from 'react-router-dom';
+import { useI18n } from '../../i18n/useI18n';
 import type { MyItem } from '../../items/useMyItems';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
@@ -109,10 +110,38 @@ export function ItemCard({ item, index }: ItemCardProps) {
           </div>
         )}
 
-        <div style={{ marginTop: 'var(--s-3)' }}>
+        <div
+          style={{
+            marginTop: 'var(--s-3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--s-3)',
+            flexWrap: 'wrap',
+          }}
+        >
           <OccasionTag kind={item.occasion as Occasion} />
+          {item.group_ids.length === 0 && <PrivateBadge />}
         </div>
       </div>
     </Link>
+  );
+}
+
+/** Same pill as in ItemList — duplicated here rather than reaching
+ *  cross-file to keep these two row components self-contained. */
+function PrivateBadge() {
+  const { t } = useI18n();
+  return (
+    <span
+      className="mono-meta"
+      style={{
+        color: 'var(--ink-3)',
+        border: '1px solid var(--hair-strong)',
+        padding: '1px 6px',
+        borderRadius: 'var(--r-2)',
+      }}
+    >
+      {t('list.privateBadge')}
+    </span>
   );
 }

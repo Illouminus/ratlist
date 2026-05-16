@@ -27,6 +27,7 @@ export const en: Translation = {
     currentlySaved: 'currently saved',
     headlineMine: "things i'd\nactually love",
     annotation: '(yes, even at full price)',
+    privateBadge: 'private',
     countOfTotal: '{count} of {total}',
     addItem: '+ add item',
     addFirst: 'add the first thing',
@@ -80,6 +81,8 @@ export const en: Translation = {
   },
   item: {
     eyebrowNumbered: 'item #{n}',
+    eyebrowFriend: "from {name}'s list",
+    backToFriend: "‹ to {name}'s list",
     added: 'added {date}',
     back: '‹ to list',
     edit: 'edit',
