@@ -16,6 +16,7 @@
  */
 import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useAuth } from './auth/useAuth';
 import { RequireAuth } from './auth/RequireAuth';
 import { AppLayout } from './components/AppLayout';
 import { LoginScreen } from './screens/LoginScreen';
@@ -23,6 +24,7 @@ import { AuthCallbackScreen } from './screens/AuthCallbackScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
 import { PublicListScreen } from './screens/PublicListScreen';
+import { LandingScreen } from './screens/LandingScreen';
 
 /**
  * Helper to lazy-load a module whose export is named rather than
@@ -95,6 +97,17 @@ function appRoute(screen: ReactNode): ReactNode {
   );
 }
 
+/** Root path is shared between anonymous and authenticated users:
+ *  anons get the marketing landing page, authed users land straight on
+ *  their list. We deliberately don't redirect — the URL stays `/` for
+ *  both so deep-link sharing and bookmarks "just work". */
+function HomeRoute() {
+  const { status } = useAuth();
+  if (status === 'loading') return null;
+  if (status === 'anonymous') return <LandingScreen />;
+  return appRoute(<MyListScreen />);
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -116,7 +129,7 @@ export function AppRouter() {
         />
 
         {/* Authenticated + onboarded (full app chrome) */}
-        <Route path="/" element={appRoute(<MyListScreen />)} />
+        <Route path="/" element={<HomeRoute />} />
         <Route path="/add" element={appRoute(<AddItemScreen />)} />
         <Route path="/i/:itemId" element={appRoute(<ItemDetailScreen />)} />
         <Route path="/i/:itemId/edit" element={appRoute(<EditItemScreen />)} />

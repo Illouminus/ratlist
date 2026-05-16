@@ -79,6 +79,17 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   .hide-on-desktop { display: none !important; }
 }
 
+/* ── Landing hero: 2-column on desktop, stacked on mobile ───────── */
+/* The hero pairs a copy block with a mock-list card. On wide screens
+   they sit side-by-side; on narrow screens the mock drops below the
+   copy so the headline stays the first thing seen. */
+@media (min-width: 880px) {
+  .landing-hero {
+    grid-template-columns: 1.1fr 0.9fr !important;
+    align-items: center;
+  }
+}
+
 /* ── App chrome (sidebar + bottom-tab-bar) ──────────────── */
 
 .app-layout {
