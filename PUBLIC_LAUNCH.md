@@ -29,71 +29,126 @@ itself is built.
 - Code-split routes (per-screen chunks)
 - Public landing page at `/` for anonymous visitors
 
-## Phase 1 — pre-launch hardening (1–2 weeks)
+## Phase 1A — pre-launch hardening ✅ DONE (2026-05-17)
 
-Things the product genuinely cannot ship without. Order roughly by
-dependency.
+Everything the product needed to be publicly hostable on `ratlist.app`
+without GDPR / consumer-law gaps. Shipped to production end-to-end.
 
 ### Auth & profile
 
-- [ ] OAuth providers (Google + Apple at minimum; consider Яндекс for
-      RU audience). Supabase has this built-in, mostly config + Apple
-      sign-in setup
-- [ ] `/settings/profile` screen: change display_name, handle, upload
-      avatar, delete account button
-- [ ] Account deletion endpoint (GDPR "right to be forgotten") —
-      SECURITY DEFINER RPC that cascades through claims / items /
-      group_members / santa_*. Plain `auth.admin.deleteUser` won't
-      cascade gracefully
+- [x] `/settings/profile` screen — display name, handle, avatar, language
+- [x] Account deletion endpoint (GDPR right-to-erasure) —
+      `delete_my_account` RPC with sole-admin pre-flight and group
+      re-homing
+- [x] Data portability — `export_my_data` RPC returns one JSONB blob
+- [ ] OAuth providers — **deferred to Phase 1B** (magic-link covers
+      MVP; Google / Apple add later)
 
 ### Legal / compliance
 
-- [ ] Privacy Policy (template-generated is fine for MVP; mention
-      Supabase as sub-processor, list cookies, retention policy)
-- [ ] Terms of Service (likewise; cover acceptable use, account
-      termination, jurisdiction)
-- [ ] Cookie banner (only if shipping to EU — Supabase auth uses
-      first-party cookies which are essential, so we can skip the
-      consent flow for those, but tracking analytics needs consent)
-- [ ] 13+ age gate at signup (COPPA + GDPR-K)
-- [ ] If affiliate later — disclosure banner per Russian 38-ФЗ
-      «О рекламе» and FTC guidelines
+- [x] Privacy Policy (GDPR / CNIL framework) at `/legal/privacy`
+- [x] Terms of Service at `/legal/terms`
+- [x] 13+ implicit-consent notice under the magic-link submit button
+- [x] No cookie banner needed (only first-party essential auth cookie;
+      no tracking analytics yet)
 
 ### Production infrastructure
 
-- [ ] Pick a frontend host (Vercel / Fly / Cloudflare Pages — Vercel
-      Hobby is fine to start)
-- [ ] Upgrade Supabase to **Pro tier** (~$25/mo) for daily backups,
-      no auto-pause, custom domains
-- [ ] Custom domain (буду рад если ratlist.app свободен) + SSL
-- [ ] Edge functions deployed to production (the fetch-url-meta one
-      needs CORS allow-list set to the production domain)
-- [ ] Environment management — `.env.production` separate from local;
-      anon key + URL injected at build time
-- [ ] Error monitoring: Sentry (free tier — 5k events/mo)
-- [ ] Privacy-respecting analytics: Plausible / Umami (paid ~$9/mo) or
-      self-host. **No Google Analytics** — it'd contradict the no-ads
-      positioning of the landing page
-- [ ] Uptime monitoring: BetterStack or UptimeRobot free tier
+- [x] Vercel project linked to GitHub repo, auto-deploy on `main`
+- [x] Custom domain `ratlist.app` + SSL on Vercel
+- [x] Production Supabase project (`fiuheufmawxkgbqddwwu`, Frankfurt)
+      with all 15 migrations applied
+- [x] `vercel.json` SPA fallback + immutable asset cache
+- [x] Edge Function `fetch-url-meta` deployed; CORS limited to
+      `ratlist.app` + `*.vercel.app` + `localhost:5173` per request
+- [x] Environment management — `.env.example` separate, production
+      values injected via Vercel env vars
+- [x] Resend custom SMTP wired into Supabase Auth; branded magic-link
+      template
+- [x] `hello@ratlist.app` inbound via ImprovMX → personal gmail
+- [x] Sentry SDK hookup gated on `VITE_SENTRY_DSN` (DSN to be added
+      by user when ready — no DSN, no SDK init)
+- [ ] **Supabase Pro upgrade** — still on free tier; upgrade when
+      we want daily backups + no auto-pause
+- [ ] **Uptime monitoring** (BetterStack / UptimeRobot) — Phase 1B
+- [ ] **Plausible / Umami analytics** — Phase 1B
 
 ### SEO / discoverability
 
-- [x] OG meta tags on `/` (title, description, Schema.org). og:image
-      deliberately deferred — see "Dynamic OG image" in Phase 1B
+- [x] OG meta tags + Twitter Card + Schema.org `WebApplication` on `/`
 - [x] `robots.txt` — landing + `/legal/*` allowed, everything authed
       disallowed
 - [x] `sitemap.xml` — `/`, `/legal/privacy`, `/legal/terms`
-- [x] Structured data (Schema.org `WebApplication`) on landing
-- [ ] **Pre-rendered landing** — SPA Google indexing works but slow.
-      Two options: (a) Vercel's `getStaticProps`-equivalent if
-      switching to Next.js, (b) `vite-plugin-ssr` / `prerender` for
-      just `/`. Path (b) is less work.
-- [ ] **Dynamic OG image** (satori + resvg) for landing + per-share-
-      token previews. First attempt blocked on Newsreader being a
-      variable font (satori chokes), so deferred — pick a known-good
-      static TTF (Inter Italic from `@vercel/og`'s bundled fonts, or
-      bundle a static Newsreader variant) and reuse the markup that
-      already lives in commit history.
+- [x] Favicon SVG, `<html lang>` synced with active locale
+- [ ] **Pre-rendered landing** — Phase 1B (`vite-plugin-ssg` or
+      `react-snap`)
+- [ ] **Dynamic OG image** (satori + resvg) — Phase 1B. First attempt
+      blocked on Newsreader being a variable font (satori chokes); fix
+      is to bundle a static TTF (Inter Italic from `@vercel/og`'s
+      bundled fonts works). Markup already exists in commit history.
+
+### Privacy invariants smoke-test
+
+- [x] 5 RLS scenarios pass locally (owner-blind claims, group-mate
+      visibility, outsider blocked); production schema verified
+      bit-identical via read-only structure check (all RLS enabled,
+      all SECURITY DEFINER functions present, no INSERT/UPDATE/DELETE
+      policies on `santa_assignments`)
+
+### Bonus polish that landed during 1A
+
+- [x] Router rewrite to nested routes + `<Outlet/>` so Sidebar / top
+      bar / bottom tab bar stop re-mounting on every navigation
+- [x] Eager-import of MyList / Groups / People / Santa to kill the
+      Suspense flash on tab switches
+- [x] Multi-origin CORS for Edge Functions (request-bound allow-list
+      instead of single `ALLOWED_ORIGIN` env)
+
+## Phase 1B — polish before marketing (5–7 days)
+
+Stuff that doesn't block the URL going live but should be in place
+before we point Habr / Product Hunt / Hacker News at it.
+
+### Performance & accessibility
+
+- [ ] Pre-render landing `/` via `vite-plugin-ssg` or `react-snap` —
+      gives Google a fully-rendered HTML on first load
+- [ ] Lighthouse pass (perf, a11y, SEO, best practices) — aim 90+
+- [ ] Loading skeletons for slow networks on MyList / Groups / Santa
+- [ ] Image optimisation — Supabase Storage `?width=...&resize=cover`
+      transformations for thumbnails on mobile
+- [ ] Accessibility audit — ARIA labels, heading hierarchy, focus
+      traps in dialogs (ConfirmDialog and ShareDialog currently don't
+      trap focus)
+
+### OAuth + auth polish
+
+- [ ] OAuth Google — Supabase has it built-in; ~20 min of setup
+      (Google Cloud Console + Supabase Auth → Providers + redirect URL
+      whitelist already done)
+- [ ] OAuth Apple — deferred unless we see real demand (Apple Developer
+      account is $99/yr + non-trivial config)
+- [ ] OAuth Яндекс — for RU audience down the line; not soft-launch
+
+### Observability & monitoring
+
+- [ ] Plausible (or Umami self-hosted) for privacy-respecting analytics
+- [ ] Uptime monitoring (BetterStack / UptimeRobot free tier)
+- [ ] Sentry DSN actually populated in Vercel env (SDK already wired)
+- [ ] Supabase Pro upgrade ($25/mo) — daily backups, no auto-pause
+
+### PWA
+
+- [ ] `manifest.webmanifest` + service worker (Vite plugin)
+- [ ] Apple touch icon set, theme color, full favicon manifest
+- [ ] Offline-readable own list (cache via service worker)
+
+### Dynamic OG image (debt from 1A)
+
+- [ ] Edge Function `og-image` using satori + resvg-wasm. Pick a
+      static TTF (Inter Italic from `@vercel/og` bundle works). Two
+      entrypoints: landing default + `?token=<share>` variant that
+      pulls owner name + item count from the DB.
 
 ## Phase 2 — soft launch (1–2 weeks after Phase 1)
 

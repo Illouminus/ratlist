@@ -1,10 +1,11 @@
 # Крысиные желания / Rat List — agent handoff
 
 A wishlist + Secret Santa app — started as a private tool for one
-friend group, now positioned as something that could go public. v0.2
-is feature-complete locally: groups, items, public share URLs, Secret
-Santa, realtime, priority levels, an editorial landing page. Not yet
-deployed.
+friend group, now publicly deployed on **`ratlist.app`** (Phase 1A of
+[PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) shipped 2026-05-17). v0.2 is
+feature-complete: groups, items, public share URLs, Secret Santa,
+realtime, priority levels, an editorial landing page, account
+self-management, GDPR-compatible legal pages.
 
 > Start here. Then read [ARCHITECTURE.md](ARCHITECTURE.md) for the data
 > model and [README.md](README.md) for one-paragraph context. Memory at
@@ -24,7 +25,7 @@ deployed.
 | Routing     | `react-router-dom@7` (JSX API, not data router)    |
 | i18n        | Custom tiny dict + context (`src/i18n/`)           |
 | Backend     | Supabase (Postgres + RLS + Auth + Storage + Edge)  |
-| Hosting     | Not deployed yet                                   |
+| Hosting     | Vercel (frontend) + Supabase Pro project (Frankfurt) |
 
 ## Quick start
 
@@ -226,9 +227,14 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | Centralised error mapping                                | ✅      |
 | Responsive sidebar/bottom-tab layout                     | ✅      |
 | Code-split routes via React.lazy                         | ✅      |
-| **Deploy**                                               | ⬜ — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
-| **OAuth + email transactional**                          | ⬜ — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
-| **Legal: Privacy / Terms / account deletion**            | ⬜ — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
+| **Deploy on `ratlist.app`** (Vercel + prod Supabase)     | ✅ Phase 1A done (2026-05-17) |
+| **Email transactional** (Resend + branded magic-link)    | ✅ Phase 1A done |
+| **Legal: Privacy / Terms / 13+ gate**                    | ✅ Phase 1A done — `/legal/*` routes |
+| **Account self-management** (`/settings`, delete, export)| ✅ Phase 1A done |
+| **SEO statics** (OG meta, robots, sitemap, favicon)      | ✅ Phase 1A done |
+| **Sentry frontend SDK** (gated on env DSN)               | ✅ Phase 1A done |
+| **OAuth + Plausible + PWA + prerender**                  | ⬜ Phase 1B — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
+| **Dynamic OG image**                                     | ⬜ Phase 1B (debt from 1A) |
 | Share % (partial claims)                                 | ⬜ (schema has `share`, no UI) |
 | Anonymous Santa chat                                     | ⬜      |
 
