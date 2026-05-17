@@ -26,7 +26,7 @@
  * Response: { title?, image_url?, site_name?, price_text?, description? }
  *           or { error: string } with status 4xx/5xx.
  */
-import { preflight, jsonResponse } from '../_shared/cors.ts';
+import { bindCors } from '../_shared/cors.ts';
 
 interface RequestBody {
   url?: unknown;
@@ -343,35 +343,36 @@ async function parseMetadata(url: string): Promise<UrlMetadata> {
 // ─────────────────────────── handler ───────────────────────────
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return preflight();
+  const cors = bindCors(req);
+  if (req.method === 'OPTIONS') return cors.preflight();
   if (req.method !== 'POST') {
-    return jsonResponse({ error: 'method_not_allowed' }, 405);
+    return cors.json({ error: 'method_not_allowed' }, 405);
   }
 
   let body: RequestBody;
   try {
     body = (await req.json()) as RequestBody;
   } catch {
-    return jsonResponse({ error: 'invalid_json' }, 400);
+    return cors.json({ error: 'invalid_json' }, 400);
   }
 
   if (typeof body.url !== 'string' || body.url.trim().length === 0) {
-    return jsonResponse({ error: 'url_required' }, 400);
+    return cors.json({ error: 'url_required' }, 400);
   }
 
   let target: URL;
   try {
     target = new URL(body.url.trim());
   } catch {
-    return jsonResponse({ error: 'invalid_url' }, 400);
+    return cors.json({ error: 'invalid_url' }, 400);
   }
   if (target.protocol !== 'http:' && target.protocol !== 'https:') {
-    return jsonResponse({ error: 'unsupported_protocol' }, 400);
+    return cors.json({ error: 'unsupported_protocol' }, 400);
   }
 
   try {
     const metadata = await parseMetadata(target.toString());
-    return jsonResponse(metadata, 200);
+    return cors.json(metadata, 200);
   } catch (err) {
     const message =
       err instanceof Error && err.name === 'AbortError'
@@ -379,6 +380,6 @@ Deno.serve(async (req) => {
         : err instanceof Error
           ? err.message
           : 'unknown_error';
-    return jsonResponse({ error: 'fetch_failed', detail: message }, 502);
+    return cors.json({ error: 'fetch_failed', detail: message }, 502);
   }
 });
