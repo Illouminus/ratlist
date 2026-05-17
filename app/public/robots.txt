@@ -1,0 +1,19 @@
+# Allow crawlers on the marketing landing and the legal pages only.
+# Everything else is user data or auth flow — no value in indexing.
+
+User-agent: *
+Allow: /$
+Allow: /legal/
+Disallow: /auth/
+Disallow: /onboarding
+Disallow: /invite/
+Disallow: /share/
+Disallow: /settings
+Disallow: /add
+Disallow: /i/
+Disallow: /groups
+Disallow: /people
+Disallow: /p/
+Disallow: /santa
+
+Sitemap: https://ratlist.app/sitemap.xml

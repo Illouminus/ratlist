@@ -6,7 +6,7 @@
  * of truth) and `./en.ts` must conform to the same shape — enforced by
  * TypeScript.
  */
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ru, type Translation } from './ru';
 import { en } from './en';
 import { I18nContext, type I18nContextValue, type Lang } from './i18n-context';
@@ -38,10 +38,16 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
   );
 }
 
+/**
+ * Default language for new visitors. We target FR/global primarily, so
+ * `en` is the safer default — RU users land via the toggle once and
+ * their choice persists. Existing users with a stored preference keep
+ * whichever they already picked.
+ */
 function loadInitialLang(): Lang {
-  if (typeof localStorage === 'undefined') return 'ru';
+  if (typeof localStorage === 'undefined') return 'en';
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === 'en' || stored === 'ru' ? stored : 'ru';
+  return stored === 'en' || stored === 'ru' ? stored : 'en';
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -54,8 +60,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     } catch {
       /* private-mode storage etc. — non-fatal. */
     }
-    document.documentElement.lang = l;
   }, []);
+
+  // Keep <html lang> in sync with the active language. Helps screen
+  // readers, search crawlers and the browser's quote-style heuristics.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   const t = useCallback(
     (key: string, vars?: Record<string, string | number>): string => {
