@@ -547,10 +547,12 @@ export type Database = {
           created_at: string
           created_by: string
           draw_deadline: string | null
+          draw_emailed_at: string | null
           gift_date: string | null
           group_id: string
           id: string
           name: string
+          start_emailed_at: string | null
           status: string
           updated_at: string
         }
@@ -559,10 +561,12 @@ export type Database = {
           created_at?: string
           created_by: string
           draw_deadline?: string | null
+          draw_emailed_at?: string | null
           gift_date?: string | null
           group_id: string
           id?: string
           name: string
+          start_emailed_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -571,10 +575,12 @@ export type Database = {
           created_at?: string
           created_by?: string
           draw_deadline?: string | null
+          draw_emailed_at?: string | null
           gift_date?: string | null
           group_id?: string
           id?: string
           name?: string
+          start_emailed_at?: string | null
           status?: string
           updated_at?: string
         }
