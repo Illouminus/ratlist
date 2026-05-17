@@ -51,6 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error ? mapAuthError(error) : null;
   }, []);
 
+  const signInWithGoogle = useCallback(async (): Promise<string | null> => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: authCallbackUrl() },
+    });
+    return error ? mapAuthError(error) : null;
+  }, []);
+
   const signOut = useCallback(async (): Promise<void> => {
     await supabase.auth.signOut();
   }, []);
@@ -61,9 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       signInWithMagicLink,
+      signInWithGoogle,
       signOut,
     }),
-    [status, session, signInWithMagicLink, signOut],
+    [status, session, signInWithMagicLink, signInWithGoogle, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

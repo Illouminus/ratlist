@@ -17,6 +17,12 @@ export interface AuthContextValue {
    * the UI can map to a localised message. Never throws.
    */
   signInWithMagicLink: (email: string) => Promise<string | null>;
+  /**
+   * Start the Google OAuth flow. Resolves immediately if the request to
+   * Supabase was accepted (the browser then navigates to Google); returns
+   * a stable error code if Supabase refused the request.
+   */
+  signInWithGoogle: () => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 

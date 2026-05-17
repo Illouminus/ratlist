@@ -145,6 +145,8 @@ export const en: Translation = {
     pageHint: "we'll send a magic link — no password needed",
     signIn: 'sign in',
     signOut: 'sign out',
+    continueWithGoogle: 'continue with Google',
+    or: 'or',
     ageConfirm: 'by clicking "send the link" you confirm you’re 13+ and accept the',
     ageConfirmTerms: 'terms',
     ageConfirmAnd: 'and',

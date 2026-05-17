@@ -150,6 +150,8 @@ export const ru: Translation = {
     pageHint: 'мы пришлём волшебную ссылку — пароль не нужен',
     signIn: 'войти',
     signOut: 'выйти',
+    continueWithGoogle: 'войти через Google',
+    or: 'или',
     ageConfirm: 'нажимая «прислать ссылку», ты подтверждаешь что тебе 13+ и принимаешь',
     ageConfirmTerms: 'правила',
     ageConfirmAnd: 'и',

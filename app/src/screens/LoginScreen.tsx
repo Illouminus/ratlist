@@ -97,33 +97,129 @@ export function LoginScreen() {
       {form.kind === 'sent' ? (
         <SentNotice email={form.email} />
       ) : (
-        <form onSubmit={handleSubmit} noValidate>
-          <Field label={t('auth.emailLabel')} error={errorText}>
-            <SketchInput
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              placeholder={t('auth.emailPh')}
-              value={email}
-              onChange={(e) => handleEmailChange(e.target.value)}
-              autoFocus
-              required
-              invalid={errorCode !== null}
-            />
-          </Field>
+        <>
+          <GoogleButton />
+          <OrDivider />
+          <form onSubmit={handleSubmit} noValidate>
+            <Field label={t('auth.emailLabel')} error={errorText}>
+              <SketchInput
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder={t('auth.emailPh')}
+                value={email}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                autoFocus
+                required
+                invalid={errorCode !== null}
+              />
+            </Field>
 
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={form.kind === 'sending' || email.length === 0}
-          >
-            {form.kind === 'sending' ? t('auth.sending') : t('auth.sendMagic')}
-          </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={form.kind === 'sending' || email.length === 0}
+            >
+              {form.kind === 'sending' ? t('auth.sending') : t('auth.sendMagic')}
+            </Button>
 
-          <AgeAndLegalNotice />
-        </form>
+            <AgeAndLegalNotice />
+          </form>
+        </>
       )}
     </PaperLayout>
+  );
+}
+
+/**
+ * Continue-with-Google button. Triggers the OAuth flow via Supabase;
+ * the browser is then redirected to Google and back to /auth/callback,
+ * where AuthCallbackScreen takes over.
+ *
+ * No loading state needed because clicking immediately navigates the
+ * whole window away — by the time we'd render "loading" the user is
+ * already on accounts.google.com.
+ */
+function GoogleButton() {
+  const { signInWithGoogle } = useAuth();
+  const { t } = useI18n();
+
+  async function handleClick(): Promise<void> {
+    await signInWithGoogle();
+    // If Supabase returns an error we currently just no-op — Supabase
+    // already logs to the console and the user can fall back to the
+    // magic-link form below.
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleClick()}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 'var(--s-3)',
+        padding: '12px 18px',
+        background: 'var(--paper)',
+        border: '1px solid var(--hair-strong)',
+        borderRadius: 'var(--r-2)',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-body)',
+        fontSize: 14,
+        fontWeight: 500,
+        color: 'var(--ink)',
+      }}
+    >
+      <GoogleMark />
+      <span>{t('auth.continueWithGoogle')}</span>
+    </button>
+  );
+}
+
+/** Official Google "G" mark, simplified SVG. Inline so we don't ship a
+ *  3 KB PNG just for this. */
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden focusable={false}>
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.79 2.71v2.26h2.9c1.69-1.56 2.67-3.86 2.67-6.62z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.46-.81 5.95-2.18l-2.9-2.26c-.81.54-1.83.86-3.05.86-2.34 0-4.33-1.58-5.04-3.7H.96v2.33A8.99 8.99 0 0 0 9 18z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.96 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.28-1.72V4.95H.96A8.99 8.99 0 0 0 0 9c0 1.45.35 2.82.96 4.05l3-2.33z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A8.96 8.96 0 0 0 9 0 8.99 8.99 0 0 0 .96 4.95l3 2.33C4.67 5.16 6.66 3.58 9 3.58z"
+      />
+    </svg>
+  );
+}
+
+/** Hairline horizontal rule with a tiny eyebrow word in the middle. */
+function OrDivider() {
+  const { t } = useI18n();
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--s-3)',
+        margin: 'var(--s-5) 0',
+        color: 'var(--ink-3)',
+      }}
+    >
+      <span style={{ flex: 1, height: 1, background: 'var(--hair)' }} />
+      <span className="mono-meta">{t('auth.or')}</span>
+      <span style={{ flex: 1, height: 1, background: 'var(--hair)' }} />
+    </div>
   );
 }
 
