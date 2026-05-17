@@ -13,7 +13,17 @@
     />
 
     <link rel="canonical" href="https://ratlist.app/" />
+
+    <!-- Favicon set + PWA manifest. SVG is preferred where supported
+         (sharp at any zoom), with PNG fallbacks for older browsers and
+         Apple home-screen. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="Rat List" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
     <!-- Open Graph. og:image is rendered on the fly by the og-image
          Supabase Edge Function; Vercel rewrites /og.png onto it so
