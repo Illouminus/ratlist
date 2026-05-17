@@ -1,9 +1,10 @@
 # Plausible analytics — setup
 
-Code is wired up — when `VITE_PLAUSIBLE_DOMAIN` is set in the Vercel
-production env, `main.tsx` injects the Plausible script on first
-render. This doc covers the manual half: creating the Plausible
-account, adding the site, and dropping the domain into Vercel.
+Code is wired up — when `VITE_PLAUSIBLE_SCRIPT_ID` is set in the
+Vercel production env, `main.tsx` installs the queue stub and
+injects Plausible's per-site loader script on first render. This
+doc covers the manual half: creating the Plausible account, adding
+the site, and dropping the script ID into Vercel.
 
 ---
 
@@ -32,37 +33,45 @@ plenty.
    - Domain: `ratlist.app`
    - Timezone: Europe/Paris (matches your tz; affects dashboard
      time bucketing only)
-4. Plausible shows the snippet to install. You don't need to copy
-   it — `main.tsx` already constructs the same `<script>` tag
-   programmatically.
+4. Plausible shows the snippet to install. The script src looks
+   like `https://plausible.io/js/pa-<long-id>.js` — copy just the
+   `pa-<long-id>` part (without `.js`). That's your site's
+   `VITE_PLAUSIBLE_SCRIPT_ID`. The init JavaScript next to it is
+   the standard Plausible bootstrap; our `initPlausible()` in
+   `app/src/lib/plausible.ts` reproduces it exactly, so no manual
+   `<script>` paste is needed.
 
 ## 2. Plug into Vercel
 
 1. Vercel → Project → Settings → Environment Variables
 2. Add:
    ```
-   Name:  VITE_PLAUSIBLE_DOMAIN
-   Value: ratlist.app
+   Name:  VITE_PLAUSIBLE_SCRIPT_ID
+   Value: pa-shRef6EUUr7_B4DMvcoSa     (the exact ID from your snippet)
    Env:   Production (and Preview if you want preview deploys tracked
           separately — usually leave off so test traffic doesn't
           inflate stats)
    ```
-3. Trigger a redeploy. Open https://ratlist.app, then check the
-   Plausible dashboard — page-view should appear within seconds.
+3. Trigger a redeploy. Open https://ratlist.app, then click
+   "Verify installation" in Plausible — within ~10 seconds it
+   should flip from "We couldn't detect Plausible on your site" to
+   confirmed.
+
+> If you previously set `VITE_PLAUSIBLE_DOMAIN`, you can delete it.
+> The new per-site loader encodes the domain in the script ID, so
+> the old env var is ignored.
 
 ## 3. (Optional) DNS proxy for ad-blockers
 
 Some ad-blockers (uBlock Origin's default list) block
-`plausible.io/js/script.js`. If you want to see those visits too,
-Plausible offers a **custom domain proxy**: load the script from
+`plausible.io/js/*`. If you want to see those visits too, Plausible
+offers a **custom domain proxy**: load the script from
 `stats.ratlist.app` instead. Setup:
 
 1. Plausible → Settings → Custom domain → enter `stats.ratlist.app`
 2. Vercel DNS → add CNAME `stats` → `custom.plausible.io`
-3. Update `main.tsx`:
-   ```ts
-   s.src = 'https://stats.ratlist.app/js/script.js';
-   ```
+3. Edit `initPlausible()` in `app/src/lib/plausible.ts` and swap
+   the host: `https://stats.ratlist.app/js/${scriptId}.js`
 
 Skip this for soft-launch. Revisit if you suspect significant
 ad-block traffic loss in the dashboard.
@@ -78,9 +87,9 @@ The app fires three custom events via the typed wrapper at
 | `ItemAdded`    | `items/useMyItems.ts` → `createItem`              | items insert succeeds (before the publish-to-groups step, so a partial publish still counts) |
 | `GroupCreated` | `groups/useGroups.ts` → `createGroup`             | `create_group` RPC succeeds                |
 
-The wrapper is a no-op when `VITE_PLAUSIBLE_DOMAIN` is unset (no
-Plausible script loaded) so call-sites don't need to guard. The
-goal list is closed in TypeScript — add an entry to
+The wrapper is a no-op when `VITE_PLAUSIBLE_SCRIPT_ID` is unset
+(no Plausible script loaded) so call-sites don't need to guard.
+The goal list is closed in TypeScript — add an entry to
 `PlausibleGoal` before introducing a new event so call-sites can't
 typo a name.
 

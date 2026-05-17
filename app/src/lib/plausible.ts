@@ -1,11 +1,19 @@
 /**
  * Typed wrapper around Plausible's custom-event API.
  *
- * The Plausible script is injected from `main.tsx` only when
- * `VITE_PLAUSIBLE_DOMAIN` is set. When it isn't (local dev, preview
- * deploys, any environment without the env var) `window.plausible`
- * stays undefined and `track()` becomes a silent no-op — no error,
- * no console noise. That means call-sites don't need to guard.
+ * Plausible's current script format ships a per-site loader URL
+ * (`https://plausible.io/js/pa-<hash>.js`) that already encodes the
+ * site identity — there is no `data-domain` attribute on the new
+ * stack. We follow Plausible's recommended bootstrap exactly: install
+ * a queue stub on `window.plausible` first (so events fired before
+ * the script loads are buffered), inject the loader, then call
+ * `plausible.init()` to flush.
+ *
+ * Bootstrap is a no-op when `VITE_PLAUSIBLE_SCRIPT_ID` is unset (local
+ * dev, preview deploys, any environment without the env var) — the
+ * stub never gets installed and `track()` becomes a silent no-op
+ * because `window.plausible` stays undefined. Call-sites don't need
+ * to guard.
  *
  * The goal list is closed on purpose: callers get autocomplete and
  * can't typo a name into a brand-new low-volume goal. Add an entry
@@ -23,12 +31,48 @@ type PlausibleProps = Record<string, string | number | boolean>;
 
 interface PlausibleApi {
   (event: PlausibleGoal, options?: { props?: PlausibleProps }): void;
+  /** Queue of calls made before the real script loaded. */
+  q?: unknown[][];
+  /** Init options captured by the stub; the real loader reads this. */
+  o?: unknown;
+  /** Init hook — Plausible's loader replaces it with the real impl. */
+  init?: (options?: unknown) => void;
 }
 
 declare global {
   interface Window {
     plausible?: PlausibleApi;
   }
+}
+
+/**
+ * Install the Plausible queue stub and inject the per-site loader
+ * script. Safe to call once on client startup; no-op on the server.
+ *
+ * The `scriptId` is the unique identifier Plausible hands out in the
+ * "Install Plausible" step of site setup (e.g. `pa-shRef6EUUr7…`).
+ * Not a secret — it ships in the client bundle and in every network
+ * request to plausible.io — but we read it from env to keep the value
+ * out of source control and to gate the script on env presence.
+ */
+export function initPlausible(scriptId: string): void {
+  if (typeof window === 'undefined') return;
+  if (window.plausible) return; // already initialised
+
+  const stub: PlausibleApi = function (this: unknown, ...args: unknown[]) {
+    (stub.q = stub.q ?? []).push(args);
+  };
+  stub.init = function (options?: unknown) {
+    stub.o = options ?? {};
+  };
+  window.plausible = stub;
+
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = `https://plausible.io/js/${scriptId}.js`;
+  document.head.appendChild(s);
+
+  stub.init();
 }
 
 export function track(event: PlausibleGoal, props?: PlausibleProps): void {

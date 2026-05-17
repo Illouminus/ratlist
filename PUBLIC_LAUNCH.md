@@ -54,8 +54,11 @@ human touch in Vercel + Supabase + Plausible:
                             --project-ref fiuheufmawxkgbqddwwu
    ```
 3. **Vercel env vars**:
-   - `VITE_PLAUSIBLE_DOMAIN=ratlist.app` (turns on the analytics
-     script + custom-goal sends)
+   - `VITE_PLAUSIBLE_SCRIPT_ID=pa-<your-site-id>` (turns on the
+     analytics script + custom-goal sends; the value is the
+     `pa-…` token from the install snippet Plausible shows on
+     site setup. The earlier `VITE_PLAUSIBLE_DOMAIN` is obsolete
+     under Plausible's per-site loader and can be removed.)
    - `VITE_SENTRY_DSN=...` (when the Sentry project is created)
    - The Vercel-side Edge Function at `app/api/share/[token].ts`
      reads `SUPABASE_URL` / `SUPABASE_ANON_KEY` — likely already
@@ -325,8 +328,8 @@ What landed in 1B:
 
 - [x] Sentry SDK wired in `main.tsx`, gated on `VITE_SENTRY_DSN` —
       no DSN populated yet (next session can drop one in Vercel env)
-- [x] Plausible script injected from `main.tsx`, gated on
-      `VITE_PLAUSIBLE_DOMAIN`; setup in [docs/PLAUSIBLE_SETUP.md](docs/PLAUSIBLE_SETUP.md)
+- [x] Plausible loader injected from `main.tsx` via `initPlausible()`,
+      gated on `VITE_PLAUSIBLE_SCRIPT_ID`; setup in [docs/PLAUSIBLE_SETUP.md](docs/PLAUSIBLE_SETUP.md)
 - [x] Uptime monitoring setup in [docs/UPTIME_SETUP.md](docs/UPTIME_SETUP.md) —
       3 UptimeRobot monitors mapping to real failure modes
 - [ ] **Supabase Pro upgrade** ($25/mo) — daily backups + no
