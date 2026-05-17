@@ -127,16 +127,17 @@ What landed in 1B:
       Per-route `<title>` / `<meta description>` / `<link canonical>`
       are written by `src/prerender.tsx`. A separate `_spa.html` is
       emitted as the Vercel rewrite target for unknown routes so /login
-      etc. no longer flash the landing copy at crawlers. Custom Vite
-      plugin strips the 587 KB prerender chunk from the client bundle
-      (Vite 8's Rolldown doesn't honour vite-prerender-plugin's own
-      `manualChunks` merge) and the matching `modulepreload` tag from
-      every emitted HTML. `LegalScreen` had to come out of `React.lazy`
-      because `renderToString` doesn't await lazy promises — it would
-      have emitted an empty `<Suspense>` boundary instead of the actual
-      text. Service-worker `navigateFallbackDenylist` now lists
-      `/legal/` so the cached `index.html` doesn't hijack legal
-      navigations in the browser.
+      etc. no longer flash the landing copy at crawlers. `LegalScreen`
+      had to come out of `React.lazy` because `renderToString` doesn't
+      await lazy promises — it would have emitted an empty `<Suspense>`
+      boundary instead of the actual text. Service-worker
+      `navigateFallbackDenylist` now lists `/legal/` so the cached
+      `index.html` doesn't hijack legal navigations in the browser.
+      Under Rolldown the prerender entry produces a separate ~600 KB /
+      ~160 KB-gzip chunk that the `index` chunk imports shared React /
+      Router code from; we leave it in `dist/assets/` because deleting
+      it would break those imports. The dead-code overhead (just
+      `renderToString` + the prerender wrapper) is ~10 KB gzip.
 - [ ] Image transforms via Supabase Storage `?width=…&resize=cover` —
       needs Supabase Pro (image transformations are not on Free)
 

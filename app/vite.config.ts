@@ -16,10 +16,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * React Router takes over and re-renders the right screen — plus search
  * crawlers would index the landing under every SPA URL.
  *
- * Runs in the default (normal) enforce phase, which is before
- * `vite-prerender-plugin`'s post-enforce `generateBundle`. At that point
- * `bundle['index.html']` is still the empty template Vite just produced, so
- * the snapshot is the right starting point.
+ * Runs in `transformIndexHtml` (which fires during Vite's HTML phase, before
+ * vite-prerender-plugin's `generateBundle` mutates index.html in place) and
+ * writes the snapshot to disk in `closeBundle`, after Vite has finished
+ * emitting everything.
  */
 function emitSpaFallback(): Plugin {
   let template: string | null = null;
@@ -43,67 +43,7 @@ function emitSpaFallback(): Plugin {
     },
     async closeBundle() {
       if (!template || !outDir) return;
-      // Strip the dangling modulepreload to the prerender chunk — that
-      // file is deleted by `stripPrerenderChunkFromClient`, so without
-      // this regex the browser would 404 on every SPA-fallback load.
-      // The chunk name is always `prerender-<hash>.js` because that's
-      // how Rolldown derives names from the source file `prerender.tsx`.
-      const cleaned = template.replace(
-        /\s*<link\s+rel="modulepreload"[^>]*href="[^"]*prerender-[^"]+"[^>]*>/g,
-        '',
-      );
-      await fs.writeFile(join(outDir, '_spa.html'), cleaned);
-    },
-  };
-}
-
-/**
- * Drops the prerender entry chunk from the client output. `vite-prerender-plugin`
- * emits `src/prerender.tsx` as a separate Rollup input so it can `import()`
- * the bundle in Node and call `prerender()`. In Vite 5 + classic Rollup the
- * plugin's `manualChunks` setting merged that code into `index`; in Vite 8 /
- * Rolldown it doesn't, so a ~600 KB chunk + a `<link rel="modulepreload">`
- * pointing at it leak into every shipped page. The chunk is server-only —
- * nothing in the runtime app imports it — so once `vite-prerender-plugin`
- * has finished using it we delete the asset from the bundle and strip the
- * preload tag from every emitted HTML file.
- *
- * Detected by the `prerender` export name: the plugin itself locates the
- * chunk the same way (`exports.includes('prerender')`), so this matches
- * whatever the plugin used.
- */
-function stripPrerenderChunkFromClient(): Plugin {
-  return {
-    name: 'strip-prerender-chunk-from-client',
-    apply: 'build',
-    enforce: 'post',
-    generateBundle: {
-      order: 'post',
-      handler(_opts, bundle) {
-        let chunkFile: string | undefined;
-        for (const [name, item] of Object.entries(bundle)) {
-          if (item.type === 'chunk' && item.exports?.includes('prerender')) {
-            chunkFile = item.fileName;
-            delete bundle[name];
-            break;
-          }
-        }
-        if (!chunkFile) return;
-        const escaped = chunkFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const re = new RegExp(
-          `\\s*<link\\s+rel="modulepreload"[^>]*href="[^"]*${escaped}"[^>]*>`,
-          'g',
-        );
-        for (const item of Object.values(bundle)) {
-          if (
-            item.type === 'asset' &&
-            typeof item.source === 'string' &&
-            item.fileName.endsWith('.html')
-          ) {
-            item.source = item.source.replace(re, '');
-          }
-        }
-      },
+      await fs.writeFile(join(outDir, '_spa.html'), template);
     },
   };
 }
@@ -119,14 +59,20 @@ export default defineConfig({
     // app to static HTML in Node so crawlers and slow second-pass JS
     // indexers see real content immediately. See `src/prerender.tsx`
     // for the route list and per-route head metadata.
+    //
+    // Sidebar on Vite 8 / Rolldown: the plugin's internal `manualChunks`
+    // hook is supposed to merge `prerender.tsx` into the `index` chunk so
+    // nothing prerender-related ships to clients. Rolldown ignores that
+    // hook for entry inputs, so a separate `prerender-<hash>.js` chunk
+    // sticks around and `index` ends up importing shared React / Router
+    // code from it. We don't delete the chunk: dropping it would break
+    // the import. The ~160 KB gzip cost is mostly code the client needs
+    // anyway (React, react-router, app code) — only `renderToString` and
+    // the prerender wrapper are wasted weight (~10 KB gzip).
     vitePrerenderPlugin({
       renderTarget: '#root',
       prerenderScript: resolve(__dirname, 'src/prerender.tsx'),
     }),
-    // Must run AFTER vite-prerender-plugin so the chunk still exists when
-    // it does its rendering work, but before write so we don't have to
-    // touch disk.
-    stripPrerenderChunkFromClient(),
     VitePWA({
       // Generate a service worker that pre-caches the build output and
       // updates itself when a new deploy lands.
