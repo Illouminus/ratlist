@@ -79,24 +79,32 @@ where id = '<report-id>';
 Soft tools available right now:
 
 ```sql
--- Disable share — owner has to opt back in via Settings:
+-- Soft-disable an account. Their share-token (if any) starts
+-- returning `invite_not_found` to crawlers and viewers — kills the
+-- public-facing abuse surface without destroying their data. The
+-- user can still log in and see their own content; nothing is
+-- removed. To re-enable just set disabled_at back to null.
+update public.profiles set disabled_at = now() where id = '<user-id>';
+update public.profiles set disabled_at = null  where id = '<user-id>'; -- undo
+
+-- Disable share specifically (keeps the rest of the account active):
 update public.profiles set share_token = null where id = '<user-id>';
 
 -- Delete a single item:
 delete from public.items where id = '<item-id>';
-
--- Hard delete an account (cascades through groups, items, claims,
--- santa, invites, reports.reporter_id → null):
-select public.delete_my_account_admin('<user-id>');  -- TODO: not yet
-                                                      -- implemented;
-                                                      -- use auth admin
-                                                      -- API for now.
 ```
 
+Group-member visibility is intentionally NOT yet filtered by
+`disabled_at` — friends inside the same circle keep seeing each
+other. The exposure surface there is trusted-only by design. If a
+disabled user is also a nuisance inside a circle, the circle's
+admin can remove them through the existing UI.
+
 For account bans, use Supabase Studio → Authentication → Users →
-find user → "Ban user" sets `auth.users.banned_until`. Doesn't touch
-the public schema, so their content stays in the DB until you delete
-it explicitly.
+find user → "Ban user" sets `auth.users.banned_until`. Doesn't
+touch the public schema, so their content stays in the DB until
+you delete it explicitly. Combine with `disabled_at` if you want
+"can't log in AND public surface is dead".
 
 ## Looking for trends
 
