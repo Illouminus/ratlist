@@ -10,6 +10,7 @@ import { usePeople, type Person } from '../../people/usePeople';
 import { formatRelativeTime } from '../../lib/relativeTime';
 import { PaperLayout } from '../../components/PaperLayout';
 import { SittingRat } from '../../components/rats';
+import { ListSkeleton } from '../../components/Skeleton';
 
 export function PeopleScreen() {
   const { t } = useI18n();
@@ -75,11 +76,7 @@ export function PeopleScreen() {
 
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-2)' }} />
 
-      {query.status === 'loading' && (
-        <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
-          …
-        </div>
-      )}
+      {query.status === 'loading' && <ListSkeleton rows={4} />}
       {query.status === 'error' && (
         <p style={{ color: 'var(--accent-deep)' }}>{query.error}</p>
       )}

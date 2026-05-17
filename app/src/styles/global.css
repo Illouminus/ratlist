@@ -176,6 +176,18 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   }
 }
 
+/* Skeleton shimmer — used by <ListSkeleton> during loading. Slow + low
+   contrast so it doesn't compete with surrounding hairlines once real
+   content lands. */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 /* Long-form legal copy (privacy policy, terms). Editorial typography to
    match the rest of the UI: italic Newsreader headings, Public Sans
    body, terracotta links. Stays readable on small screens via the

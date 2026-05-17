@@ -23,6 +23,7 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
 import { EndOfList } from '../../components/EndOfList';
 import { ShareDialog } from '../../components/ShareDialog';
+import { ListSkeleton } from '../../components/Skeleton';
 import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
 import { ItemFilters, type ViewMode } from './ItemFilters';
@@ -75,11 +76,7 @@ export function MyListScreen() {
         </>
       )}
 
-      {itemsQ.status === 'loading' && (
-        <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
-          …
-        </div>
-      )}
+      {itemsQ.status === 'loading' && <ListSkeleton rows={5} />}
 
       {itemsQ.status === 'error' && (
         <p style={{ color: 'var(--accent-deep)' }}>{itemsQ.error}</p>

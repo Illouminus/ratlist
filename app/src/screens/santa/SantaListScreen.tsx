@@ -18,6 +18,7 @@ import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { SittingRat } from '../../components/rats';
+import { ListSkeleton } from '../../components/Skeleton';
 
 /** Inline block shown when the user has no groups yet — they otherwise
  *  see only the page header and an empty list, with no hint that the
@@ -277,7 +278,7 @@ function EventsList({ query }: { query: ReturnType<typeof useSantaEvents>['query
   const { t, lang } = useI18n();
 
   if (query.status === 'loading') {
-    return <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>…</div>;
+    return <ListSkeleton rows={3} />;
   }
   if (query.status === 'error') {
     return <p style={{ color: 'var(--accent-deep)' }}>{query.error}</p>;

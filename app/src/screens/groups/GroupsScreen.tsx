@@ -26,6 +26,7 @@ import { Button } from '../../components/Button';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { SittingRat } from '../../components/rats';
+import { ListSkeleton } from '../../components/Skeleton';
 import { InviteList } from './InviteList';
 
 export function GroupsScreen() {
@@ -177,7 +178,7 @@ function GroupsList({ query, onUpdate, onDelete }: GroupsListProps) {
   const { t } = useI18n();
 
   if (query.status === 'loading') {
-    return <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>…</div>;
+    return <ListSkeleton rows={4} />;
   }
   if (query.status === 'error') {
     return <p style={{ color: 'var(--accent-deep)' }}>{query.error}</p>;
@@ -550,11 +551,7 @@ function MembersList({ groupId, groupName, viewerIsAdmin }: MembersListProps) {
   }
 
   if (query.status === 'loading') {
-    return (
-      <div className="mono-meta" style={{ marginTop: 'var(--s-3)', color: 'var(--ink-3)' }}>
-        …
-      </div>
-    );
+    return <ListSkeleton rows={3} />;
   }
   if (query.status === 'error') {
     return (
