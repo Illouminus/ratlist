@@ -1,5 +1,29 @@
-# Allow crawlers on the marketing landing and the legal pages only.
-# Everything else is user data or auth flow — no value in indexing.
+# Two-tier policy:
+#
+# 1. Social-preview crawlers — allow them onto `/share/<token>` URLs so
+#    link previews work in Twitter / Facebook / Telegram / Discord /
+#    Slack / iMessage / LinkedIn / WhatsApp. The Vercel Edge Function
+#    at `app/api/share/[token].ts` patches per-token `og:image` and
+#    `<title>` into the page; without /share/ access these bots see
+#    nothing. Listed bots only fetch URLs they're explicitly pointed
+#    at (e.g. when a user pastes a link), so opening the door for them
+#    doesn't risk leaking user data into a search index.
+#
+# 2. Search engines + everything else — landing + legal pages only.
+#    Everything authed is user-private; share URLs contain tokens that
+#    leak who's on the platform if indexed; /login adds no SEO value.
+
+User-agent: Twitterbot
+User-agent: facebookexternalhit
+User-agent: TelegramBot
+User-agent: Slackbot
+User-agent: Slackbot-LinkExpanding
+User-agent: Discordbot
+User-agent: LinkedInBot
+User-agent: WhatsApp
+User-agent: SkypeUriPreview
+User-agent: Applebot
+Allow: /
 
 User-agent: *
 Allow: /$
@@ -15,5 +39,7 @@ Disallow: /groups
 Disallow: /people
 Disallow: /p/
 Disallow: /santa
+Disallow: /login
+Disallow: /api/
 
 Sitemap: https://ratlist.app/sitemap.xml
