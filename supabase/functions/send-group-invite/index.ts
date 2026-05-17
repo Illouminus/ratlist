@@ -28,7 +28,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import { bindCors } from '../_shared/cors.ts';
-import { sendEmail } from '../_shared/email.ts';
+import { sendEmail, sanitizeHeaderValue } from '../_shared/email.ts';
 import { renderGroupInviteEmail, renderGroupInviteText } from './template.ts';
 
 const PROD_ORIGIN = 'https://ratlist.app';
@@ -156,7 +156,11 @@ Deno.serve(async (req) => {
   const organizerName = (inviterRow?.display_name as string | undefined) ?? 'A fellow rat';
 
   const inviteUrl = `${PROD_ORIGIN}/invite/${encodeURIComponent(invite.token)}`;
-  const subject = `${organizerName} invites you to «${group.name}» on Rat List`;
+  const safeOrganizer = sanitizeHeaderValue(organizerName) || 'A fellow rat';
+  const safeGroupName = sanitizeHeaderValue(group.name) || 'the group';
+  const subject = sanitizeHeaderValue(
+    `${safeOrganizer} invites you to «${safeGroupName}» on Rat List`,
+  );
   const input = {
     organizerName,
     groupName: group.name,
