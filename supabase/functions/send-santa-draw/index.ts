@@ -33,7 +33,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import { bindCors } from '../_shared/cors.ts';
-import { sendEmail } from '../_shared/email.ts';
+import { sendEmail, sanitizeHeaderValue } from '../_shared/email.ts';
 import { renderSantaDrawEmail, renderSantaDrawText } from './template.ts';
 
 const PROD_ORIGIN = 'https://ratlist.app';
@@ -47,6 +47,7 @@ interface SantaEvent {
   name: string;
   status: string;
   created_by: string;
+  draw_emailed_at: string | null;
 }
 
 interface AssignmentRow {
@@ -110,7 +111,7 @@ Deno.serve(async (req) => {
 
   const { data: event, error: eventErr } = await admin
     .from('santa_events')
-    .select('id, name, status, created_by')
+    .select('id, name, status, created_by, draw_emailed_at')
     .eq('id', eventId)
     .maybeSingle();
   if (eventErr) return cors.json({ error: 'db_error', detail: eventErr.message }, 500);
@@ -125,6 +126,22 @@ Deno.serve(async (req) => {
   // debug than a silent success.
   if (santaEvent.status !== 'drawn') {
     return cors.json({ error: 'wrong_status', status: santaEvent.status }, 409);
+  }
+
+  // Atomic single-claim: only one concurrent caller's UPDATE matches
+  // the predicate. The other gets zero rows back and bails with 409.
+  const { data: claimed, error: claimErr } = await admin
+    .from('santa_events')
+    .update({ draw_emailed_at: new Date().toISOString() })
+    .eq('id', eventId)
+    .is('draw_emailed_at', null)
+    .select('id')
+    .maybeSingle();
+  if (claimErr) {
+    return cors.json({ error: 'db_error', detail: claimErr.message }, 500);
+  }
+  if (!claimed) {
+    return cors.json({ error: 'already_emailed' }, 409);
   }
 
   // Get the organiser's display name (used in the email body). The
@@ -144,7 +161,7 @@ Deno.serve(async (req) => {
     .select('giver_id, giver:profiles!giver_id(display_name)')
     .eq('event_id', eventId);
   if (assignErr) return cors.json({ error: 'db_error', detail: assignErr.message }, 500);
-  const assignments = (assignmentsData ?? []) as AssignmentRow[];
+  const assignments = (assignmentsData ?? []) as unknown as AssignmentRow[];
   if (assignments.length === 0) {
     return cors.json({ error: 'no_assignments' }, 409);
   }
@@ -164,7 +181,8 @@ Deno.serve(async (req) => {
   }
 
   const eventUrl = `${PROD_ORIGIN}/santa/${encodeURIComponent(santaEvent.id)}`;
-  const subject = `🎁 ${santaEvent.name} — the draw is done`;
+  const safeEventName = sanitizeHeaderValue(santaEvent.name) || 'Secret Santa';
+  const subject = sanitizeHeaderValue(`🎁 ${safeEventName} — the draw is done`);
 
   // Send one email per giver, in parallel. Skip givers without an
   // email on file (shouldn't happen for normally-created accounts,
@@ -201,6 +219,17 @@ Deno.serve(async (req) => {
   for (const s of settled) {
     if (s.status === 'fulfilled' && s.value.ok) sent++;
     else failed++;
+  }
+
+  // If every send failed, the claim is the only side-effect — roll it
+  // back so a retry can re-fire. A partial success keeps the claim
+  // (some givers already got their email; we don't want to spam them
+  // a second time).
+  if (sent === 0 && failed > 0) {
+    await admin
+      .from('santa_events')
+      .update({ draw_emailed_at: null })
+      .eq('id', eventId);
   }
 
   return cors.json({ ok: true, sent, failed, total: assignments.length });
