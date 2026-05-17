@@ -28,6 +28,7 @@
  */
 import { bindCors } from '../_shared/cors.ts';
 import { isBlockedHost } from './blocklist.ts';
+import { BlockedError, safeFetch } from '../_shared/network.ts';
 
 interface RequestBody {
   url?: unknown;
@@ -303,38 +304,26 @@ function extractFallbacks(html: string, baseUrl: string): UrlMetadata {
 // ─────────────────────────── pipeline ───────────────────────────
 
 async function parseMetadata(url: string): Promise<UrlMetadata> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const response = await safeFetch(new URL(url), {
+    isBlockedHost,
+    maxHops: 5,
+    timeoutMs: FETCH_TIMEOUT_MS,
+    headers: {
+      'user-agent': USER_AGENT,
+      accept: 'text/html,application/xhtml+xml',
+      'accept-language': 'en-US,en;q=0.9',
+    },
+  });
+  if (!response.ok) throw new Error(`http_${response.status}`);
+  // Cap the body so a runaway 50 MB page can't OOM the function.
+  const html = (await response.text()).slice(0, 2_500_000);
 
-  let html: string;
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'user-agent': USER_AGENT,
-        accept: 'text/html,application/xhtml+xml',
-        // Amazon and a few others serve different markup without these.
-        'accept-language': 'en-US,en;q=0.9',
-      },
-      redirect: 'follow',
-    });
-    if (!response.ok) throw new Error(`http_${response.status}`);
-    // Cap the body so a runaway 50 MB page can't OOM the function.
-    html = (await response.text()).slice(0, 2_500_000);
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  // Run each extractor; first non-empty value per field wins. Order is
-  // by reliability when present:
-  //   og: → JSON-LD Product → Amazon-specific → fallbacks
   let result: UrlMetadata = {};
   result = mergePrefer(result, extractOpenGraph(html));
   result = mergePrefer(result, extractJsonLdProduct(html));
   result = mergePrefer(result, extractAmazon(html));
   result = mergePrefer(result, extractFallbacks(html, url));
 
-  // Absolutise image URLs in case any extractor returned a relative one.
   if (result.image_url) {
     result.image_url = absolutise(result.image_url, url);
   }
@@ -367,24 +356,24 @@ Deno.serve(async (req) => {
   } catch {
     return cors.json({ error: 'invalid_url' }, 400);
   }
-  if (target.protocol !== 'http:' && target.protocol !== 'https:') {
-    return cors.json({ error: 'unsupported_protocol' }, 400);
-  }
-  // Refuse known-NSFW hosts upfront — we don't want their og:image
-  // ending up on someone's public wishlist or Secret Santa preview.
-  // See `blocklist.ts` for the policy. 422 (not 400) signals "we
-  // understood your request, the policy refuses it" — distinct from
-  // a malformed URL so the client can show a different message.
-  if (isBlockedHost(target.hostname)) {
-    return cors.json({ error: 'blocked_host' }, 422);
-  }
 
   try {
     const metadata = await parseMetadata(target.toString());
     return cors.json(metadata, 200);
   } catch (err) {
+    if (err instanceof BlockedError) {
+      // Log enough to monitor false-positive rate during rollout. The
+      // hostname is the user's input — already public-facing on the
+      // wishlist; no token leakage. Remove this console.warn after
+      // one week of low false-positive rate.
+      console.warn('[fetch-url-meta] blocked', err.code, target.hostname);
+      // 400 for unsupported_protocol (malformed request), 422 for the
+      // policy refusals (we understood, we won't fetch this).
+      const status = err.code === 'unsupported_protocol' ? 400 : 422;
+      return cors.json({ error: err.code }, status);
+    }
     const message =
-      err instanceof Error && err.name === 'AbortError'
+      err instanceof Error && err.name === 'TimeoutError'
         ? 'timeout'
         : err instanceof Error
           ? err.message
