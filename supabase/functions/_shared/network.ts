@@ -11,7 +11,7 @@
  *   2. `resolvesToPrivate(hostname)` — async DNS resolution + same
  *      check on every returned IP. Catches DNS rebinding
  *      (`127-0-0-1.nip.io` resolves to 127.0.0.1).
- *   3. `safeFetch(url, opts, hooks)` — manual redirect loop that
+ *   3. `safeFetch(url, opts)` — manual redirect loop that
  *      reruns 1+2 plus a caller-supplied `isBlockedHost` callback on
  *      EVERY hop. Catches `bit.ly → pornhub.com` redirect bypasses.
  *
