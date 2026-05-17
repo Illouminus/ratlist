@@ -5,6 +5,18 @@ import { I18nProvider } from './i18n';
 import App from './App';
 import './styles/global.css';
 
+// Plausible analytics — privacy-respecting, no cookies, no personal
+// data. Gated on env var so local / unconfigured deploys stay silent.
+// The script is loaded async + deferred so it doesn't block paint.
+const plausibleDomain = import.meta.env.VITE_PLAUSIBLE_DOMAIN;
+if (plausibleDomain) {
+  const s = document.createElement('script');
+  s.defer = true;
+  s.dataset.domain = plausibleDomain;
+  s.src = 'https://plausible.io/js/script.js';
+  document.head.appendChild(s);
+}
+
 // Sentry — gated on the env var so local / unconfigured deploys stay
 // silent. We deliberately disable session replay and tracing for now
 // (privacy + bundle size); just plain error reporting until traffic
