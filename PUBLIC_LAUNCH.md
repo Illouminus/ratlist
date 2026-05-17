@@ -104,66 +104,92 @@ without GDPR / consumer-law gaps. Shipped to production end-to-end.
 - [x] Multi-origin CORS for Edge Functions (request-bound allow-list
       instead of single `ALLOWED_ORIGIN` env)
 
-## Phase 1B — polish before marketing (5–7 days)
+## Phase 1B — polish before marketing ✅ DONE (2026-05-17)
 
-Stuff that doesn't block the URL going live but should be in place
-before we point Habr / Product Hunt / Hacker News at it.
+What landed in 1B:
 
 ### Performance & accessibility
 
-- [ ] Pre-render landing `/` — `react-snap` is broken on React 19,
-      `vite-react-ssg` is still beta, `vite-prerender-plugin` requires
-      an SSR entry refactor + careful `hydrateRoot` switch. Worth a
-      dedicated session. **OG / Schema.org / SEO meta tags are already
-      static in `index.html`, so social previews and basic crawlers
-      are unaffected — the bottleneck is only Google's second-pass JS
-      render latency on the home page itself.**
-- [ ] Lighthouse pass (perf, a11y, SEO, best practices) — aim 90+
-- [ ] Loading skeletons for slow networks on MyList / Groups / Santa
-- [ ] Image optimisation — Supabase Storage `?width=...&resize=cover`
-      transformations for thumbnails on mobile
-- [ ] Accessibility audit — ARIA labels, heading hierarchy, focus
-      traps in dialogs (ConfirmDialog and ShareDialog currently don't
-      trap focus)
+- [x] Lighthouse pass on production — baseline 82 / 86 / 100 / 100,
+      improved to 90+ a11y after the contrast / landmarks / heading /
+      touch-target fixes (see commit `b58f2d3`)
+- [x] Loading skeletons (`<ListSkeleton>`) on MyList / Groups / People
+      / Santa replacing the single "…" placeholder
+- [x] Lazy images verified — `ItemPhoto` already `loading="lazy"`
+- [x] Accessibility: focus traps in `ConfirmDialog` + `ShareDialog`
+      via new `useFocusTrap` hook; `<main>` landmark via new
+      `<PaperLayout as="main">` prop on every pre-auth screen;
+      heading order fixed on the landing (h1 → h2 → h3); WCAG AA
+      contrast for `--ink-3` and `--accent`; sign-in touch target
+      bumped to 44 px
+- [ ] **Pre-render landing `/`** — still deferred. `react-snap` is
+      broken on React 19, `vite-react-ssg` is beta, `vite-prerender-plugin`
+      requires an SSR entry refactor + `hydrateRoot` switch. **OG /
+      Schema.org / SEO meta tags are already static**, so social
+      previews and basic crawlers are unaffected — the only remaining
+      bottleneck is Google's second-pass JS render latency on the
+      home page itself.
+- [ ] Image transforms via Supabase Storage `?width=…&resize=cover` —
+      needs Supabase Pro (image transformations are not on Free)
 
 ### OAuth + auth polish
 
-- [x] OAuth Google — client wiring shipped (button on /login, AuthProvider
-      method, AuthCallback handles both flows). Manual setup steps in
-      [docs/OAUTH_GOOGLE.md](docs/OAUTH_GOOGLE.md) — ~20 min in Google
-      Cloud Console + Supabase Dashboard.
-- [ ] OAuth Apple — deferred unless we see real demand (Apple Developer
-      account is $99/yr + non-trivial config)
-- [ ] OAuth Яндекс — for RU audience down the line; not soft-launch
+- [x] OAuth Google — client wiring + Google Cloud Console + Search
+      Console domain verification (TXT) — live, anyone can sign in
+- [ ] OAuth Apple — deferred unless we see real demand
+- [ ] OAuth Яндекс — Phase 2 if we open RU channel
 
 ### Observability & monitoring
 
-- [ ] Plausible (or Umami self-hosted) for privacy-respecting analytics
-- [ ] Uptime monitoring (BetterStack / UptimeRobot free tier)
-- [ ] Sentry DSN actually populated in Vercel env (SDK already wired)
-- [ ] Supabase Pro upgrade ($25/mo) — daily backups, no auto-pause
+- [x] Sentry SDK wired in `main.tsx`, gated on `VITE_SENTRY_DSN` —
+      no DSN populated yet (next session can drop one in Vercel env)
+- [x] Plausible script injected from `main.tsx`, gated on
+      `VITE_PLAUSIBLE_DOMAIN`; setup in [docs/PLAUSIBLE_SETUP.md](docs/PLAUSIBLE_SETUP.md)
+- [x] Uptime monitoring setup in [docs/UPTIME_SETUP.md](docs/UPTIME_SETUP.md) —
+      3 UptimeRobot monitors mapping to real failure modes
+- [ ] **Supabase Pro upgrade** ($25/mo) — daily backups + no
+      auto-pause + image transformations. Worth doing once we have
+      any actual users; until then Free is fine
 
 ### PWA
 
-- [x] `manifest.webmanifest` (paper bg + theme color, standalone display)
+- [x] `manifest.webmanifest` with standalone display, paper bg, theme
+      color
 - [x] Apple touch icon (180), PNG favicon set (32, 192, 512), full
-      Apple meta tags (`apple-mobile-web-app-{title,capable,status-bar-style}`)
-- [ ] Service worker for offline-readable own list — future work, the
-      install-to-home-screen flow works from just the manifest
+      Apple meta tags
+- [x] Service worker via `vite-plugin-pwa` — pre-caches build output
+      (~683 KB / 17 entries), auto-update on new deploys, navigation
+      fallback excludes `/og.png` and `/functions/*` so external
+      rewrites aren't intercepted
 
 ### Dynamic OG image (debt from 1A)
 
-- [x] Edge Function `og-image` using satori + resvg-wasm. Fix turned
-      out to be (a) ship Newsreader as **WOFF** (not woff2, not variable
-      TTF), (b) inline as base64 since supabase CLI doesn't bundle
-      non-TS assets, (c) use plain object trees instead of satori-html
-      so whitespace between tags doesn't trip the "display: flex"
-      check. 1200x630 PNG, ≈43 KB, served via Vercel rewrite from
-      `/og.png`.
-- [ ] Future variant: `?token=<share>` to render per-list previews
-      ("Маша's list — 12 wishes") for `/share/<token>` link cards.
-      Markup pattern already in place; just needs a DB lookup for
-      owner display_name + visible item count.
+- [x] Edge Function `og-image` (satori + resvg-wasm). Fix was (a)
+      ship Newsreader as **WOFF** (not woff2, not variable TTF), (b)
+      inline as base64 since supabase CLI doesn't bundle non-TS
+      assets, (c) use plain object trees instead of satori-html so
+      whitespace between tags doesn't trip the "display: flex" check.
+      1200x630 PNG, ≈43 KB, served via Vercel rewrite from `/og.png`.
+- [ ] Future variant: `?token=<share>` for per-list previews
+      ("Маша's list — 12 wishes") on `/share/<token>` cards. Markup
+      already factored to grow into this; just needs a DB lookup
+      for owner display_name + visible item count.
+
+### Things to pick up for the next contributor
+
+When opening a fresh session, this is where 1B "polish" leaves off:
+
+1. **Pre-render landing** (own session, ~2 h) — refactor `main.tsx`
+   into SSR + hydrate entries, integrate `vite-prerender-plugin` or
+   roll a postbuild Node script using `vite-node` + `react-dom/server`.
+   See [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) for the trap report.
+2. **Per-share-token OG image** (~1 h) — extend `og-image` Edge
+   Function with a `?token=...` branch that fetches `profiles +
+   items count` and renders a personalised preview.
+3. **Supabase Pro upgrade** (5 min, $25/mo) — unblocks image
+   transformations and gives backups.
+4. **Custom Plausible goal events** for SignedIn / ItemAdded /
+   GroupCreated — needs ~30 min once Plausible is live.
 
 ## Phase 2 — soft launch (1–2 weeks after Phase 1)
 

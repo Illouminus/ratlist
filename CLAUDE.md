@@ -1,11 +1,13 @@
 # Крысиные желания / Rat List — agent handoff
 
 A wishlist + Secret Santa app — started as a private tool for one
-friend group, now publicly deployed on **`ratlist.app`** (Phase 1A of
-[PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) shipped 2026-05-17). v0.2 is
-feature-complete: groups, items, public share URLs, Secret Santa,
-realtime, priority levels, an editorial landing page, account
-self-management, GDPR-compatible legal pages.
+friend group, now publicly deployed on **`ratlist.app`**. Phase 1A
+(production deploy, legal, email, account self-mgmt, SEO) and Phase
+1B (OAuth Google, PWA + service worker, dynamic OG image, focus
+traps, Plausible, uptime) shipped 2026-05-17. v0.2 is feature-complete:
+groups, items, public share URLs, Secret Santa, realtime, priority
+levels, an editorial landing page, account self-management,
+GDPR-compatible legal pages.
 
 > Start here. Then read [ARCHITECTURE.md](ARCHITECTURE.md) for the data
 > model and [README.md](README.md) for one-paragraph context. Memory at
@@ -233,8 +235,14 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Account self-management** (`/settings`, delete, export)| ✅ Phase 1A done |
 | **SEO statics** (OG meta, robots, sitemap, favicon)      | ✅ Phase 1A done |
 | **Sentry frontend SDK** (gated on env DSN)               | ✅ Phase 1A done |
-| **OAuth + Plausible + PWA + prerender**                  | ⬜ Phase 1B — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
-| **Dynamic OG image**                                     | ⬜ Phase 1B (debt from 1A) |
+| **OAuth Google** (button on /login)                      | ✅ Phase 1B done — see [docs/OAUTH_GOOGLE.md](docs/OAUTH_GOOGLE.md) |
+| **PWA** (manifest + service worker + full favicon set)   | ✅ Phase 1B done |
+| **Dynamic OG image** (Edge Function, satori + WOFF)      | ✅ Phase 1B done — `/og.png` rewrite |
+| **Focus traps + WCAG AA + landmarks + loading skeletons**| ✅ Phase 1B done |
+| **Plausible + uptime monitoring** (code wired, docs ready) | ✅ Phase 1B done — gated on env DSN |
+| **Pre-render landing** (SSR / hydrateRoot refactor)      | ⬜ deferred — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
+| **Per-share-token OG image variant**                     | ⬜ deferred — ~1 h follow-up |
+| **Supabase Pro upgrade**                                 | ⬜ optional — $25/mo, unlocks image transforms + backups |
 | Share % (partial claims)                                 | ⬜ (schema has `share`, no UI) |
 | Anonymous Santa chat                                     | ⬜      |
 

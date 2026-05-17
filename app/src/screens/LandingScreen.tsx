@@ -535,7 +535,13 @@ function FinalCta() {
         position: 'relative',
       }}
     >
-      <div className="mono-meta" style={{ marginBottom: 'var(--s-3)' }}>
+      {/* On the accent-soft FinalCta background the mono-meta default
+          color (--ink-3) sits at 4.46:1 contrast, just under WCAG AA.
+          Bump to --ink-2 locally so the section passes. */}
+      <div
+        className="mono-meta"
+        style={{ marginBottom: 'var(--s-3)', color: 'var(--ink-2)' }}
+      >
         {t('landing.ctaEyebrow')}
       </div>
       <h2
