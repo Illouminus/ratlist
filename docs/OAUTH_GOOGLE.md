@@ -55,10 +55,44 @@ Google Cloud Console and pasting them into Supabase. ~20 minutes.
 
 ### Publish
 
-13. Back to **OAuth consent screen** → **Publish app**. Sites under
-    `*.supabase.co` callback don't need Google's review process for
-    the basic scopes we're using, so the app stays in "Testing" /
-    "In production" mode immediately. Confirm.
+13. Back to **OAuth consent screen** → **Publish app**.
+
+    > ⚠️ **Branding validation gotcha (since 2023).** When you click
+    > Publish, Google now checks that the homepage URL
+    > (`https://ratlist.app`) is verified as yours in Google Search
+    > Console. If it isn't, the validation panel will refuse with
+    > "Le site Web ... n'est pas enregistré à votre nom" / "The
+    > website ... is not registered to you" and the app stays in
+    > Testing mode. This is independent from OAuth scopes — even our
+    > basic `openid + email + profile` scope set triggers the check
+    > on first publish.
+
+    **Two paths from here:**
+
+    - **(A) Soft launch — stay in Testing mode.** No verification
+      needed; only up to 100 explicitly-listed test users can sign in
+      via Google. Add them under **Audience → Test users**. Everyone
+      else still has magic-link as a fallback. Use this if you only
+      need OAuth for yourself + a handful of friends right now.
+
+    - **(B) Production — verify the domain via Search Console
+      (~10 min).** The proper path. Useful for SEO monitoring later
+      anyway.
+
+      1. Open https://search.google.com/search-console
+      2. **Add property → Domain** (not "URL prefix" — Domain covers
+         apex + subdomains in one record)
+      3. Enter `ratlist.app`
+      4. Google shows a TXT record like
+         `google-site-verification=abc…`
+      5. **Vercel → Project → Settings → Domains → ratlist.app →
+         DNS Records → Add Record**: Type `TXT`, Name `@`, Value =
+         the verification string (no quotes)
+      6. Wait 30–60 s, click **Verify** in Search Console
+      7. Back in Google Cloud Console → **OAuth consent screen →
+         Branding** → side panel "I've fixed the issues" → submit
+      8. A few minutes later the app moves to "In production" and
+         Google sign-in works for any account.
 
 ## 2. Supabase
 
