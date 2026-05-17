@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
+import { track } from '../lib/plausible';
 
 /** A group row enriched with the caller's role and the group's size. */
 export interface MyGroup {
@@ -166,6 +167,8 @@ export function useGroups(): UseGroupsResult {
       });
 
       if (error || !data) return { error: error?.message ?? 'unknown error' };
+
+      track('GroupCreated');
 
       // The RPC returns the bare `groups` row. We synthesise the
       // MyGroup shape locally (role=admin, member_count=1) so the

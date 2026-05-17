@@ -67,13 +67,40 @@ Plausible offers a **custom domain proxy**: load the script from
 Skip this for soft-launch. Revisit if you suspect significant
 ad-block traffic loss in the dashboard.
 
+## Goal events (already wired in code)
+
+The app fires three custom events via the typed wrapper at
+`app/src/lib/plausible.ts`:
+
+| Goal           | Fired from                                        | When                                       |
+| -------------- | ------------------------------------------------- | ------------------------------------------ |
+| `SignedIn`     | `screens/AuthCallbackScreen.tsx`                  | auth status flips to `authenticated` on the callback URL (so it covers magic link + Google OAuth, but skips cached-session restores) |
+| `ItemAdded`    | `items/useMyItems.ts` → `createItem`              | items insert succeeds (before the publish-to-groups step, so a partial publish still counts) |
+| `GroupCreated` | `groups/useGroups.ts` → `createGroup`             | `create_group` RPC succeeds                |
+
+The wrapper is a no-op when `VITE_PLAUSIBLE_DOMAIN` is unset (no
+Plausible script loaded) so call-sites don't need to guard. The
+goal list is closed in TypeScript — add an entry to
+`PlausibleGoal` before introducing a new event so call-sites can't
+typo a name.
+
+To make the events show up in the dashboard's conversion view, the
+matching custom event must also exist in Plausible:
+
+1. Plausible → Site settings → **Goals & funnels** → **+ Add goal**
+2. Pick **Custom event**
+3. Event name: exactly `SignedIn`, `ItemAdded`, or `GroupCreated`
+   (case-sensitive — must match what the wrapper sends)
+4. Repeat for the other two
+
+Until those goals are added in the dashboard, the events still get
+sent and counted, they just aren't surfaced as conversions.
+
 ## What stays manual after this
 
-- **Goal events** (signups, item-added, etc.) — Plausible supports
-  custom events via `plausible('SignedUp')`. Not wired up yet;
-  add it in `AuthCallbackScreen` after first sign-in and in
-  `AddItemScreen` after a successful create. Worth doing once you
-  see ~100 sessions/day and need conversion funnels.
 - **Outbound links** — Plausible auto-tracks outbound clicks if
   the file-downloads + outbound-links extension is enabled in the
   site settings. One toggle, no code change.
+- **Funnels** — once goals exist, you can chain them
+  (`SignedIn` → `GroupCreated` → `ItemAdded`) to see drop-off
+  between sign-up and first real use.

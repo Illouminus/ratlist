@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
+import { track } from '../lib/plausible';
 import type { Item, Occasion, ItemStatus } from '../lib/db';
 
 /** An item plus the list of groups it's published to. */
@@ -183,6 +184,11 @@ export function useMyItems(): UseMyItemsResult {
         .single();
 
       if (error || !data) return { error: error?.message ?? 'unknown error' };
+
+      // Fire the goal immediately after the items insert succeeds, not
+      // after the publish step — if pub fails the item still exists in
+      // the user's list and from the user's perspective they added it.
+      track('ItemAdded');
 
       // Publish to groups in a separate batch insert. If the user picked
       // no groups, the item is private — owner-only.

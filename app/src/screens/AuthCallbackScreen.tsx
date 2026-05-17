@@ -7,14 +7,25 @@
  * This component just renders a tiny "signing you in…" state until the
  * AuthProvider sees the new session, then redirects.
  */
+import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n/useI18n';
 import { PaperLayout } from '../components/PaperLayout';
+import { track } from '../lib/plausible';
 
 export function AuthCallbackScreen() {
   const { t } = useI18n();
   const { status } = useAuth();
+
+  // Fire the SignedIn goal once per successful callback. This screen
+  // is only reachable via a magic-link click or an OAuth redirect, so
+  // every transition to `authenticated` here is a genuine sign-in —
+  // unlike `onAuthStateChange` in AuthProvider, which also fires for
+  // cached-session restores on every page load.
+  useEffect(() => {
+    if (status === 'authenticated') track('SignedIn');
+  }, [status]);
 
   if (status === 'authenticated') return <Navigate to="/" replace />;
   if (status === 'anonymous') {
