@@ -15,6 +15,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { OCCASIONS, type Occasion } from '../../lib/db';
 import type { MyGroup } from '../../groups/useGroups';
 import type { CreateItemInput, MyItem } from '../../items/useMyItems';
+import { useEvents } from '../../events/useEvents';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
@@ -74,11 +75,29 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(
     () => new Set(initial ? initial.group_ids : groups.map((g) => g.id)),
   );
+  // Events the user is honoree of — they can attach this item to any of
+  // them. In create mode start empty (intentional opt-in); in edit mode
+  // mirror the item's existing attachments.
+  const { query: eventsQ } = useEvents();
+  const myEvents =
+    eventsQ.status === 'ready' ? eventsQ.events.filter((e) => e.is_honoree) : [];
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(
+    () => new Set(initial?.event_ids ?? []),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function toggleGroup(id: string): void {
     setSelectedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleEvent(id: string): void {
+    setSelectedEvents((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -163,6 +182,11 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
       note: note.trim() || null,
       cover_url: coverUrl,
       group_ids: Array.from(selectedGroups),
+      // Always pass event_ids (even if empty) in edit mode so the hook
+      // knows to sync. In create mode `undefined` means "skip" — but
+      // since we always have the Set, sending [] is also fine; the hook
+      // treats both as full-replacement.
+      event_ids: Array.from(selectedEvents),
     };
 
     const result = await onSubmit(input);
@@ -296,6 +320,22 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
                 emoji={g.emoji}
                 active={selectedGroups.has(g.id)}
                 onClick={() => toggleGroup(g.id)}
+              />
+            ))}
+          </div>
+        </Field>
+      )}
+
+      {myEvents.length > 0 && (
+        <Field label={t('add.eventsLabel')} hint={t('add.eventsHint')}>
+          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+            {myEvents.map((e) => (
+              <GroupChip
+                key={e.id}
+                label={e.title}
+                emoji={null}
+                active={selectedEvents.has(e.id)}
+                onClick={() => toggleEvent(e.id)}
               />
             ))}
           </div>

@@ -4,9 +4,11 @@
  *
  * Loaded via the `get_people` RPC (see `usePeople`).
  */
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { usePeople, type Person } from '../../people/usePeople';
+import { useEvents } from '../../events/useEvents';
 import { formatRelativeTime } from '../../lib/relativeTime';
 import { PaperLayout } from '../../components/PaperLayout';
 import { SittingRat } from '../../components/rats';
@@ -15,6 +17,21 @@ import { ListSkeleton } from '../../components/Skeleton';
 export function PeopleScreen() {
   const { t } = useI18n();
   const { query } = usePeople();
+  const { query: eventsQ } = useEvents();
+
+  // Map honoree_id → number of their events that are visible to me.
+  // Computed once per render and passed down so PersonRow doesn't have
+  // to spin up its own hook per row.
+  const eventCountByUser = useMemo(() => {
+    const m = new Map<string, number>();
+    if (eventsQ.status === 'ready') {
+      for (const e of eventsQ.events) {
+        if (e.is_honoree) continue; // skip my own events on People rows
+        m.set(e.honoree_id, (m.get(e.honoree_id) ?? 0) + 1);
+      }
+    }
+    return m;
+  }, [eventsQ]);
 
   return (
     <PaperLayout>
@@ -92,7 +109,7 @@ export function PeopleScreen() {
           }}
         >
           {query.people.map((p) => (
-            <PersonRow key={p.id} person={p} />
+            <PersonRow key={p.id} person={p} eventCount={eventCountByUser.get(p.id) ?? 0} />
           ))}
         </ul>
       )}
@@ -102,7 +119,7 @@ export function PeopleScreen() {
 
 // ─────────────────────────── row ───────────────────────────
 
-function PersonRow({ person }: { person: Person }) {
+function PersonRow({ person, eventCount }: { person: Person; eventCount: number }) {
   const { t, lang } = useI18n();
   // Mirrors the design-v2 friend row: avatar + italic "{handle}'s list",
   // item count on the right (tnum), a single line of `·`-joined recent
@@ -172,16 +189,32 @@ function PersonRow({ person }: { person: Person }) {
             {previewLine}
           </div>
 
-          {updated && (
+          {(updated || eventCount > 0) && (
             <div
-              className="marginalia"
               style={{
                 marginTop: 4,
-                fontSize: 13,
-                color: 'var(--accent)',
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 'var(--s-3)',
+                flexWrap: 'wrap',
               }}
             >
-              {t('people.updatedAgo', { when: updated })}
+              {eventCount > 0 && (
+                <span
+                  className="mono-meta"
+                  style={{ color: 'var(--accent)', fontWeight: 600 }}
+                >
+                  {t('people.eventCount', { count: String(eventCount) })}
+                </span>
+              )}
+              {updated && (
+                <span
+                  className="marginalia"
+                  style={{ fontSize: 13, color: 'var(--accent)' }}
+                >
+                  {t('people.updatedAgo', { when: updated })}
+                </span>
+              )}
             </div>
           )}
         </div>

@@ -63,6 +63,9 @@ Below is the schema in the first migration. Detailed in
 | `item_groups`  | Many-to-many: which item is visible in which group |
 | `item_photos`  | Multiple photos per item |
 | `claims`       | "I'll get this one" — **hidden from item owner** |
+| `events`       | A first-class occasion (birthday, holidays, anniversary…) owned by one honoree; the user-facing primary entity in the post-M2 UI |
+| `event_circles`| M:M — which audience circles can see a given event (and, via the extended `items` RLS, see the items curated into it) |
+| `event_items`  | M:M — the curated subset of the honoree's items featured in this event. Honoree-only insert/delete |
 
 ### Helper functions (SECURITY DEFINER)
 
@@ -89,15 +92,31 @@ not public.owns_item(item_id) and public.can_see_item(item_id)
 The owner of an item literally cannot read claim rows on it. This is
 checked at every read path.
 
-**`items` table — SELECT:**
+**`items` table — SELECT:** three OR'd policies, any pathway opens visibility:
 ```sql
+-- 1. owner sees their own
 owner_id = auth.uid()
-or exists (
+
+-- 2. members of any item_groups circle (long-term audience)
+exists (
   select 1 from item_groups ig
   join group_members gm on gm.group_id = ig.group_id
   where ig.item_id = items.id and gm.user_id = auth.uid()
 )
+
+-- 3. members of any event_circles audience for an event the item is
+--    curated into (event-driven, added in 20260517181620)
+exists (
+  select 1
+  from event_items ei
+  join event_circles ec on ec.event_id = ei.event_id
+  join group_members gm on gm.group_id = ec.group_id
+  where ei.item_id = items.id and gm.user_id = auth.uid()
+)
 ```
+The honoree attaching an item to an event whose audience includes circle
+X is treated as a deliberate "let circle X see this item" — so circles
+don't have to also be on `item_groups` to receive curated event items.
 
 **`group_members` — SELECT:** only fellow members.
 

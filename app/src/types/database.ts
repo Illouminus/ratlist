@@ -51,6 +51,113 @@ export type Database = {
           },
         ]
       }
+      event_circles: {
+        Row: {
+          event_id: string
+          group_id: string
+        }
+        Insert: {
+          event_id: string
+          group_id: string
+        }
+        Update: {
+          event_id?: string
+          group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_circles_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_circles_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_items: {
+        Row: {
+          added_at: string
+          event_id: string
+          item_id: string
+          position: number | null
+        }
+        Insert: {
+          added_at?: string
+          event_id: string
+          item_id: string
+          position?: number | null
+        }
+        Update: {
+          added_at?: string
+          event_id?: string
+          item_id?: string
+          position?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_items_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          honoree_id: string
+          id: string
+          kind: string
+          note: string | null
+          occurs_on: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          honoree_id: string
+          id?: string
+          kind?: string
+          note?: string | null
+          occurs_on?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          honoree_id?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          occurs_on?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_honoree_id_fkey"
+            columns: ["honoree_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           group_id: string
@@ -566,6 +673,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_see_event: { Args: { _event_id: string }; Returns: boolean }
       can_see_item: { Args: { _item_id: string }; Returns: boolean }
       complete_onboarding: {
         Args: { _display_name: string; _handle?: string }
@@ -608,6 +716,25 @@ export type Database = {
       }
       delete_my_account: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
+      get_my_events: {
+        Args: never
+        Returns: {
+          audience_circle_count: number
+          created_at: string
+          honoree_avatar_url: string
+          honoree_display_name: string
+          honoree_handle: string
+          honoree_id: string
+          id: string
+          is_honoree: boolean
+          item_count: number
+          kind: string
+          note: string
+          occurs_on: string
+          title: string
+          updated_at: string
+        }[]
+      }
       get_my_groups: {
         Args: never
         Returns: {
@@ -665,6 +792,7 @@ export type Database = {
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       is_santa_organiser: { Args: { _event_id: string }; Returns: boolean }
       is_santa_participant: { Args: { _event_id: string }; Returns: boolean }
+      owns_event: { Args: { _event_id: string }; Returns: boolean }
       owns_item: { Args: { _item_id: string }; Returns: boolean }
       redeem_invite: {
         Args: { _token: string }

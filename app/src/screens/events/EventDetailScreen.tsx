@@ -1,0 +1,851 @@
+/**
+ * `EventDetailScreen` — `/events/:id`. Two views in one:
+ *
+ * Honoree mode (owner): inline edit of title / kind / date / note,
+ *   add/remove audience circles, add/remove curated items, delete event.
+ *
+ * Guest mode (audience member): read-only header, claim / release each
+ *   curated item. Claim privacy is RLS-enforced — the honoree never sees
+ *   any claim row (see `claims` RLS in 20260516120000_init.sql), so this
+ *   page just renders what comes back.
+ */
+import { useMemo, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useI18n } from '../../i18n/useI18n';
+import { useEvent, type EventClaim } from '../../events/useEvent';
+import { useGroups } from '../../groups/useGroups';
+import { useMyItems, type MyItem } from '../../items/useMyItems';
+import { useAuth } from '../../auth/useAuth';
+import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { errorMessage } from '../../lib/errors';
+import { EVENT_KINDS, type EventKind } from '../../lib/db';
+import { PaperLayout } from '../../components/PaperLayout';
+import { ItemPhoto } from '../../components/ItemPhoto';
+import { ListSkeleton } from '../../components/Skeleton';
+import { Field } from '../../components/Field';
+import { SketchInput } from '../../components/SketchInput';
+import { Button } from '../../components/Button';
+
+export function EventDetailScreen() {
+  const { eventId } = useParams<{ eventId: string }>();
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { user } = useAuth();
+  const {
+    query,
+    update,
+    remove,
+    attachCircle,
+    detachCircle,
+    attachItem,
+    detachItem,
+    claim,
+    release,
+  } = useEvent(eventId ?? null);
+
+  if (query.status === 'loading') {
+    return (
+      <PaperLayout>
+        <ListSkeleton rows={4} />
+      </PaperLayout>
+    );
+  }
+  if (query.status === 'anonymous') return null;
+  if (query.status === 'error') {
+    return (
+      <PaperLayout>
+        <p style={{ color: 'var(--accent-deep)' }}>{errorMessage(t, query.error)}</p>
+        <Link to="/events" className="mono-meta" style={{ color: 'var(--accent)' }}>
+          ← {t('events.backToList')}
+        </Link>
+      </PaperLayout>
+    );
+  }
+
+  const { event, audience, items, isHonoree } = query.data;
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: t('events.deleteConfirmTitle'),
+      body: t('events.deleteConfirm', { title: event.title }),
+      confirmLabel: t('events.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    const result = await remove();
+    if ('error' in result) {
+      toast.show(errorMessage(t, result.error));
+      return;
+    }
+    toast.show(t('events.deletedToast'));
+    navigate('/events', { replace: true });
+  }
+
+  return (
+    <PaperLayout>
+      <Link
+        to="/events"
+        className="mono-meta"
+        style={{
+          color: 'var(--ink-3)',
+          textDecoration: 'none',
+          display: 'inline-block',
+          marginBottom: 'var(--s-4)',
+        }}
+      >
+        ← {t('events.backToList')}
+      </Link>
+
+      {isHonoree ? (
+        <HonoreeHeader event={event} onSave={update} />
+      ) : (
+        <GuestHeader event={event} />
+      )}
+
+      <AudienceSection
+        audience={audience}
+        isHonoree={isHonoree}
+        onAttach={attachCircle}
+        onDetach={detachCircle}
+      />
+
+      <ItemsSection
+        items={items}
+        isHonoree={isHonoree}
+        myUserId={user?.id ?? null}
+        onAttach={attachItem}
+        onDetach={detachItem}
+        onClaim={claim}
+        onRelease={release}
+      />
+
+      {isHonoree && (
+        <footer
+          style={{
+            marginTop: 'var(--s-7)',
+            paddingTop: 'var(--s-4)',
+            borderTop: '1px solid var(--hair)',
+            textAlign: 'center',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            className="mono-meta"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              color: 'var(--accent-deep)',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+            }}
+          >
+            {t('events.deleteCta')}
+          </button>
+        </footer>
+      )}
+    </PaperLayout>
+  );
+}
+
+// ─────────────────────────── headers ───────────────────────────
+
+interface HeaderEvent {
+  id: string;
+  title: string;
+  kind: string;
+  occurs_on: string | null;
+  note: string | null;
+}
+
+function GuestHeader({ event }: { event: HeaderEvent }) {
+  const { t } = useI18n();
+  return (
+    <header style={{ marginBottom: 'var(--s-6)' }}>
+      <div className="mono-meta" style={{ marginBottom: 'var(--s-3)', color: 'var(--ink-3)' }}>
+        {t(`events.kind.${event.kind}`)}
+        {event.occurs_on && ` · ${formatDate(event.occurs_on)}`}
+      </div>
+      <h1
+        className="display-italic"
+        style={{
+          fontSize: 'var(--display-l)',
+          margin: 0,
+          lineHeight: 1.05,
+          letterSpacing: -1,
+        }}
+      >
+        {event.title}
+      </h1>
+      {event.note && (
+        <p
+          style={{
+            marginTop: 'var(--s-3)',
+            color: 'var(--ink-2)',
+            fontSize: 15,
+            lineHeight: 1.5,
+          }}
+        >
+          {event.note}
+        </p>
+      )}
+    </header>
+  );
+}
+
+interface HonoreeHeaderProps {
+  event: HeaderEvent;
+  onSave: (input: {
+    title?: string;
+    kind?: EventKind;
+    occurs_on?: string | null;
+    note?: string | null;
+  }) => Promise<{ ok: true } | { error: string }>;
+}
+
+function HonoreeHeader({ event, onSave }: HonoreeHeaderProps) {
+  const { t } = useI18n();
+  const toast = useToast();
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(event.title);
+  const [kind, setKind] = useState<EventKind>(event.kind as EventKind);
+  const [occursOn, setOccursOn] = useState(event.occurs_on ?? '');
+  const [note, setNote] = useState(event.note ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function reset() {
+    setTitle(event.title);
+    setKind(event.kind as EventKind);
+    setOccursOn(event.occurs_on ?? '');
+    setNote(event.note ?? '');
+    setError(null);
+  }
+
+  async function handleSave(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const trimmed = title.trim();
+    if (trimmed.length === 0) return;
+
+    setSaving(true);
+    setError(null);
+    const result = await onSave({
+      title: trimmed,
+      kind,
+      occurs_on: occursOn || null,
+      note: note.trim() || null,
+    });
+    setSaving(false);
+
+    if ('error' in result) {
+      setError(errorMessage(t, result.error));
+      return;
+    }
+    toast.show(t('events.savedToast'));
+    setEditing(false);
+  }
+
+  if (!editing) {
+    return (
+      <header style={{ marginBottom: 'var(--s-6)' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            gap: 'var(--s-4)',
+            marginBottom: 'var(--s-3)',
+          }}
+        >
+          <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
+            {t(`events.kind.${event.kind}`)}
+            {event.occurs_on && ` · ${formatDate(event.occurs_on)}`}
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="mono-meta"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              color: 'var(--accent)',
+              cursor: 'pointer',
+            }}
+          >
+            {t('events.editDetails')}
+          </button>
+        </div>
+        <h1
+          className="display-italic"
+          style={{
+            fontSize: 'var(--display-l)',
+            margin: 0,
+            lineHeight: 1.05,
+            letterSpacing: -1,
+          }}
+        >
+          {event.title}
+        </h1>
+        {event.note && (
+          <p
+            style={{
+              marginTop: 'var(--s-3)',
+              color: 'var(--ink-2)',
+              fontSize: 15,
+              lineHeight: 1.5,
+            }}
+          >
+            {event.note}
+          </p>
+        )}
+      </header>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSave}
+      style={{
+        marginBottom: 'var(--s-6)',
+        padding: 'var(--s-5)',
+        background: '#fffdf6',
+        border: '1px solid var(--hair)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--s-4)',
+      }}
+    >
+      <Field label={t('events.field.title')}>
+        <SketchInput
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={120}
+          required
+        />
+      </Field>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <Field label={t('events.field.kind')}>
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value as EventKind)}
+            style={selectStyle}
+          >
+            {EVENT_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {t(`events.kind.${k}`)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t('events.field.date')}>
+          <SketchInput
+            type="date"
+            value={occursOn}
+            onChange={(e) => setOccursOn(e.target.value)}
+          />
+        </Field>
+      </div>
+      <Field label={t('events.field.note')}>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={2}
+          style={{ ...selectStyle, resize: 'vertical', lineHeight: 1.5 }}
+        />
+      </Field>
+      {error && <p style={{ color: 'var(--accent-deep)', fontSize: 13 }}>{error}</p>}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s-3)' }}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            reset();
+            setEditing(false);
+          }}
+        >
+          {t('events.cancel')}
+        </Button>
+        <Button type="submit" variant="primary" disabled={saving || title.trim().length === 0}>
+          {saving ? t('events.saving') : t('events.save')}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+const selectStyle = {
+  width: '100%',
+  padding: '8px 0',
+  background: 'transparent',
+  border: 'none',
+  borderBottom: '1px solid var(--hair-strong)',
+  fontFamily: 'var(--font-body)',
+  fontSize: 15,
+  color: 'var(--ink)',
+  outline: 'none',
+} as const;
+
+// ─────────────────────────── audience ───────────────────────────
+
+interface AudienceSectionProps {
+  audience: Array<{
+    group_id: string;
+    group: { id: string; name: string; emoji: string | null };
+  }>;
+  isHonoree: boolean;
+  onAttach: (groupId: string) => Promise<{ ok: true } | { error: string }>;
+  onDetach: (groupId: string) => Promise<{ ok: true } | { error: string }>;
+}
+
+function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSectionProps) {
+  const { t } = useI18n();
+  const { query: groupsQ } = useGroups();
+  const [picking, setPicking] = useState(false);
+  const allGroups = groupsQ.status === 'ready' ? groupsQ.groups : [];
+  const attachedIds = new Set(audience.map((a) => a.group_id));
+  const availableGroups = allGroups.filter((g) => !attachedIds.has(g.id));
+
+  return (
+    <section style={{ marginBottom: 'var(--s-6)' }}>
+      <div className="mono-meta" style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-3)' }}>
+        {t('events.audienceLabel')}
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+        {audience.length === 0 && !isHonoree && (
+          <span style={{ color: 'var(--ink-3)', fontStyle: 'italic', fontSize: 14 }}>
+            {t('events.audienceEmpty')}
+          </span>
+        )}
+        {audience.map((a) => (
+          <span
+            key={a.group_id}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '2px 10px',
+              border: '1px solid var(--hair-strong)',
+              borderRadius: 999,
+              fontSize: 13,
+              color: 'var(--ink-2)',
+            }}
+          >
+            {a.group.emoji && <span aria-hidden>{a.group.emoji}</span>}
+            {a.group.name}
+            {isHonoree && (
+              <button
+                type="button"
+                onClick={() => void onDetach(a.group_id)}
+                aria-label={t('events.removeCircle', { name: a.group.name })}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  marginLeft: 2,
+                  color: 'var(--ink-3)',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            )}
+          </span>
+        ))}
+        {isHonoree && availableGroups.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setPicking((v) => !v)}
+            className="mono-meta"
+            style={{
+              background: 'transparent',
+              border: '1px dashed var(--hair-strong)',
+              padding: '2px 10px',
+              borderRadius: 999,
+              color: 'var(--accent)',
+              cursor: 'pointer',
+            }}
+          >
+            {picking ? t('events.collapse') : t('events.addCircle')}
+          </button>
+        )}
+      </div>
+      {picking && isHonoree && availableGroups.length > 0 && (
+        <div
+          style={{
+            marginTop: 'var(--s-3)',
+            display: 'flex',
+            gap: 'var(--s-2)',
+            flexWrap: 'wrap',
+          }}
+        >
+          {availableGroups.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => void onAttach(g.id)}
+              style={{
+                padding: '4px 12px',
+                borderRadius: 999,
+                border: '1px dashed var(--accent)',
+                background: 'var(--accent-soft)',
+                color: 'var(--ink)',
+                fontFamily: 'var(--font-body)',
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              + {g.emoji ? `${g.emoji} ` : ''}
+              {g.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─────────────────────────── items ───────────────────────────
+
+interface ItemsSectionProps {
+  items: Array<{ item_id: string; item: MyItem | { id: string; cover_url: string | null; title: string; maker: string | null; price_text: string | null; owner_id: string }; claims: EventClaim[] }>;
+  isHonoree: boolean;
+  myUserId: string | null;
+  onAttach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
+  onDetach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
+  onClaim: (itemId: string) => Promise<{ ok: true } | { error: string }>;
+  onRelease: (itemId: string) => Promise<{ ok: true } | { error: string }>;
+}
+
+function ItemsSection({
+  items,
+  isHonoree,
+  myUserId,
+  onAttach,
+  onDetach,
+  onClaim,
+  onRelease,
+}: ItemsSectionProps) {
+  const { t } = useI18n();
+  const { query: myItemsQ } = useMyItems();
+  const [picking, setPicking] = useState(false);
+  const attachedIds = new Set(items.map((it) => it.item_id));
+  const myItems = myItemsQ.status === 'ready' ? myItemsQ.items : [];
+  const availableItems = myItems.filter(
+    (it) => it.status === 'active' && !attachedIds.has(it.id),
+  );
+
+  return (
+    <section>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          marginBottom: 'var(--s-3)',
+        }}
+      >
+        <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
+          {t('events.itemsLabel')}
+        </div>
+        {isHonoree && availableItems.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setPicking((v) => !v)}
+            className="mono-meta"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              color: 'var(--accent)',
+              cursor: 'pointer',
+            }}
+          >
+            {picking ? t('events.collapse') : t('events.addItems')}
+          </button>
+        )}
+      </div>
+
+      {items.length === 0 ? (
+        <p style={{ color: 'var(--ink-3)', fontStyle: 'italic' }}>
+          {isHonoree ? t('events.noItemsHonoree') : t('events.noItemsGuest')}
+        </p>
+      ) : (
+        <ul
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: 0,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: 'var(--s-5)',
+          }}
+        >
+          {items.map((it) => (
+            <CuratedItemCard
+              key={it.item_id}
+              entry={it}
+              isHonoree={isHonoree}
+              myUserId={myUserId}
+              onDetach={() => void onDetach(it.item_id)}
+              onClaim={() => void onClaim(it.item_id)}
+              onRelease={() => void onRelease(it.item_id)}
+            />
+          ))}
+        </ul>
+      )}
+
+      {picking && isHonoree && (
+        <div
+          style={{
+            marginTop: 'var(--s-5)',
+            padding: 'var(--s-4)',
+            background: '#fffdf6',
+            border: '1px dashed var(--hair-strong)',
+          }}
+        >
+          <div className="mono-meta" style={{ marginBottom: 'var(--s-3)', color: 'var(--ink-3)' }}>
+            {t('events.pickFromList')}
+          </div>
+          <ul
+            style={{
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+              gap: 'var(--s-4)',
+            }}
+          >
+            {availableItems.map((it) => (
+              <li key={it.id}>
+                <button
+                  type="button"
+                  onClick={() => void onAttach(it.id)}
+                  style={{
+                    width: '100%',
+                    padding: 0,
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    color: 'inherit',
+                  }}
+                >
+                  <ItemPhoto coverUrl={it.cover_url} aspectRatio="4 / 3" alt={it.title} />
+                  <div
+                    style={{
+                      paddingTop: 'var(--s-2)',
+                      fontFamily: 'var(--font-body)',
+                      fontWeight: 600,
+                      fontSize: 13,
+                      color: 'var(--ink)',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    + {it.title}
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+interface CuratedItemCardProps {
+  entry: ItemsSectionProps['items'][number];
+  isHonoree: boolean;
+  myUserId: string | null;
+  onDetach: () => void;
+  onClaim: () => void;
+  onRelease: () => void;
+}
+
+function CuratedItemCard({
+  entry,
+  isHonoree,
+  myUserId,
+  onDetach,
+  onClaim,
+  onRelease,
+}: CuratedItemCardProps) {
+  const { t } = useI18n();
+  const { item, claims } = entry;
+  const myClaim = useMemo(
+    () => (myUserId ? claims.find((c) => c.user_id === myUserId) ?? null : null),
+    [claims, myUserId],
+  );
+  const othersClaim = useMemo(
+    () => claims.find((c) => c.user_id !== myUserId) ?? null,
+    [claims, myUserId],
+  );
+  const dimmed = !isHonoree && claims.length > 0 && !myClaim;
+
+  return (
+    <li>
+      <div style={{ opacity: dimmed ? 0.55 : 1, position: 'relative' }}>
+        <Link
+          to={`/i/${item.id}`}
+          style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+        >
+          <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
+        </Link>
+        {isHonoree && (
+          <button
+            type="button"
+            onClick={onDetach}
+            aria-label={t('events.removeItem', { title: item.title })}
+            style={{
+              position: 'absolute',
+              top: 6,
+              right: 6,
+              width: 26,
+              height: 26,
+              borderRadius: '50%',
+              background: 'var(--paper)',
+              color: 'var(--ink-2)',
+              border: '1px solid var(--hair-strong)',
+              cursor: 'pointer',
+              fontSize: 14,
+              lineHeight: 1,
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            ×
+          </button>
+        )}
+      </div>
+      <div style={{ paddingTop: 'var(--s-3)' }}>
+        <h3
+          style={{
+            margin: 0,
+            fontFamily: 'var(--font-body)',
+            fontWeight: 600,
+            fontSize: 15,
+            color: 'var(--ink)',
+            lineHeight: 1.3,
+            textDecoration: dimmed ? 'line-through' : 'none',
+          }}
+        >
+          {item.title}
+        </h3>
+        {item.maker && (
+          <div style={{ marginTop: 2, fontSize: 12, color: 'var(--ink-3)' }}>{item.maker}</div>
+        )}
+        {item.price_text && (
+          <div
+            style={{
+              marginTop: 4,
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontSize: 14,
+              color: 'var(--accent)',
+            }}
+          >
+            {item.price_text}
+          </div>
+        )}
+        {!isHonoree && (
+          <div style={{ marginTop: 'var(--s-3)' }}>
+            <ClaimControl
+              myClaim={myClaim}
+              othersClaim={othersClaim}
+              onClaim={onClaim}
+              onRelease={onRelease}
+            />
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function ClaimControl({
+  myClaim,
+  othersClaim,
+  onClaim,
+  onRelease,
+}: {
+  myClaim: EventClaim | null;
+  othersClaim: EventClaim | null;
+  onClaim: () => void;
+  onRelease: () => void;
+}) {
+  const { t } = useI18n();
+
+  if (myClaim) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-2)' }}>
+        <span
+          className="marginalia"
+          style={{ fontSize: 13, color: 'var(--accent)', transform: 'rotate(-1deg)' }}
+        >
+          {t('friend.youClaim')} ✓
+        </span>
+        <button
+          type="button"
+          onClick={onRelease}
+          className="mono-meta"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            color: 'var(--ink-3)',
+            cursor: 'pointer',
+          }}
+        >
+          {t('friend.release')}
+        </button>
+      </div>
+    );
+  }
+  if (othersClaim) {
+    return (
+      <span className="marginalia" style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+        {t('friend.claimedBy', { name: othersClaim.user.display_name })}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClaim}
+      style={{
+        background: 'transparent',
+        border: '1px solid var(--ink)',
+        padding: '4px 10px',
+        borderRadius: 'var(--r-1)',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-body)',
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        color: 'var(--ink)',
+      }}
+    >
+      {t('friend.claim')}
+    </button>
+  );
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}

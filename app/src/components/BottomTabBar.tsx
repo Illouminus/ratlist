@@ -16,9 +16,12 @@ interface Tab {
   labelKey: string;
 }
 
+// 2 left + FAB + 2 right. Circles live in /settings now — they're
+// long-lived plumbing, not a daily destination. Events are the
+// honoree-facing primary surface; People is the friend directory.
 const LEFT_TABS: Tab[] = [
   { to: '/', match: (p) => p === '/', labelKey: 'nav.myList' },
-  { to: '/groups', match: (p) => p === '/groups' || p.startsWith('/groups/'), labelKey: 'nav.groups' },
+  { to: '/events', match: (p) => p === '/events' || p.startsWith('/events/'), labelKey: 'nav.events' },
 ];
 
 const RIGHT_TABS: Tab[] = [

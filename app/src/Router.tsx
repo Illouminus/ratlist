@@ -45,12 +45,13 @@ import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
 import { PublicListScreen } from './screens/PublicListScreen';
 import { LandingScreen } from './screens/LandingScreen';
 
-// Eager: the four screens that live in Sidebar / BottomTabBar. Users
-// flip between them constantly so a Suspense flash hurts every tab.
+// Eager: the screens that live in Sidebar / BottomTabBar. Users flip
+// between them constantly so a Suspense flash hurts every tab.
 import { MyListScreen } from './screens/items/MyListScreen';
 import { GroupsScreen } from './screens/groups/GroupsScreen';
 import { PeopleScreen } from './screens/people/PeopleScreen';
 import { SantaListScreen } from './screens/santa/SantaListScreen';
+import { EventsScreen } from './screens/events/EventsScreen';
 // Eager: the two legal pages. Lazy-loading them produced an empty
 // `<Suspense>` boundary in the prerendered HTML (renderToString doesn't
 // await `React.lazy` promises), defeating the whole point of
@@ -94,6 +95,14 @@ const SantaEventScreen = lazyNamed(
 const SettingsScreen = lazyNamed(
   () => import('./screens/settings/SettingsScreen'),
   'SettingsScreen',
+);
+const EventDetailScreen = lazyNamed(
+  () => import('./screens/events/EventDetailScreen'),
+  'EventDetailScreen',
+);
+const CreateEventScreen = lazyNamed(
+  () => import('./screens/events/CreateEventScreen'),
+  'CreateEventScreen',
 );
 
 /**
@@ -203,6 +212,9 @@ export function AppRoutes() {
         <Route path="/p/:userId" element={<FriendListScreen />} />
         <Route path="/santa" element={<SantaListScreen />} />
         <Route path="/santa/:eventId" element={<SantaEventScreen />} />
+        <Route path="/events" element={<EventsScreen />} />
+        <Route path="/events/new" element={<CreateEventScreen />} />
+        <Route path="/events/:eventId" element={<EventDetailScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
       </Route>
 

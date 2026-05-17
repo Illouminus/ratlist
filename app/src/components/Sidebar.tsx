@@ -13,7 +13,7 @@ import { LangToggle } from './LangToggle';
 
 const NAV = [
   { to: '/', key: 'nav.myList' },
-  { to: '/groups', key: 'nav.groups' },
+  { to: '/events', key: 'nav.events' },
   { to: '/people', key: 'nav.people' },
   { to: '/santa', key: 'nav.santa' },
 ] as const;

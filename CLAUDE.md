@@ -158,6 +158,7 @@ The draw runs in a `SECURITY DEFINER` Postgres function
         ├── groups/          useGroups, useGroupInvites
         ├── people/          usePeople, useFriendList
         ├── santa/           useSantaEvents, useSantaEvent
+        ├── events/          useEvents, useEvent (Events-first model)
         ├── components/      shared atoms (see below)
         ├── screens/         one folder per area + top-level auth screens
         ├── i18n/            recursive dict, useI18n, plural helper
@@ -204,12 +205,20 @@ Authed (full chrome via `appRoute`):
 - `/add` → `AddItemScreen` (full-screen create form)
 - `/i/:itemId` → `ItemDetailScreen` (works for own + friend's items)
 - `/i/:itemId/edit` → `EditItemScreen` (full-screen edit form)
-- `/groups` → `GroupsScreen` (circles + members + invites)
-- `/people` → `PeopleScreen` (directory with preview titles)
-- `/p/:userId` → `FriendListScreen` (their list + claim/release)
+- `/events` → `EventsScreen` (events I see — own + audience)
+- `/events/new` → `CreateEventScreen` (full-screen create form)
+- `/events/:eventId` → `EventDetailScreen` (honoree edit / guest claim)
+- `/groups` → `GroupsScreen` (circles + members + invites — reachable
+  from Settings, no longer a primary nav tab)
+- `/people` → `PeopleScreen` (directory with preview titles + event counts)
+- `/p/:userId` → `FriendListScreen` (friend's events + items + claim/release)
 - `/santa` → `SantaListScreen` (events)
 - `/santa/:eventId` → `SantaEventScreen` (participants, exclusions,
   draw, reveal)
+
+Primary nav is **4 tabs**: My list / Events / People / Santa (plus the
+central FAB → `/add`). Circles live one settings-click away — they're
+long-lived infrastructure (audience definitions), not a daily destination.
 
 All authed routes are lazy-loaded via `React.lazy` — see
 `Router.lazyNamed()`. Landing + auth screens are eager (critical path).
@@ -265,6 +274,7 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Moderation: user reports on /share + /p/:userId**      | ✅ Phase 1C done — `public.reports` + `<ReportDialog>` + [docs/MODERATION.md](docs/MODERATION.md) |
 | **Moderation: NSFW URL blocklist in fetch-url-meta**     | ✅ Phase 1C done — `supabase/functions/fetch-url-meta/blocklist.ts` |
 | **Moderation: soft-disable via `profiles.disabled_at`**  | ✅ Phase 1C done — `get_public_list` refuses disabled owners |
+| **Events as first-class entity** (M2 redesign)           | ✅ done — `events` / `event_circles` / `event_items` tables, honoree-managed curation, audience via circles, primary nav surfaces it as a tab |
 | Moderation: rate limits (per-user sliding window)        | ⬜ ~1 h — design sketch in [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
 | Notification preferences UI                              | ⬜ ~1.5 h — `email_prefs` JSONB on profiles |
 | **Supabase Pro upgrade**                                 | ⬜ optional — $25/mo, unlocks image transforms + backups |

@@ -14,10 +14,11 @@
  *       · claimed by you  → "you're getting it" + release
  *       · claimed by them → "{name} got it ✓" (item struck through)
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useFriendList, type ClaimWithUser, type FriendItem } from '../../people/useFriendList';
+import { useEvents, type MyEvent } from '../../events/useEvents';
 import { useI18n } from '../../i18n/useI18n';
 import { errorMessage } from '../../lib/errors';
 import type { Occasion } from '../../lib/db';
@@ -33,8 +34,16 @@ export function FriendListScreen() {
   const { t } = useI18n();
   const { userId } = useParams<{ userId: string }>();
   const { query, claim, release } = useFriendList(userId ?? null);
+  const { query: eventsQ } = useEvents();
   const { user: me } = useAuth();
   const [reportOpen, setReportOpen] = useState(false);
+
+  // Events of this friend that I (the viewer) can see. Only their events
+  // where they're the honoree, not generic ones from get_my_events.
+  const friendEvents = useMemo<MyEvent[]>(() => {
+    if (!userId || eventsQ.status !== 'ready') return [];
+    return eventsQ.events.filter((e) => e.honoree_id === userId && !e.is_honoree);
+  }, [userId, eventsQ]);
 
   // Don't offer "report this user" against yourself — the route is
   // reachable via /p/<my-id>, and self-reports would just clutter the
@@ -58,6 +67,10 @@ export function FriendListScreen() {
       {query.status === 'ready' && (
         <>
           <Header profile={query.profile} />
+
+          {friendEvents.length > 0 && (
+            <FriendEventsSection events={friendEvents} />
+          )}
 
           <p
             style={{
@@ -122,6 +135,66 @@ export function FriendListScreen() {
       )}
     </PaperLayout>
   );
+}
+
+// ─────────────────────────── friend's events ───────────────────────────
+
+function FriendEventsSection({ events }: { events: MyEvent[] }) {
+  const { t } = useI18n();
+  return (
+    <section
+      style={{
+        margin: 'var(--s-4) 0',
+        padding: 'var(--s-4) 0',
+        borderTop: '1px solid var(--hair)',
+        borderBottom: '1px solid var(--hair)',
+      }}
+    >
+      <div
+        className="mono-meta"
+        style={{ color: 'var(--ink-3)', marginBottom: 'var(--s-3)' }}
+      >
+        {t('friend.eventsLabel')}
+      </div>
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+        {events.map((e) => (
+          <li key={e.id}>
+            <Link
+              to={`/events/${e.id}`}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                gap: 'var(--s-3)',
+                padding: '4px 0',
+                textDecoration: 'none',
+                color: 'inherit',
+              }}
+            >
+              <span>
+                <strong style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, fontSize: 16 }}>
+                  {e.title}
+                </strong>
+                <span className="mono-meta" style={{ marginLeft: 'var(--s-2)', color: 'var(--ink-3)' }}>
+                  {t(`events.kind.${e.kind}`)}
+                  {e.occurs_on && ` · ${formatShortDate(e.occurs_on)}`}
+                </span>
+              </span>
+              <span className="mono-meta" style={{ color: 'var(--accent)' }}>
+                {t('events.open')} →
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function formatShortDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
 // ─────────────────────────── header ───────────────────────────

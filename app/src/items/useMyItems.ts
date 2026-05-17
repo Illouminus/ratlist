@@ -15,9 +15,12 @@ import { useAuth } from '../auth/useAuth';
 import { track } from '../lib/plausible';
 import type { Item, Occasion, ItemStatus } from '../lib/db';
 
-/** An item plus the list of groups it's published to. */
+/** An item plus the list of groups it's published to and events it's
+ * curated into. Both arrays are full snapshots — the form treats them
+ * as the source of truth for publishing on submit. */
 export interface MyItem extends Item {
   group_ids: string[];
+  event_ids: string[];
 }
 
 export type ItemsQuery =
@@ -38,6 +41,8 @@ export interface CreateItemInput {
   cover_url?: string | null;
   /** IDs of groups to publish the item to. Empty = private to owner. */
   group_ids: string[];
+  /** IDs of own events to curate this item into. Empty = no event. */
+  event_ids?: string[];
 }
 
 export interface UseMyItemsResult {
@@ -59,24 +64,26 @@ type FetchState =
   | { kind: 'loaded'; userId: string; items: MyItem[] }
   | { kind: 'failed'; userId: string; error: string };
 
-interface ItemWithGroupsRow extends Item {
+interface ItemWithRelationsRow extends Item {
   item_groups: { group_id: string }[] | null;
+  event_items: { event_id: string }[] | null;
 }
 
 /** Pure async fetcher — never touches React state directly. */
 async function loadItems(userId: string): Promise<FetchState> {
   const { data, error } = await supabase
     .from('items')
-    .select('*, item_groups(group_id)')
+    .select('*, item_groups(group_id), event_items(event_id)')
     .eq('owner_id', userId)
     .order('created_at', { ascending: false })
-    .returns<ItemWithGroupsRow[]>();
+    .returns<ItemWithRelationsRow[]>();
 
   if (error) return { kind: 'failed', userId, error: error.message };
 
   const items: MyItem[] = (data ?? []).map((row) => ({
     ...row,
     group_ids: (row.item_groups ?? []).map((g) => g.group_id),
+    event_ids: (row.event_items ?? []).map((e) => e.event_id),
   }));
 
   return { kind: 'loaded', userId, items };
@@ -202,11 +209,27 @@ export function useMyItems(): UseMyItemsResult {
         }
       }
 
+      // Attach to events the owner picked. Same fire-after-insert pattern
+      // as publishing — if it fails the item still exists and the owner
+      // can attach manually from the event detail page.
+      if (input.event_ids && input.event_ids.length > 0) {
+        const rows = input.event_ids.map((eid) => ({ event_id: eid, item_id: data.id }));
+        const { error: attachError } = await supabase.from('event_items').insert(rows);
+        if (attachError) return { error: attachError.message };
+      }
+
       const state = await loadItems(user.id);
       setFetched(state);
       // The freshly-loaded list is the source of truth.
       const created = state.kind === 'loaded' ? state.items.find((i) => i.id === data.id) : undefined;
-      return { item: created ?? { ...data, group_ids: input.group_ids } };
+      return {
+        item:
+          created ?? {
+            ...data,
+            group_ids: input.group_ids,
+            event_ids: input.event_ids ?? [],
+          },
+      };
     },
     [user],
   );
@@ -247,6 +270,22 @@ export function useMyItems(): UseMyItemsResult {
         const rows = input.group_ids.map((gid) => ({ item_id: id, group_id: gid }));
         const { error: insError } = await supabase.from('item_groups').insert(rows);
         if (insError) return { error: insError.message };
+      }
+
+      // Same drop-and-replace dance for event curation. RLS only allows
+      // delete/insert by the honoree on their own event_items rows, so a
+      // user trying to attach someone else's item would be rejected.
+      if (input.event_ids !== undefined) {
+        const { error: delEvErr } = await supabase
+          .from('event_items')
+          .delete()
+          .eq('item_id', id);
+        if (delEvErr) return { error: delEvErr.message };
+        if (input.event_ids.length > 0) {
+          const rows = input.event_ids.map((eid) => ({ event_id: eid, item_id: id }));
+          const { error: insEvErr } = await supabase.from('event_items').insert(rows);
+          if (insEvErr) return { error: insEvErr.message };
+        }
       }
 
       const state = await loadItems(user.id);

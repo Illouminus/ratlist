@@ -17,9 +17,10 @@
  * circles.
  */
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useProfile } from '../../auth/useProfile';
+import { useGroups } from '../../groups/useGroups';
 import { uploadAvatar } from '../../auth/uploadAvatar';
 import {
   deleteMyAccount,
@@ -94,6 +95,10 @@ function Loaded({ profile, onRefresh }: LoadedProps) {
         <div style={{ marginTop: 'var(--s-3)' }}>
           <LangToggle />
         </div>
+      </Section>
+
+      <Section title={t('settings.circlesSection')} sub={t('settings.circlesSub')}>
+        <CirclesPanel />
       </Section>
 
       <DangerZone profile={profile} />
@@ -173,6 +178,74 @@ function Section({ title, sub, children }: SectionProps) {
       </p>
       {children}
     </section>
+  );
+}
+
+// ─────────────────────────── circles panel ───────────────────────────
+
+/** Tiny widget that lists the user's circles + a link to manage them.
+ *  Doesn't reproduce GroupsScreen here — that screen is the canonical
+ *  place to rename / invite / kick. Settings just provides discovery. */
+function CirclesPanel() {
+  const { t } = useI18n();
+  const { query } = useGroups();
+
+  if (query.status === 'loading') {
+    return <p className="mono-meta" style={{ color: 'var(--ink-3)' }}>…</p>;
+  }
+  if (query.status === 'anonymous') return null;
+  if (query.status === 'error') {
+    return (
+      <p style={{ color: 'var(--accent-deep)', fontSize: 13 }}>
+        {errorMessage(t, query.error)}
+      </p>
+    );
+  }
+
+  const { groups } = query;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+      {groups.length === 0 ? (
+        <p style={{ color: 'var(--ink-3)', fontStyle: 'italic', fontSize: 14, margin: 0 }}>
+          {t('settings.circlesEmpty')}
+        </p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {groups.map((g) => (
+            <li
+              key={g.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                padding: '4px 0',
+                fontSize: 14,
+              }}
+            >
+              <span>
+                {g.emoji && <span aria-hidden style={{ marginRight: 6 }}>{g.emoji}</span>}
+                <strong style={{ fontWeight: 600 }}>{g.name}</strong>
+                <span className="mono-meta" style={{ marginLeft: 'var(--s-2)', color: 'var(--ink-3)' }}>
+                  {g.member_count} · {g.role}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link
+        to="/groups"
+        className="mono-meta"
+        style={{
+          color: 'var(--accent)',
+          textDecoration: 'none',
+          marginTop: 'var(--s-3)',
+        }}
+      >
+        {t('settings.circlesManage')} →
+      </Link>
+    </div>
   );
 }
 
