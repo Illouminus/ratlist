@@ -15,10 +15,9 @@
     <link rel="canonical" href="https://ratlist.app/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- Open Graph. og:image is deliberately omitted for now — Phase 1B
-         will add a server-rendered preview PNG (satori + resvg). Without
-         it social previews fall back to title + description, which is
-         fine for the soft launch. -->
+    <!-- Open Graph. og:image is rendered on the fly by the og-image
+         Supabase Edge Function; Vercel rewrites /og.png onto it so
+         crawlers see a clean ratlist.app URL. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Rat List" />
     <meta property="og:title" content="Rat List — wishlist for the rats" />
@@ -27,16 +26,20 @@
       content="A quiet, ad-free wishlist + Secret Santa for friend circles."
     />
     <meta property="og:url" content="https://ratlist.app/" />
+    <meta property="og:image" content="https://ratlist.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:locale:alternate" content="ru_RU" />
 
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Rat List — wishlist for the rats" />
     <meta
       name="twitter:description"
       content="A quiet, ad-free wishlist + Secret Santa for friend circles."
     />
+    <meta name="twitter:image" content="https://ratlist.app/og.png" />
 
     <!-- Schema.org WebApplication. Helps Google understand what this -->
     <!-- product is at indexing time. -->
