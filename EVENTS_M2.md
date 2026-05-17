@@ -274,3 +274,25 @@ from those phases remain:
 Push status at time of commit: `912cdf0` lives only locally;
 classifier blocks `git push origin main` from inside the session.
 Edouard's job to push.
+
+## ⚠️ Don't forget — prod DB needs the migrations too
+
+Code deploys auto on `git push` via Vercel. **The two new migrations
+do NOT auto-apply to the production Supabase project**, and the prod
+build crashes loudly when it tries to call `get_my_events()` or join
+`event_items` without them ("Could not find the function… / a
+relationship…"). This bit us once already during the rollout — the
+landing and `/events` both 500'd until the push went through.
+
+After (or before) `git push`, also run:
+
+```sh
+supabase db push --linked
+# or, explicit:
+supabase db push --project-ref fiuheufmawxkgbqddwwu
+```
+
+PostgREST refreshes its schema cache automatically within a few
+seconds of the migration applying. If a stale cache lingers, force a
+reload via Dashboard → Database → "Reload schema cache" or via the
+service-role NOTIFY hack documented in the Supabase docs.
