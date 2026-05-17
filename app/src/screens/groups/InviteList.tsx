@@ -15,6 +15,7 @@ import { useGroupInvites } from '../../groups/useGroupInvites';
 import { useI18n } from '../../i18n/useI18n';
 import { errorMessage } from '../../lib/errors';
 import { Button } from '../../components/Button';
+import { SketchInput } from '../../components/SketchInput';
 
 interface InviteListProps {
   groupId: string;
@@ -22,7 +23,7 @@ interface InviteListProps {
 
 export function InviteList({ groupId }: InviteListProps) {
   const { t } = useI18n();
-  const { query, generate, revoke } = useGroupInvites(groupId);
+  const { query, generate, revoke, sendByEmail } = useGroupInvites(groupId);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +60,12 @@ export function InviteList({ groupId }: InviteListProps) {
 
       {query.status === 'ready' &&
         query.invites.map((inv) => (
-          <InviteRow key={inv.token} invite={inv} onRevoke={() => void revoke(inv.token)} />
+          <InviteRow
+            key={inv.token}
+            invite={inv}
+            onRevoke={() => void revoke(inv.token)}
+            onSendByEmail={(email) => sendByEmail(inv.token, email)}
+          />
         ))}
 
       <Button
@@ -85,6 +91,7 @@ export function InviteList({ groupId }: InviteListProps) {
 interface InviteRowProps {
   invite: Invite;
   onRevoke: () => void;
+  onSendByEmail: (email: string) => Promise<{ ok: true } | { error: string }>;
 }
 
 /** Days remaining until the invite expires. Floor-rounded, min 0. */
@@ -97,9 +104,20 @@ function inviteUrl(token: string): string {
   return `${window.location.origin}/invite/${encodeURIComponent(token)}`;
 }
 
-function InviteRow({ invite, onRevoke }: InviteRowProps) {
+function InviteRow({ invite, onRevoke, onSendByEmail }: InviteRowProps) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  // Discriminated-union state machine for the email form: collapsed
+  // until the user clicks "send by email", then idle / sending /
+  // sent / error. Keeps render branches explicit.
+  type EmailState =
+    | { kind: 'collapsed' }
+    | { kind: 'idle' }
+    | { kind: 'sending' }
+    | { kind: 'sent' }
+    | { kind: 'error'; message: string };
+  const [emailState, setEmailState] = useState<EmailState>({ kind: 'collapsed' });
+  const [emailValue, setEmailValue] = useState('');
 
   async function copy(): Promise<void> {
     try {
@@ -111,40 +129,112 @@ function InviteRow({ invite, onRevoke }: InviteRowProps) {
     }
   }
 
+  async function handleSend(): Promise<void> {
+    setEmailState({ kind: 'sending' });
+    const result = await onSendByEmail(emailValue);
+    if ('ok' in result) {
+      setEmailState({ kind: 'sent' });
+      setEmailValue('');
+      setTimeout(() => setEmailState({ kind: 'collapsed' }), 1800);
+    } else {
+      setEmailState({ kind: 'error', message: errorMessage(t, result.error) });
+    }
+  }
+
   return (
     <div
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--s-3)',
         padding: 'var(--s-2) 0',
         borderTop: '1px solid var(--hair)',
-        flexWrap: 'wrap',
       }}
     >
-      <code
+      <div
         style={{
-          flex: 1,
-          minWidth: 0,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          fontFamily: 'monospace',
-          fontSize: 12,
-          color: 'var(--ink-2)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--s-3)',
+          flexWrap: 'wrap',
         }}
       >
-        {inviteUrl(invite.token)}
-      </code>
-      <span className="mono-meta" style={{ color: 'var(--ink-3)' }}>
-        {t('groups.inviteExpiresIn', { days: daysUntil(invite.expires_at) })}
-      </span>
-      <Button variant="ghost" onClick={() => void copy()}>
-        {copied ? t('groups.copied') : t('groups.copyLink')}
-      </Button>
-      <Button variant="ghost" onClick={onRevoke} style={{ color: 'var(--accent-deep)' }}>
-        {t('groups.revokeInvite')}
-      </Button>
+        <code
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontFamily: 'monospace',
+            fontSize: 12,
+            color: 'var(--ink-2)',
+          }}
+        >
+          {inviteUrl(invite.token)}
+        </code>
+        <span className="mono-meta" style={{ color: 'var(--ink-3)' }}>
+          {t('groups.inviteExpiresIn', { days: daysUntil(invite.expires_at) })}
+        </span>
+        <Button variant="ghost" onClick={() => void copy()}>
+          {copied ? t('groups.copied') : t('groups.copyLink')}
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() =>
+            setEmailState((s) =>
+              s.kind === 'collapsed' ? { kind: 'idle' } : { kind: 'collapsed' },
+            )
+          }
+        >
+          {t('groups.sendByEmail')}
+        </Button>
+        <Button variant="ghost" onClick={onRevoke} style={{ color: 'var(--accent-deep)' }}>
+          {t('groups.revokeInvite')}
+        </Button>
+      </div>
+
+      {emailState.kind !== 'collapsed' && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (emailState.kind === 'sending') return;
+            void handleSend();
+          }}
+          style={{
+            display: 'flex',
+            gap: 'var(--s-2)',
+            alignItems: 'baseline',
+            marginTop: 'var(--s-3)',
+            flexWrap: 'wrap',
+          }}
+        >
+          <SketchInput
+            type="email"
+            value={emailValue}
+            onChange={(e) => setEmailValue(e.target.value)}
+            placeholder={t('groups.sendByEmailPlaceholder')}
+            aria-label={t('groups.sendByEmailTitle')}
+            style={{ flex: 1, minWidth: 200 }}
+            autoFocus
+            disabled={emailState.kind === 'sending' || emailState.kind === 'sent'}
+          />
+          <Button
+            type="submit"
+            variant="ghost"
+            disabled={!emailValue.trim() || emailState.kind === 'sending'}
+            style={{ color: 'var(--accent)' }}
+          >
+            {emailState.kind === 'sending'
+              ? t('groups.sendByEmailSending')
+              : emailState.kind === 'sent'
+                ? t('groups.sendByEmailSent')
+                : t('groups.sendByEmailSubmit')}
+          </Button>
+          {emailState.kind === 'error' && (
+            <span style={{ color: 'var(--accent-deep)', fontSize: 12 }}>
+              {emailState.message}
+            </span>
+          )}
+        </form>
+      )}
     </div>
   );
 }

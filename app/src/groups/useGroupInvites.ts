@@ -27,6 +27,17 @@ export interface UseGroupInvitesResult {
   generate: () => Promise<{ invite: Invite } | { error: string }>;
   /** Revoke (delete) an invite by its token. */
   revoke: (token: string) => Promise<{ ok: true } | { error: string }>;
+  /**
+   * Email an existing invite to the given address via the
+   * `send-group-invite` Edge Function. Does NOT change the invite
+   * record — same token, same expiry — so the email is essentially
+   * a re-share. Returns `{ ok }` on success or `{ error }` with a
+   * stable code the UI can map through `errors.*`.
+   */
+  sendByEmail: (
+    token: string,
+    email: string,
+  ) => Promise<{ ok: true } | { error: string }>;
 }
 
 type FetchState =
@@ -108,5 +119,25 @@ export function useGroupInvites(groupId: string | null): UseGroupInvitesResult {
     [groupId],
   );
 
-  return { query, refresh, generate, revoke };
+  const sendByEmail = useCallback(
+    async (token: string, email: string): Promise<{ ok: true } | { error: string }> => {
+      const trimmed = email.trim();
+      if (!trimmed) return { error: 'invalidEmail' };
+      const { data, error } = await supabase.functions.invoke<{ ok?: boolean; error?: string }>(
+        'send-group-invite',
+        { body: { token, email: trimmed } },
+      );
+      // `supabase.functions.invoke` only throws on transport errors;
+      // logical 4xx come back as `{ data: { error: '…' } }`. Both
+      // paths funnel into the same `{ error }` shape here.
+      if (error) return { error: error.message };
+      if (data && typeof data === 'object' && 'error' in data && data.error) {
+        return { error: String(data.error) };
+      }
+      return { ok: true };
+    },
+    [],
+  );
+
+  return { query, refresh, generate, revoke, sendByEmail };
 }
