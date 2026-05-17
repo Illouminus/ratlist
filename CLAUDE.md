@@ -252,7 +252,8 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | Share % (partial claims)                                 | ⬜ (schema has `share`, no UI) |
 | Anonymous Santa chat                                     | ⬜      |
 | **Transactional email: Santa draw**                      | ✅ `send-santa-draw` Edge Function, dry-runs without RESEND_API_KEY |
-| Transactional email: group invites / Santa start / reveal | ⬜ same pattern, follow `send-santa-draw` |
+| **Transactional email: Santa start (group invite)**      | ✅ `send-santa-start` — fires on event creation, emails every group member |
+| Transactional email: Santa reveal / account deletion / group invite by email | ⬜ same pattern |
 
 ## Known gotchas
 

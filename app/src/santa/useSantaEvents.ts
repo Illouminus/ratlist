@@ -116,6 +116,18 @@ export function useSantaEvents(): UseSantaEventsResult {
         .single();
       if (error || !data) return { error: error?.message ?? 'unknown error' };
 
+      // Notify the rest of the group asynchronously. Best-effort — a
+      // failed Edge invocation must not roll back the event creation,
+      // so we don't await this and only log the failure in dev. The
+      // organiser still sees the event in their dashboard either way.
+      void supabase.functions
+        .invoke('send-santa-start', { body: { event_id: data.id } })
+        .catch((err: unknown) => {
+          if (import.meta.env.DEV) {
+            console.warn('[santa] send-santa-start invoke failed', err);
+          }
+        });
+
       const state = await loadEvents(user.id);
       setFetched(state);
       const created =
