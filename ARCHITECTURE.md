@@ -15,6 +15,8 @@ Living doc. Update as decisions change.
 | Auth        | Magic link via email                            | OTP fallback enabled |
 | Hosting     | TBD — own VPS vs Vercel/Fly                     | App is static; any host fine |
 
+
+
 ## Folder layout
 
 ```
