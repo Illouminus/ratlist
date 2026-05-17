@@ -111,8 +111,13 @@ before we point Habr / Product Hunt / Hacker News at it.
 
 ### Performance & accessibility
 
-- [ ] Pre-render landing `/` via `vite-plugin-ssg` or `react-snap` —
-      gives Google a fully-rendered HTML on first load
+- [ ] Pre-render landing `/` — `react-snap` is broken on React 19,
+      `vite-react-ssg` is still beta, `vite-prerender-plugin` requires
+      an SSR entry refactor + careful `hydrateRoot` switch. Worth a
+      dedicated session. **OG / Schema.org / SEO meta tags are already
+      static in `index.html`, so social previews and basic crawlers
+      are unaffected — the bottleneck is only Google's second-pass JS
+      render latency on the home page itself.**
 - [ ] Lighthouse pass (perf, a11y, SEO, best practices) — aim 90+
 - [ ] Loading skeletons for slow networks on MyList / Groups / Santa
 - [ ] Image optimisation — Supabase Storage `?width=...&resize=cover`
@@ -123,9 +128,10 @@ before we point Habr / Product Hunt / Hacker News at it.
 
 ### OAuth + auth polish
 
-- [ ] OAuth Google — Supabase has it built-in; ~20 min of setup
-      (Google Cloud Console + Supabase Auth → Providers + redirect URL
-      whitelist already done)
+- [x] OAuth Google — client wiring shipped (button on /login, AuthProvider
+      method, AuthCallback handles both flows). Manual setup steps in
+      [docs/OAUTH_GOOGLE.md](docs/OAUTH_GOOGLE.md) — ~20 min in Google
+      Cloud Console + Supabase Dashboard.
 - [ ] OAuth Apple — deferred unless we see real demand (Apple Developer
       account is $99/yr + non-trivial config)
 - [ ] OAuth Яндекс — for RU audience down the line; not soft-launch
@@ -139,16 +145,25 @@ before we point Habr / Product Hunt / Hacker News at it.
 
 ### PWA
 
-- [ ] `manifest.webmanifest` + service worker (Vite plugin)
-- [ ] Apple touch icon set, theme color, full favicon manifest
-- [ ] Offline-readable own list (cache via service worker)
+- [x] `manifest.webmanifest` (paper bg + theme color, standalone display)
+- [x] Apple touch icon (180), PNG favicon set (32, 192, 512), full
+      Apple meta tags (`apple-mobile-web-app-{title,capable,status-bar-style}`)
+- [ ] Service worker for offline-readable own list — future work, the
+      install-to-home-screen flow works from just the manifest
 
 ### Dynamic OG image (debt from 1A)
 
-- [ ] Edge Function `og-image` using satori + resvg-wasm. Pick a
-      static TTF (Inter Italic from `@vercel/og` bundle works). Two
-      entrypoints: landing default + `?token=<share>` variant that
-      pulls owner name + item count from the DB.
+- [x] Edge Function `og-image` using satori + resvg-wasm. Fix turned
+      out to be (a) ship Newsreader as **WOFF** (not woff2, not variable
+      TTF), (b) inline as base64 since supabase CLI doesn't bundle
+      non-TS assets, (c) use plain object trees instead of satori-html
+      so whitespace between tags doesn't trip the "display: flex"
+      check. 1200x630 PNG, ≈43 KB, served via Vercel rewrite from
+      `/og.png`.
+- [ ] Future variant: `?token=<share>` to render per-list previews
+      ("Маша's list — 12 wishes") for `/share/<token>` link cards.
+      Markup pattern already in place; just needs a DB lookup for
+      owner display_name + visible item count.
 
 ## Phase 2 — soft launch (1–2 weeks after Phase 1)
 
