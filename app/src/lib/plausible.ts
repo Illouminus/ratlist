@@ -59,6 +59,14 @@ export function initPlausible(scriptId: string): void {
   if (typeof window === 'undefined') return;
   if (window.plausible) return; // already initialised
 
+  // Be defensive about stray whitespace: env-var tooling (CLI `echo |
+  // vercel env add`, dashboard paste with a trailing newline, …) can
+  // smuggle a `\n` or surrounding spaces into the value, which then
+  // gets baked into the bundle as a literal and produces a broken
+  // loader URL like `plausible.io/js/pa-…%0A.js` that 404s.
+  const id = scriptId.trim();
+  if (!id) return;
+
   const stub: PlausibleApi = function (this: unknown, ...args: unknown[]) {
     (stub.q = stub.q ?? []).push(args);
   };
@@ -69,7 +77,7 @@ export function initPlausible(scriptId: string): void {
 
   const s = document.createElement('script');
   s.async = true;
-  s.src = `https://plausible.io/js/${scriptId}.js`;
+  s.src = `https://plausible.io/js/${id}.js`;
   document.head.appendChild(s);
 
   stub.init();
