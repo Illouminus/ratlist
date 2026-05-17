@@ -179,10 +179,29 @@ What landed in 1B:
       assets, (c) use plain object trees instead of satori-html so
       whitespace between tags doesn't trip the "display: flex" check.
       1200x630 PNG, ≈43 KB, served via Vercel rewrite from `/og.png`.
-- [ ] Future variant: `?token=<share>` for per-list previews
-      ("Маша's list — 12 wishes") on `/share/<token>` cards. Markup
-      already factored to grow into this; just needs a DB lookup
-      for owner display_name + visible item count.
+- [x] Per-share variant via `?token=<share>` — Edge Function
+      branches on the query param, calls `get_public_list(_token)`
+      (SECURITY DEFINER, anon-callable), and renders
+      "{display_name} · wishlist · N items" with the same paper /
+      ink / accent aesthetic. Falls back to the landing markup on
+      any error or missing token so a malformed crawl never 500s.
+      The bundled Newsreader WOFF is Latin-only, so non-Latin names
+      (Cyrillic / CJK / Greek / Arabic) substitute "a fellow rat"
+      to avoid `.notdef` rectangles. Adding a Cyrillic font subset
+      doubles the bundled font weight — defer until there's real RU
+      traffic.
+- [ ] **Wire the share page to use the per-token preview** —
+      currently `/share/<token>` is an SPA route, so its
+      `og:image` meta is the static landing default. To make
+      crawlers actually see the per-share preview, the share URL
+      needs to be served with route-specific meta tags. Three
+      possible paths, in increasing order of work: (a) a tiny
+      Vercel function that returns HTML with the right meta tags
+      for `/share/<token>` (Facebook-friendly, ~2 h); (b) UA
+      sniffing in `vercel.json` to send crawlers to the function
+      and users to the SPA (riskier — UA strings drift); (c) full
+      SSR for `/share/*` (closest to "real" but heaviest). The
+      Edge Function side is done; this is the remaining glue.
 
 ### Things to pick up for the next contributor
 
