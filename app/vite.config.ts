@@ -9,6 +9,40 @@ import { vitePrerenderPlugin } from 'vite-prerender-plugin';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
+ * Forces `node` to exit cleanly once the build pipeline has finished.
+ *
+ * `vite-prerender-plugin` dynamically imports the bundled prerender
+ * entry to render HTML at build time. Something in that load path —
+ * almost certainly `react-dom/server`'s lazy worker / scheduler
+ * initialisation — leaves a libuv handle alive, so `vite build`
+ * completes (every file is written to disk, every hook returns) but
+ * the process never exits. Locally that's a 60s nuisance; on Vercel's
+ * Hobby tier it eats the entire 45-minute build budget and the
+ * deployment is killed.
+ *
+ * Sitting in the `enforce: 'post'` + `order: 'post'` slot of
+ * `closeBundle` puts us strictly last: all assets are committed,
+ * every plugin has already done its work. We schedule the exit on
+ * `setImmediate` so any in-flight microtasks (e.g. the plugin
+ * logger flushing the "Prerendered N pages" message) get a chance
+ * to run before we tear down.
+ */
+function forceExitAfterBuild(): Plugin {
+  return {
+    name: 'force-exit-after-build',
+    apply: 'build',
+    enforce: 'post',
+    closeBundle: {
+      sequential: true,
+      order: 'post',
+      handler() {
+        setImmediate(() => process.exit(0));
+      },
+    },
+  };
+}
+
+/**
  * Snapshots the un-prerendered `index.html` template as `_spa.html` so Vercel
  * has a clean SPA shell to fall back to on routes we don't prerender (login,
  * share, auth callback, …). Without this, every unknown URL would be served
@@ -107,6 +141,9 @@ export default defineConfig({
         enabled: false,
       },
     }),
+    // Strictly last — see comment above. Must come after VitePWA so
+    // sw.js / workbox-*.js are already written by the time we exit.
+    forceExitAfterBuild(),
   ],
   resolve: {
     // Force a single copy of React across the dep graph. react-router v7
