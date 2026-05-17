@@ -20,6 +20,7 @@ import { PaperLayout } from '../components/PaperLayout';
 import { ItemPhoto } from '../components/ItemPhoto';
 import { OccasionTag } from '../components/OccasionTag';
 import { LangToggle } from '../components/LangToggle';
+import { ReportDialog } from '../components/ReportDialog';
 import { SittingRat } from '../components/rats';
 import type { Occasion } from '../lib/db';
 
@@ -110,7 +111,7 @@ export function PublicListScreen() {
 
       {state.kind === 'ready' && <Body owner={state.owner} items={state.items} />}
 
-      <Footer />
+      {token && <Footer token={token} />}
     </PaperLayout>
   );
 }
@@ -368,8 +369,9 @@ function Invalid() {
   );
 }
 
-function Footer() {
+function Footer({ token }: { token: string }) {
   const { t } = useI18n();
+  const [reportOpen, setReportOpen] = useState(false);
   return (
     <footer
       style={{
@@ -377,6 +379,11 @@ function Footer() {
         paddingTop: 'var(--s-4)',
         borderTop: '1px solid var(--hair)',
         textAlign: 'center',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'baseline',
+        gap: 'var(--s-4)',
+        flexWrap: 'wrap',
       }}
     >
       <Link
@@ -390,6 +397,29 @@ function Footer() {
       >
         {t('publicList.poweredBy')}
       </Link>
+      {/* Anonymous-friendly: the report flow inserts into `reports`
+          with `reporter_id` null when the caller has no session. */}
+      <button
+        type="button"
+        onClick={() => setReportOpen(true)}
+        className="mono-meta"
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          color: 'var(--ink-3)',
+          textDecoration: 'underline',
+          cursor: 'pointer',
+        }}
+      >
+        {t('report.trigger')}
+      </button>
+      <ReportDialog
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="share"
+        targetId={token}
+      />
     </footer>
   );
 }

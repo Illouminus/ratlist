@@ -334,6 +334,60 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          reason: string
+          reporter_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason: string
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason?: string
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       santa_assignments: {
         Row: {
           created_at: string

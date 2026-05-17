@@ -244,10 +244,16 @@ Things that turn "live URL" into "actually inviting people".
 
 ### Moderation / abuse
 
-- [ ] "Report" button on `/p/:userId` and `/share/<token>` pages
-      (anonymous reporter form for share URLs)
-- [ ] Admin dashboard (can be a Supabase Studio bookmark for v1 — no
-      need to build UI yet, but document the queries)
+- [x] "Report" button on `/p/:userId` and `/share/<token>` pages —
+      anon-friendly on share URLs. Inserts into `public.reports`
+      with `reporter_id` null if no session. `<ReportDialog>` is a
+      reusable component; future targets (`item`, `group`) drop in
+      by passing `targetType` + `targetId`.
+- [x] Admin dashboard — kept as a Supabase Studio bookmark + the
+      psql queries in [docs/MODERATION.md](docs/MODERATION.md).
+      Triage statuses (`open`/`reviewed`/`actioned`/`dismissed`)
+      and the action SQL are documented; thin in-app `/admin` can
+      come once volume warrants.
 - [ ] NSFW URL filter (URLs with known adult-content hosts blocked at
       meta-fetch time) — Edge Function modification
 - [ ] Soft-delete / ban: profile `disabled_at` column; RLS skips

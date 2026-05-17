@@ -255,6 +255,7 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Transactional email: Santa start (group invite)**      | ✅ `send-santa-start` — fires on event creation, emails every group member |
 | **Transactional email: group invite by email**           | ✅ `send-group-invite` — "send by email" affordance on each invite row in `<InviteList>` |
 | Transactional email: Santa reveal / account deletion     | ⬜ same pattern |
+| **Moderation: user reports on /share + /p/:userId**      | ✅ `public.reports` table, `<ReportDialog>`, anon insert OK — see [docs/MODERATION.md](docs/MODERATION.md) |
 
 ## Known gotchas
 

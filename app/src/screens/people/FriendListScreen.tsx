@@ -14,6 +14,7 @@
  *       · claimed by you  → "you're getting it" + release
  *       · claimed by them → "{name} got it ✓" (item struck through)
  */
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useFriendList, type ClaimWithUser, type FriendItem } from '../../people/useFriendList';
@@ -25,6 +26,7 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { PriorityDots } from '../../components/PriorityDots';
+import { ReportDialog } from '../../components/ReportDialog';
 import { SittingRat, RunningRat } from '../../components/rats';
 
 export function FriendListScreen() {
@@ -32,6 +34,12 @@ export function FriendListScreen() {
   const { userId } = useParams<{ userId: string }>();
   const { query, claim, release } = useFriendList(userId ?? null);
   const { user: me } = useAuth();
+  const [reportOpen, setReportOpen] = useState(false);
+
+  // Don't offer "report this user" against yourself — the route is
+  // reachable via /p/<my-id>, and self-reports would just clutter the
+  // moderation queue.
+  const canReport = !!userId && userId !== me?.id;
 
   return (
     <PaperLayout>
@@ -74,7 +82,43 @@ export function FriendListScreen() {
               onRelease={(id) => void release(id)}
             />
           )}
+
+          {canReport && (
+            <div
+              style={{
+                marginTop: 'var(--s-7)',
+                paddingTop: 'var(--s-4)',
+                borderTop: '1px solid var(--hair)',
+                textAlign: 'center',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="mono-meta"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  color: 'var(--ink-3)',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                }}
+              >
+                {t('report.trigger')}
+              </button>
+            </div>
+          )}
         </>
+      )}
+
+      {canReport && userId && (
+        <ReportDialog
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          targetType="profile"
+          targetId={userId}
+        />
       )}
     </PaperLayout>
   );
