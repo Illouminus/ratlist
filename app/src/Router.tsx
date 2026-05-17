@@ -74,6 +74,10 @@ const SantaEventScreen = lazyNamed(
   () => import('./screens/santa/SantaEventScreen'),
   'SantaEventScreen',
 );
+const SettingsScreen = lazyNamed(
+  () => import('./screens/settings/SettingsScreen'),
+  'SettingsScreen',
+);
 // Legal pages — public, rarely visited; lazy keeps the long-form text
 // out of the main bundle. Shared shell, two route entry points.
 // Not via lazyNamed because LegalScreen takes a `doc` prop and we want
@@ -169,6 +173,7 @@ function AppRoutes() {
           <Route path="/p/:userId" element={<FriendListScreen />} />
           <Route path="/santa" element={<SantaListScreen />} />
           <Route path="/santa/:eventId" element={<SantaEventScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
         </Route>
       )}
 

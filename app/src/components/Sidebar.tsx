@@ -82,35 +82,59 @@ export function Sidebar() {
 
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: 'var(--s-4) 0' }} />
 
-      <div
+      {/* Profile chip — links to /settings. The avatar (or initial)
+          plus the display name is the closest thing we have to a
+          settings affordance on desktop, so making the whole row
+          clickable saves the user from hunting for a gear icon. */}
+      <Link
+        to="/settings"
         style={{
           padding: '0 var(--s-3)',
           display: 'flex',
           alignItems: 'center',
           gap: 'var(--s-3)',
           marginBottom: 'var(--s-4)',
+          textDecoration: 'none',
+          color: 'inherit',
         }}
       >
-        <span
-          aria-hidden
-          style={{
-            width: 32,
-            height: 32,
-            flexShrink: 0,
-            borderRadius: '50%',
-            background: 'var(--accent-wash)',
-            color: 'var(--ink)',
-            display: 'grid',
-            placeItems: 'center',
-            fontFamily: 'var(--font-display)',
-            fontStyle: 'italic',
-            fontWeight: 500,
-            fontSize: 14,
-            boxShadow: 'inset 0 0 0 1px var(--hair-strong)',
-          }}
-        >
-          {initial}
-        </span>
+        {query.status === 'ready' && query.profile.avatar_url ? (
+          <img
+            src={query.profile.avatar_url}
+            alt=""
+            width={32}
+            height={32}
+            style={{
+              width: 32,
+              height: 32,
+              flexShrink: 0,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              boxShadow: 'inset 0 0 0 1px var(--hair-strong)',
+            }}
+          />
+        ) : (
+          <span
+            aria-hidden
+            style={{
+              width: 32,
+              height: 32,
+              flexShrink: 0,
+              borderRadius: '50%',
+              background: 'var(--accent-wash)',
+              color: 'var(--ink)',
+              display: 'grid',
+              placeItems: 'center',
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontWeight: 500,
+              fontSize: 14,
+              boxShadow: 'inset 0 0 0 1px var(--hair-strong)',
+            }}
+          >
+            {initial}
+          </span>
+        )}
         <div
           style={{
             flex: 1,
@@ -125,7 +149,7 @@ export function Sidebar() {
         >
           {displayName}
         </div>
-      </div>
+      </Link>
 
       {/* Two pill buttons sharing the same chrome so they line up
           visually instead of competing — LangToggle on the left

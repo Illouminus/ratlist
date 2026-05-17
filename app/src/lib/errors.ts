@@ -42,6 +42,7 @@ export type AppErrorCode =
   | 'inviteUsed'
   // groups
   | 'lastAdmin'
+  | 'soleAdminGroups'
   // santa
   | 'santaTooFew'
   | 'santaNoValid'
@@ -122,6 +123,7 @@ function matchMessage(message: string): AppErrorCode {
   if (m.includes('invite_already_used')) return 'inviteUsed';
 
   if (m.includes('last_admin')) return 'lastAdmin';
+  if (m.includes('sole_admin_of_groups')) return 'soleAdminGroups';
 
   if (m.includes('too_few_participants')) return 'santaTooFew';
   if (m.includes('no_valid_assignment')) return 'santaNoValid';

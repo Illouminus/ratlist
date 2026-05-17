@@ -353,6 +353,59 @@ export const en: Translation = {
     termsEyebrow: 'terms of service',
     termsTitle: 'the rules,\nshort',
   },
+  settings: {
+    eyebrow: 'settings',
+    title: 'your\ncorner',
+    sub: 'name, picture, language. at the bottom — export and delete account.',
+    nav: 'settings',
+
+    profileSection: 'profile',
+    profileSub: 'your name shows up to rats in your circles.',
+    displayNameLabel: 'name',
+    displayNamePh: 'Mary',
+    handleLabel: 'short handle',
+    handlePh: 'mary',
+    handleHint: 'letters, digits, dash and underscore only.',
+    saveProfile: 'save',
+    savingProfile: 'saving…',
+    profileSavedToast: 'saved',
+
+    avatarSection: 'avatar',
+    avatarSub: 'png/jpg/webp up to 2 MB.',
+    avatarUpload: 'upload',
+    avatarReplace: 'replace',
+    avatarRemove: 'remove',
+    avatarUploading: 'uploading…',
+    avatarRemoveConfirmTitle: 'remove avatar?',
+    avatarRemoveConfirm: 'we’ll show the first letter of your name again. the file stays in storage for now.',
+    avatarUpdatedToast: 'avatar updated',
+    avatarRemovedToast: 'avatar removed',
+
+    appearanceSection: 'language',
+    appearanceSub: 'switches instantly.',
+
+    dangerSection: 'danger zone',
+    dangerSub: 'grab your data or delete the account entirely.',
+
+    exportTitle: 'export your data',
+    exportSub: 'one JSON file with everything you own. excludes others’ claims on your items (they’re hidden from you too).',
+    exportCta: 'download',
+    exporting: 'packing…',
+    exportedToast: 'file downloaded',
+
+    deleteTitle: 'delete account',
+    deleteSub: 'irreversible. items, photos, circle memberships and santa records are gone within 24 hours.',
+    deleteCta: 'delete account',
+    deleting: 'deleting…',
+    deleteConfirmTitle: 'really delete?',
+    deleteConfirm: 'this can’t be undone. type your handle to confirm — or your name if you have no handle.',
+    deleteConfirmInputLabel: 'type «{token}» to confirm',
+    deleteConfirmFinal: 'delete forever',
+    deletedToast: 'account deleted',
+    deleteSoleAdminTitle: 'can’t — you’re the only admin',
+    deleteSoleAdminBody:
+      'you’re the only admin in these circles, and they have other members. promote someone else or delete the circle first:',
+  },
   share: {
     eyebrow: 'public link',
     title: 'share your list',
@@ -412,6 +465,7 @@ export const en: Translation = {
     inviteUsed: 'this invite has already been used.',
 
     lastAdmin: "you're the only admin — promote someone else first.",
+    soleAdminGroups: "can't delete the account: you're the only admin in some circles.",
 
     santaTooFew: 'at least two participants needed.',
     santaNoValid: "couldn't find valid pairings — check your exclusions.",

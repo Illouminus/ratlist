@@ -7,7 +7,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n/useI18n';
-import { LangToggle } from './LangToggle';
 
 export function MobileTopBar() {
   const { t } = useI18n();
@@ -40,7 +39,19 @@ export function MobileTopBar() {
       </Link>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
-        <LangToggle />
+        <Link
+          to="/settings"
+          className="mono-meta"
+          style={{
+            padding: '4px 10px',
+            border: '1px solid var(--hair-strong)',
+            borderRadius: 'var(--r-2)',
+            color: 'var(--ink-2)',
+            textDecoration: 'none',
+          }}
+        >
+          {t('settings.nav')}
+        </Link>
         <button
           type="button"
           onClick={() => void signOut()}

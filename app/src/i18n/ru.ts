@@ -358,6 +358,59 @@ export const ru: Translation = {
     termsEyebrow: 'правила сервиса',
     termsTitle: 'правила,\nкоротко',
   },
+  settings: {
+    eyebrow: 'настройки',
+    title: 'твой\nуголок',
+    sub: 'имя, картинка, язык. внизу — экспорт и удаление аккаунта.',
+    nav: 'настройки',
+
+    profileSection: 'профиль',
+    profileSub: 'имя видно крысятам из твоих кругов.',
+    displayNameLabel: 'имя',
+    displayNamePh: 'Маша',
+    handleLabel: 'короткое имя',
+    handlePh: 'masha',
+    handleHint: 'только латиница, цифры, дефис, подчёркивание.',
+    saveProfile: 'сохранить',
+    savingProfile: 'сохраняем…',
+    profileSavedToast: 'сохранили',
+
+    avatarSection: 'аватар',
+    avatarSub: 'png/jpg/webp до 2 МБ.',
+    avatarUpload: 'загрузить',
+    avatarReplace: 'заменить',
+    avatarRemove: 'убрать',
+    avatarUploading: 'грузим…',
+    avatarRemoveConfirmTitle: 'убрать аватар?',
+    avatarRemoveConfirm: 'снова появится первая буква имени. файл из хранилища пока остаётся.',
+    avatarUpdatedToast: 'аватар обновлён',
+    avatarRemovedToast: 'аватар убран',
+
+    appearanceSection: 'язык',
+    appearanceSub: 'переключается мгновенно.',
+
+    dangerSection: 'опасная зона',
+    dangerSub: 'забери свои данные или удали аккаунт полностью.',
+
+    exportTitle: 'экспорт данных',
+    exportSub: 'один JSON-файл со всем что тебе принадлежит. без чужих claim-ов на твои айтемы (они спрятаны даже от тебя).',
+    exportCta: 'скачать',
+    exporting: 'собираем…',
+    exportedToast: 'файл скачан',
+
+    deleteTitle: 'удалить аккаунт',
+    deleteSub: 'безвозвратно. айтемы, фотки, участия в кругах и сантах — всё уйдёт в течение суток.',
+    deleteCta: 'удалить аккаунт',
+    deleting: 'удаляем…',
+    deleteConfirmTitle: 'точно удалить?',
+    deleteConfirm: 'это нельзя отменить. впиши свой короткий ник чтобы подтвердить — или имя, если ника нет.',
+    deleteConfirmInputLabel: 'впиши «{token}» чтобы подтвердить',
+    deleteConfirmFinal: 'удалить навсегда',
+    deletedToast: 'аккаунт удалён',
+    deleteSoleAdminTitle: 'нельзя — ты единственный админ',
+    deleteSoleAdminBody:
+      'в этих кругах ты единственный админ, и там есть другие участники. сначала сделай админом кого-то ещё или удали круг:',
+  },
   share: {
     eyebrow: 'публичная ссылка',
     title: 'поделиться списком',
@@ -417,6 +470,7 @@ export const ru: Translation = {
     inviteUsed: 'этой ссылкой уже воспользовались.',
 
     lastAdmin: 'ты единственный админ — нельзя. сначала сделай админом кого-то ещё.',
+    soleAdminGroups: 'нельзя удалить аккаунт: в некоторых кругах ты единственный админ.',
 
     santaTooFew: 'нужно минимум двое участников.',
     santaNoValid: 'не вышло найти подходящие пары — проверь исключения.',
