@@ -366,6 +366,18 @@ export function useSantaEvent(eventId: string | null): UseSantaEventResult {
     const { error } = await supabase.rpc('run_santa_draw', { _event_id: eventId });
     if (error) return { error: error.message };
     await reload();
+    // Fire transactional emails to each giver. Strictly best-effort —
+    // a failed invoke (Edge function down, env not configured, etc.)
+    // must not roll back the draw itself, so this is intentionally
+    // not awaited and any error is only logged. The organiser will
+    // still see the draw result in the UI either way.
+    void supabase.functions
+      .invoke('send-santa-draw', { body: { event_id: eventId } })
+      .catch((err: unknown) => {
+        if (import.meta.env.DEV) {
+          console.warn('[santa] send-santa-draw invoke failed', err);
+        }
+      });
     return { ok: true };
   }, [eventId, reload]);
 

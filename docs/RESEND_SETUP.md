@@ -135,10 +135,43 @@ If steps 3-5 all pass, Step 3 of Phase 1A is done.
   all three DNS records and send a few more to known inboxes to warm
   the reputation up.
 
+## Transactional emails via Edge Functions
+
+Beyond magic-link (handled by Supabase Auth's custom SMTP), the app
+sends transactional notifications directly through Resend's REST API
+from Supabase Edge Functions. The shared wrapper at
+[`supabase/functions/_shared/email.ts`](../supabase/functions/_shared/email.ts)
+reads `RESEND_API_KEY` and posts to `api.resend.com/emails`. When the
+key isn't set (local dev, unconfigured preview) the wrapper logs the
+payload to stdout and returns `{ ok: true, id: 'dry-run' }` so
+call-sites can stay branchless.
+
+To enable real sends in production:
+
+1. Reuse the `re_…` API key from step 3 above (or mint a second one in
+   Resend → API Keys, scoped to **Sending access only** on `ratlist.app`).
+2. Store it as a Supabase secret for the edge runtime:
+   ```sh
+   supabase secrets set RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx --project-ref fiuheufmawxkgbqddwwu
+   ```
+3. Each Edge Function that sends mail (e.g. `send-santa-draw`) reads
+   the secret via `Deno.env.get('RESEND_API_KEY')`. No per-function
+   config needed once the project-wide secret exists.
+
+The first function wired into this pipeline is `send-santa-draw` —
+fired by the client after `run_santa_draw` succeeds. See its
+[`index.ts`](../supabase/functions/send-santa-draw/index.ts) for the
+auth pattern (caller must be the event organiser) and
+[`template.ts`](../supabase/functions/send-santa-draw/template.ts) for
+the branded HTML.
+
 ## What stays manual after this
 
-- Switching the email template if we update `magic-link.html` — Supabase
-  doesn't sync from the repo automatically; paste-replace each time.
-- Future transactional emails (group invitations, Santa events) live
-  outside Supabase Auth and would be sent through Resend's REST API
-  from an Edge Function. Not in scope for Phase 1A.
+- Switching the magic-link template — Supabase Auth doesn't sync from
+  the repo; paste-replace `supabase/templates/magic-link.html` into
+  the dashboard each time the template changes.
+- Adding new transactional emails — follow the `send-santa-draw`
+  pattern: a function under `supabase/functions/<name>/` that imports
+  `_shared/email.ts`, a `template.ts` next to `index.ts` with the
+  branded HTML, and a client-side `void supabase.functions.invoke(...)`
+  fire-and-forget at the call site.

@@ -132,8 +132,13 @@ The draw runs in a `SECURITY DEFINER` Postgres function
 ├── supabase/
 │   ├── config.toml          local ports shifted to 544xx
 │   ├── migrations/          all SQL — apply via `supabase migration up --local`
-│   └── functions/
-│       └── fetch-url-meta/  Deno Edge Function (URL → og:/JSON-LD/Amazon meta)
+│   ├── functions/
+│   │   ├── _shared/         cors helper + sendEmail (Resend wrapper)
+│   │   ├── fetch-url-meta/  Deno Edge Function (URL → og:/JSON-LD/Amazon meta)
+│   │   ├── og-image/        satori + resvg-wasm, `?token=` per-share variant
+│   │   └── send-santa-draw/ transactional "draw is done" emails
+│   └── templates/
+│       └── magic-link.html  branded Supabase Auth template
 └── app/
     ├── .env.local           supabase URL + anon key (gitignored)
     ├── tsconfig.app.json    strict TS settings
@@ -246,6 +251,8 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Supabase Pro upgrade**                                 | ⬜ optional — $25/mo, unlocks image transforms + backups |
 | Share % (partial claims)                                 | ⬜ (schema has `share`, no UI) |
 | Anonymous Santa chat                                     | ⬜      |
+| **Transactional email: Santa draw**                      | ✅ `send-santa-draw` Edge Function, dry-runs without RESEND_API_KEY |
+| Transactional email: group invites / Santa start / reveal | ⬜ same pattern, follow `send-santa-draw` |
 
 ## Known gotchas
 
