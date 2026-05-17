@@ -122,13 +122,21 @@ What landed in 1B:
       heading order fixed on the landing (h1 → h2 → h3); WCAG AA
       contrast for `--ink-3` and `--accent`; sign-in touch target
       bumped to 44 px
-- [ ] **Pre-render landing `/`** — still deferred. `react-snap` is
-      broken on React 19, `vite-react-ssg` is beta, `vite-prerender-plugin`
-      requires an SSR entry refactor + `hydrateRoot` switch. **OG /
-      Schema.org / SEO meta tags are already static**, so social
-      previews and basic crawlers are unaffected — the only remaining
-      bottleneck is Google's second-pass JS render latency on the
-      home page itself.
+- [x] **Pre-render landing `/` + `/legal/privacy` + `/legal/terms`** —
+      shipped via `vite-prerender-plugin` (see `app/vite.config.ts`).
+      Per-route `<title>` / `<meta description>` / `<link canonical>`
+      are written by `src/prerender.tsx`. A separate `_spa.html` is
+      emitted as the Vercel rewrite target for unknown routes so /login
+      etc. no longer flash the landing copy at crawlers. Custom Vite
+      plugin strips the 587 KB prerender chunk from the client bundle
+      (Vite 8's Rolldown doesn't honour vite-prerender-plugin's own
+      `manualChunks` merge) and the matching `modulepreload` tag from
+      every emitted HTML. `LegalScreen` had to come out of `React.lazy`
+      because `renderToString` doesn't await lazy promises — it would
+      have emitted an empty `<Suspense>` boundary instead of the actual
+      text. Service-worker `navigateFallbackDenylist` now lists
+      `/legal/` so the cached `index.html` doesn't hijack legal
+      navigations in the browser.
 - [ ] Image transforms via Supabase Storage `?width=…&resize=cover` —
       needs Supabase Pro (image transformations are not on Free)
 
@@ -179,17 +187,18 @@ What landed in 1B:
 
 When opening a fresh session, this is where 1B "polish" leaves off:
 
-1. **Pre-render landing** (own session, ~2 h) — refactor `main.tsx`
-   into SSR + hydrate entries, integrate `vite-prerender-plugin` or
-   roll a postbuild Node script using `vite-node` + `react-dom/server`.
-   See [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) for the trap report.
-2. **Per-share-token OG image** (~1 h) — extend `og-image` Edge
+1. **Per-share-token OG image** (~1 h) — extend `og-image` Edge
    Function with a `?token=...` branch that fetches `profiles +
    items count` and renders a personalised preview.
-3. **Supabase Pro upgrade** (5 min, $25/mo) — unblocks image
+2. **Supabase Pro upgrade** (5 min, $25/mo) — unblocks image
    transformations and gives backups.
-4. **Custom Plausible goal events** for SignedIn / ItemAdded /
+3. **Custom Plausible goal events** for SignedIn / ItemAdded /
    GroupCreated — needs ~30 min once Plausible is live.
+4. **Per-language prerender** — currently only English is prerendered.
+   Russian users get the toggle, but their crawlers see the English
+   landing. To prerender both, the routes would need `?lang=ru` (or
+   `/ru/`) variants and `hreflang` tags. Worth doing only if RU
+   discovery channels start mattering.
 
 ## Phase 2 — soft launch (1–2 weeks after Phase 1)
 

@@ -6,13 +6,11 @@
     <meta name="theme-color" content="#fbf6ef" />
     <meta name="color-scheme" content="light" />
 
+    <!-- `title`, `description` and `canonical` are written per-route by the
+         prerender pipeline (see `src/prerender.tsx`). The defaults below
+         only apply to non-prerendered SPA routes that fall back to this
+         template — login, share, etc. -->
     <title>Rat List — wishlist for the rats</title>
-    <meta
-      name="description"
-      content="A quiet, ad-free wishlist + Secret Santa for friend circles. Share a list by link, hide claims from the gift-receiver, run a draw inside a circle."
-    />
-
-    <link rel="canonical" href="https://ratlist.app/" />
 
     <!-- Favicon set + PWA manifest. SVG is preferred where supported
          (sharp at any zoom), with PNG fallbacks for older browsers and

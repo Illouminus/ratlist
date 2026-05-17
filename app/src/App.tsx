@@ -1,24 +1,30 @@
 /**
- * App root — composes the global providers (auth, i18n is wired in main.tsx)
- * around the router. Anything that needs to be available everywhere should
- * be added here.
+ * App root — composes the global providers (auth, toast, confirm) around
+ * whatever routing tree the caller passes in as `children`.
+ *
+ * The Router (BrowserRouter on the client, StaticRouter on the server) is
+ * lifted out so the same App component can be hydrated on the browser and
+ * rendered to a string at build time by the prerender pipeline. See
+ * `entry-client.tsx` and `prerender.tsx` for the two callers.
+ *
+ * I18nProvider is also lifted out so each entry can pre-set a language
+ * appropriate for its environment (server defaults to `en` because there's
+ * no localStorage to read from).
  */
+import type { ReactNode } from 'react';
 import { AuthProvider } from './auth/AuthProvider';
-import { AppRouter } from './Router';
 import { RatDefs } from './components/rats';
 import { ToastProvider } from './components/Toast';
 import { ConfirmProvider } from './components/ConfirmDialog';
 
-export default function App() {
+export default function App({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       {/* Defines the shared `#ratWobble` SVG filter every rat illustration
           references. Mount once near the root so it's always available. */}
       <RatDefs />
       <ToastProvider>
-        <ConfirmProvider>
-          <AppRouter />
-        </ConfirmProvider>
+        <ConfirmProvider>{children}</ConfirmProvider>
       </ToastProvider>
     </AuthProvider>
   );

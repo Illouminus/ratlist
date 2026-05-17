@@ -1,12 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/og.png",
       "destination": "https://fiuheufmawxkgbqddwwu.supabase.co/functions/v1/og-image"
     },
-    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+    { "source": "/((?!assets/|legal/).*)", "destination": "/_spa.html" }
   ],
   "headers": [
     {

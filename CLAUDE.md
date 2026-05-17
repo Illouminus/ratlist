@@ -139,9 +139,10 @@ The draw runs in a `SECURITY DEFINER` Postgres function
     ├── tsconfig.app.json    strict TS settings
     ├── vite.config.ts       dedupes react across deps
     └── src/
-        ├── main.tsx
-        ├── App.tsx          AuthProvider + RatDefs + AppRouter
-        ├── Router.tsx       all routes; `appRoute()` helper wraps authed routes
+        ├── main.tsx         client entry — hydrateRoot (createRoot in dev)
+        ├── prerender.tsx    Node entry called by vite-prerender-plugin
+        ├── App.tsx          provider tree; takes a router as `children`
+        ├── Router.tsx       AppRoutes (no Router) — both entries wrap it
         ├── auth/            AuthProvider, useAuth, useProfile, RequireAuth
         ├── items/           useMyItems, fetchUrlMeta, uploadItemImage
         ├── groups/          useGroups, useGroupInvites
@@ -240,7 +241,7 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Dynamic OG image** (Edge Function, satori + WOFF)      | ✅ Phase 1B done — `/og.png` rewrite |
 | **Focus traps + WCAG AA + landmarks + loading skeletons**| ✅ Phase 1B done |
 | **Plausible + uptime monitoring** (code wired, docs ready) | ✅ Phase 1B done — gated on env DSN |
-| **Pre-render landing** (SSR / hydrateRoot refactor)      | ⬜ deferred — see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
+| **Pre-render landing + legal** (vite-prerender-plugin)   | ✅ Phase 1B done — `dist/index.html`, `dist/legal/{privacy,terms}/index.html`; `_spa.html` is the SPA fallback for unknown routes |
 | **Per-share-token OG image variant**                     | ⬜ deferred — ~1 h follow-up |
 | **Supabase Pro upgrade**                                 | ⬜ optional — $25/mo, unlocks image transforms + backups |
 | Share % (partial claims)                                 | ⬜ (schema has `share`, no UI) |

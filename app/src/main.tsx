@@ -1,8 +1,22 @@
+/**
+ * Client entry. Hydrates the prerendered HTML produced at build time by
+ * `prerender.tsx`. The two entries share the same provider tree (App)
+ * and route definitions (AppRoutes) — only the router implementation
+ * differs (`BrowserRouter` here, `StaticRouter` there).
+ *
+ * Analytics / error reporting init lives in this file (not App.tsx)
+ * because both are strictly client-side: Plausible needs a window to
+ * inject its script, Sentry's beforeBreadcrumb hook reads URL state.
+ * Pulling them out of the SSR-shared App keeps `prerender.tsx` from
+ * accidentally booting a tracker during the Node build.
+ */
 import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import * as Sentry from '@sentry/react';
 import { I18nProvider } from './i18n';
 import App from './App';
+import { AppRoutes } from './Router';
 import './styles/global.css';
 
 // Plausible analytics — privacy-respecting, no cookies, no personal
@@ -46,10 +60,26 @@ if (sentryDsn) {
   });
 }
 
-createRoot(document.getElementById('root')!).render(
+const container = document.getElementById('root')!;
+const tree = (
   <StrictMode>
     <I18nProvider>
-      <App />
+      <App>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </App>
     </I18nProvider>
-  </StrictMode>,
+  </StrictMode>
 );
+
+// In production the container has prerendered HTML (see `prerender.tsx`)
+// so we hydrate. In dev there's nothing prerendered — `index.html` ships
+// an empty `<div id="root">` — so falling back to `createRoot` avoids the
+// "no hydration mismatches found because the server rendered an empty
+// container" warning and the behaviour change React 19 made around it.
+if (container.hasChildNodes()) {
+  hydrateRoot(container, tree);
+} else {
+  createRoot(container).render(tree);
+}
