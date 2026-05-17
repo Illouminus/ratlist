@@ -8,7 +8,7 @@
       "destination": "https://fiuheufmawxkgbqddwwu.supabase.co/functions/v1/og-image"
     },
     { "source": "/share/:token", "destination": "/api/share/:token" },
-    { "source": "/((?!assets/|legal/|share/|api/).*)", "destination": "/_spa.html" }
+    { "source": "/((?!assets/|legal/|share/|api/).*)", "destination": "/_spa" }
   ],
   "headers": [
     {
