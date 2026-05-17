@@ -7,7 +7,8 @@ friend group, now publicly deployed on **`ratlist.app`**. Phase 1A
 traps, Plausible, uptime) shipped 2026-05-17. v0.2 is feature-complete:
 groups, items, public share URLs, Secret Santa, realtime, priority
 levels, an editorial landing page, account self-management,
-GDPR-compatible legal pages.
+GDPR-compatible legal pages. **Events as a first-class entity** shipped
+the same evening (M2 redesign) — see EVENTS_M2.md.
 
 > Start here. Then read [ARCHITECTURE.md](ARCHITECTURE.md) for the data
 > model and [README.md](README.md) for one-paragraph context. Memory at
@@ -17,6 +18,11 @@ GDPR-compatible legal pages.
 > **Going public?** → see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md). It owns
 > the deployment + monetization roadmap; this file only covers
 > conventions and what's already shipped locally.
+>
+> **The product just had its biggest UX shift?** → see
+> [EVENTS_M2.md](EVENTS_M2.md). Narrative of the Events redesign —
+> what friends asked for, the 5 models considered, why M2 won, what's
+> on disk, and what's deliberately untouched.
 
 ## Stack at a glance
 
