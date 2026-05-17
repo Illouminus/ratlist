@@ -78,17 +78,22 @@ dependency.
 
 ### SEO / discoverability
 
-- [ ] OG meta tags on `/` and `/share/<token>` (title, description,
-      preview image). Currently a plain `<title>` only
-- [ ] `robots.txt` — allow `/`, `/share/*`; disallow everything else
-      (no signed-in URLs in search)
-- [ ] `sitemap.xml` — just `/` for now; `/share/*` URLs are
-      user-generated and shouldn't be indexed
-- [ ] Structured data (Schema.org `WebApplication`) on landing
+- [x] OG meta tags on `/` (title, description, Schema.org). og:image
+      deliberately deferred — see "Dynamic OG image" in Phase 1B
+- [x] `robots.txt` — landing + `/legal/*` allowed, everything authed
+      disallowed
+- [x] `sitemap.xml` — `/`, `/legal/privacy`, `/legal/terms`
+- [x] Structured data (Schema.org `WebApplication`) on landing
 - [ ] **Pre-rendered landing** — SPA Google indexing works but slow.
       Two options: (a) Vercel's `getStaticProps`-equivalent if
       switching to Next.js, (b) `vite-plugin-ssr` / `prerender` for
       just `/`. Path (b) is less work.
+- [ ] **Dynamic OG image** (satori + resvg) for landing + per-share-
+      token previews. First attempt blocked on Newsreader being a
+      variable font (satori chokes), so deferred — pick a known-good
+      static TTF (Inter Italic from `@vercel/og`'s bundled fonts, or
+      bundle a static Newsreader variant) and reuse the markup that
+      already lives in commit history.
 
 ## Phase 2 — soft launch (1–2 weeks after Phase 1)
 
