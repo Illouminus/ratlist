@@ -117,12 +117,22 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
 
     const result = await fetchUrlMeta(trimmed);
     if (result.kind === 'error') {
-      // `blocked_host` is the Edge Function refusing to fetch a
-      // domain on the NSFW blocklist. UI flips to a distinct hint
-      // line so the user knows the issue is policy, not a transient
-      // network problem they should retry.
+      // The Edge Function declines for two distinct policy reasons:
+      //   - `blocked_host`: NSFW blocklist — softer message, the user
+      //     can still add the item by hand.
+      //   - SSRF policy (private_address / too_many_redirects /
+      //     unsupported_protocol): the link looks internal/loopback or
+      //     leads through a too-deep redirect chain.
+      // Either way the UI surfaces a distinct hint line so the user
+      // knows the issue is policy, not a transient network problem.
       if (result.code === 'blocked_host') {
         setMetaStatus({ kind: 'blocked' });
+      } else if (
+        result.code === 'private_address' ||
+        result.code === 'too_many_redirects' ||
+        result.code === 'unsupported_protocol'
+      ) {
+        setMetaStatus({ kind: 'urlNotAllowed' });
       } else {
         setMetaStatus({ kind: 'error' });
       }
@@ -381,7 +391,8 @@ type MetaFetchStatus =
   | { kind: 'ok'; filled: string[] }
   | { kind: 'empty' }
   | { kind: 'error' }
-  | { kind: 'blocked' };
+  | { kind: 'blocked' }
+  | { kind: 'urlNotAllowed' };
 
 interface MetaFeedbackProps {
   status: MetaFetchStatus;
@@ -410,6 +421,13 @@ function MetaFeedback({ status, t }: MetaFeedbackProps) {
     return (
       <p style={{ marginTop: 'var(--s-2)', fontSize: 12, color: 'var(--accent-deep)' }}>
         {t('add.metaBlocked')}
+      </p>
+    );
+  }
+  if (status.kind === 'urlNotAllowed') {
+    return (
+      <p style={{ marginTop: 'var(--s-2)', fontSize: 12, color: 'var(--accent-deep)' }}>
+        {t('add.metaUrlNotAllowed')}
       </p>
     );
   }
