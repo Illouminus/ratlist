@@ -16,11 +16,12 @@
  * the item detail share. Mobile clipboard works in https/localhost, so
  * we don't bother with a textarea fallback.
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n/useI18n';
 import { useToast } from './Toast';
 import { useShareToken } from '../items/useShareToken';
 import { errorMessage } from '../lib/errors';
+import { useFocusTrap } from '../lib/useFocusTrap';
 
 export interface ShareDialogProps {
   open: boolean;
@@ -33,6 +34,19 @@ export function ShareDialog({ open, onClose }: ShareDialogProps) {
   const { query, enable, disable, rotate } = useShareToken();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  useFocusTrap(cardRef, open);
+
+  // Esc closes — paired with the focus trap so keyboard users can
+  // both dismiss and stay oriented inside the dialog.
+  useEffect(() => {
+    if (!open) return undefined;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -99,6 +113,7 @@ export function ShareDialog({ open, onClose }: ShareDialogProps) {
       }}
     >
       <div
+        ref={cardRef}
         onClick={(e) => e.stopPropagation()}
         className="fade-up"
         style={{

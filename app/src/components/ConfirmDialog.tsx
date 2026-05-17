@@ -17,9 +17,8 @@
  * One dialog at a time. While a dialog is open, further `confirm()`
  * calls reject with `false` so a button-mash doesn't queue a stack.
  *
- * Keyboard: Esc cancels, Enter confirms. We don't trap focus — the
- * editorial chrome is read-only behind the overlay, so tabbing
- * outside is harmless. Add a focus trap if a future screen needs it.
+ * Keyboard: Esc cancels, Enter confirms. Tab and Shift+Tab cycle
+ * focus inside the dialog (see `useFocusTrap` on the card div).
  */
 import {
   createContext,
@@ -31,6 +30,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useFocusTrap } from '../lib/useFocusTrap';
 
 export interface ConfirmOptions {
   /** Bold one-line headline (e.g. "удалить «Тестовый круг»?"). */
@@ -147,6 +147,8 @@ function Dialog({ options, onConfirm, onCancel }: DialogProps) {
     cancelLabel = 'отмена',
     danger,
   } = options;
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  useFocusTrap(cardRef);
 
   return (
     <div
@@ -168,6 +170,7 @@ function Dialog({ options, onConfirm, onCancel }: DialogProps) {
       }}
     >
       <div
+        ref={cardRef}
         onClick={(e) => e.stopPropagation()}
         className="fade-up"
         style={{
