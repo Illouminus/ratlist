@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>Sign in to Rat List</title>
+    <!--
+      Branded magic-link email for Rat List.
+
+      Supabase substitutes the {{ .Token }} / {{ .ConfirmationURL }} /
+      {{ .Email }} placeholders at send time. Keep the template HTML-only
+      (no external resources, no JS) — most mail clients strip those.
+      Inline styles only; <style> blocks survive in Apple Mail and
+      Thunderbird but Gmail and Outlook flatten them, so the visual
+      design has to work without the head <style>.
+
+      The CTA is a table-based button so Outlook on Windows renders it
+      correctly. The verbatim URL below the button is the fallback for
+      clients that strip <a>.
+    -->
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background: #fbf6ef;
+      color: #2b2620;
+      font-family: 'Public Sans', 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      style="background: #fbf6ef; padding: 32px 16px;"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            width="560"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="max-width: 560px; width: 100%;"
+          >
+            <!-- Wordmark -->
+            <tr>
+              <td style="padding: 8px 8px 24px;">
+                <span
+                  style="
+                    font-family: Georgia, 'Times New Roman', serif;
+                    font-style: italic;
+                    font-weight: 500;
+                    font-size: 26px;
+                    letter-spacing: -0.5px;
+                    color: #2b2620;
+                  "
+                  >Rat List</span
+                >
+                <span
+                  style="
+                    font-family: 'Caveat', 'Brush Script MT', cursive;
+                    font-size: 18px;
+                    color: #9b4e31;
+                    margin-left: 10px;
+                  "
+                  >— wishlist for the rats</span
+                >
+              </td>
+            </tr>
+
+            <!-- Eyebrow + title -->
+            <tr>
+              <td style="padding: 0 8px;">
+                <div
+                  style="
+                    text-transform: uppercase;
+                    letter-spacing: 0.2em;
+                    font-size: 11px;
+                    color: #5a5147;
+                    margin-bottom: 12px;
+                  "
+                >
+                  one-time sign-in link
+                </div>
+                <h1
+                  style="
+                    margin: 0;
+                    font-family: Georgia, 'Times New Roman', serif;
+                    font-style: italic;
+                    font-weight: 500;
+                    font-size: 32px;
+                    line-height: 1.15;
+                    letter-spacing: -0.5px;
+                    color: #2b2620;
+                  "
+                >
+                  here's your way in.
+                </h1>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td style="padding: 24px 8px 0;">
+                <p
+                  style="
+                    margin: 0 0 16px;
+                    font-size: 15px;
+                    line-height: 1.55;
+                    color: #2b2620;
+                  "
+                >
+                  Click the button below to sign in to Rat List as
+                  <strong style="color: #2b2620;">{{ .Email }}</strong>.
+                  The link expires in 1 hour and works once.
+                </p>
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 14px;
+                    line-height: 1.55;
+                    color: #5a5147;
+                  "
+                >
+                  If you didn't try to sign in, you can ignore this email — no
+                  account changes were made.
+                </p>
+              </td>
+            </tr>
+
+            <!-- CTA button (table-wrapped for Outlook) -->
+            <tr>
+              <td style="padding: 32px 8px 8px;">
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                >
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        background: #2b2620;
+                        border-radius: 6px;
+                      "
+                    >
+                      <a
+                        href="{{ .ConfirmationURL }}"
+                        target="_blank"
+                        style="
+                          display: inline-block;
+                          padding: 14px 28px;
+                          font-family: 'Public Sans', 'Helvetica Neue', Arial, sans-serif;
+                          font-size: 13px;
+                          font-weight: 600;
+                          letter-spacing: 0.1em;
+                          text-transform: uppercase;
+                          color: #fbf6ef;
+                          text-decoration: none;
+                        "
+                      >
+                        sign in →
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Verbatim URL fallback -->
+            <tr>
+              <td style="padding: 16px 8px 0;">
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 12px;
+                    line-height: 1.5;
+                    color: #5a5147;
+                  "
+                >
+                  Or paste this URL into your browser:
+                </p>
+                <p
+                  style="
+                    margin: 4px 0 0;
+                    font-family: 'SF Mono', Menlo, Consolas, monospace;
+                    font-size: 12px;
+                    line-height: 1.5;
+                    color: #2b2620;
+                    word-break: break-all;
+                  "
+                >
+                  <a
+                    href="{{ .ConfirmationURL }}"
+                    style="color: #9b4e31; text-decoration: underline;"
+                    >{{ .ConfirmationURL }}</a
+                  >
+                </p>
+              </td>
+            </tr>
+
+            <!-- Hairline divider -->
+            <tr>
+              <td style="padding: 40px 8px 0;">
+                <div
+                  style="
+                    height: 1px;
+                    background: rgba(43, 38, 32, 0.18);
+                    line-height: 1px;
+                    font-size: 1px;
+                  "
+                >&nbsp;</div>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="padding: 16px 8px 0;">
+                <p
+                  style="
+                    margin: 0 0 8px;
+                    font-family: 'Caveat', 'Brush Script MT', cursive;
+                    font-size: 16px;
+                    color: #5a5147;
+                  "
+                >
+                  wishlist for the rats
+                </p>
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 11px;
+                    line-height: 1.5;
+                    color: #5a5147;
+                    text-transform: uppercase;
+                    letter-spacing: 0.15em;
+                  "
+                >
+                  <a
+                    href="https://ratlist.app/"
+                    style="color: #5a5147; text-decoration: none;"
+                    >ratlist.app</a
+                  >
+                  &nbsp;·&nbsp;
+                  <a
+                    href="https://ratlist.app/legal/privacy"
+                    style="color: #5a5147; text-decoration: none;"
+                    >privacy</a
+                  >
+                  &nbsp;·&nbsp;
+                  <a
+                    href="https://ratlist.app/legal/terms"
+                    style="color: #5a5147; text-decoration: none;"
+                    >terms</a
+                  >
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
