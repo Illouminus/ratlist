@@ -133,16 +133,21 @@ The draw runs in a `SECURITY DEFINER` Postgres function
 │   ├── config.toml          local ports shifted to 544xx
 │   ├── migrations/          all SQL — apply via `supabase migration up --local`
 │   ├── functions/
-│   │   ├── _shared/         cors helper + sendEmail (Resend wrapper)
-│   │   ├── fetch-url-meta/  Deno Edge Function (URL → og:/JSON-LD/Amazon meta)
-│   │   ├── og-image/        satori + resvg-wasm, `?token=` per-share variant
-│   │   └── send-santa-draw/ transactional "draw is done" emails
+│   │   ├── _shared/             cors helper + sendEmail (Resend wrapper)
+│   │   ├── fetch-url-meta/      URL → og:/JSON-LD/Amazon meta + NSFW blocklist
+│   │   ├── og-image/            satori + resvg-wasm, `?token=` per-share variant
+│   │   ├── send-santa-draw/     "draw is done" → each giver
+│   │   ├── send-santa-start/    "X started a Santa, join" → group members
+│   │   └── send-group-invite/   re-email an existing invite token to an address
 │   └── templates/
-│       └── magic-link.html  branded Supabase Auth template
+│       └── magic-link.html      branded Supabase Auth template
 └── app/
     ├── .env.local           supabase URL + anon key (gitignored)
     ├── tsconfig.app.json    strict TS settings
-    ├── vite.config.ts       dedupes react across deps
+    ├── vite.config.ts       react + prerender + SPA-fallback + force-exit plugins
+    ├── vercel.json          cleanUrls, /share/:token rewrite to api/, SPA fallback to _spa.html
+    ├── api/
+    │   └── share/[token].ts Vercel Edge Fn — patches /share head with per-token og:image
     └── src/
         ├── main.tsx         client entry — hydrateRoot (createRoot in dev)
         ├── prerender.tsx    Node entry called by vite-prerender-plugin
@@ -156,7 +161,7 @@ The draw runs in a `SECURITY DEFINER` Postgres function
         ├── components/      shared atoms (see below)
         ├── screens/         one folder per area + top-level auth screens
         ├── i18n/            recursive dict, useI18n, plural helper
-        ├── lib/             supabase client, db row types, errors mapper
+        ├── lib/             supabase client, db row types, errors mapper, plausible wrapper
         ├── styles/          tokens, fonts, global
         └── types/database.ts auto-generated; never edit by hand
 ```
@@ -181,6 +186,8 @@ Visual atoms (`app/src/components/`):
 - `ConfirmDialog` + `useConfirm()` — promise-based modal confirm
   (replaces window.confirm everywhere)
 - `ShareDialog` — controls the public share token (`/share/<token>`)
+- `ReportDialog` — reusable flag-for-moderation modal (share / profile / item / group);
+  anon-friendly, inserts into `public.reports`
 - `rats/` — five SVG illustrations (Sitting, Running, Peeking, Tail,
   RatDefs filter)
 
@@ -246,16 +253,23 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Dynamic OG image** (Edge Function, satori + WOFF)      | ✅ Phase 1B done — `/og.png` rewrite |
 | **Focus traps + WCAG AA + landmarks + loading skeletons**| ✅ Phase 1B done |
 | **Plausible + uptime monitoring** (code wired, docs ready) | ✅ Phase 1B done — gated on env DSN |
-| **Pre-render landing + legal** (vite-prerender-plugin)   | ✅ Phase 1B done — `dist/index.html`, `dist/legal/{privacy,terms}/index.html`; `_spa.html` is the SPA fallback for unknown routes |
-| **Per-share-token OG image variant**                     | ⬜ deferred — ~1 h follow-up |
+| **Pre-render landing + legal** (vite-prerender-plugin)   | ✅ Phase 1C done — `dist/index.html`, `dist/legal/{privacy,terms}/index.html`; `_spa.html` is the SPA fallback for unknown routes |
+| **Per-share-token OG image variant**                     | ✅ Phase 1C done — `og-image?token=...` + Vercel Edge Fn at `app/api/share/[token].ts` patches `/share/<token>` head |
+| **Share-page meta tags via Vercel Edge Fn**              | ✅ Phase 1C done — `app/api/share/[token].ts`, social bots see per-token og:image |
+| **Two-tier robots.txt (social vs search)**               | ✅ Phase 1C done — Telegram/Twitter/etc. allowed onto /share/ |
+| **`forceExitAfterBuild` Vite plugin**                    | ✅ Phase 1C critical fix — Vercel deploys would otherwise timeout |
+| **Transactional email: Santa draw**                      | ✅ Phase 1C done — `send-santa-draw` Edge Function, dry-runs without RESEND_API_KEY |
+| **Transactional email: Santa start (group invite)**      | ✅ Phase 1C done — `send-santa-start` fires on event creation |
+| **Transactional email: group invite by email**           | ✅ Phase 1C done — `send-group-invite` + "send by email" in `<InviteList>` |
+| Transactional email: Santa reveal / account deletion     | ⬜ ~30 min, copy-paste from `send-santa-draw` |
+| **Moderation: user reports on /share + /p/:userId**      | ✅ Phase 1C done — `public.reports` + `<ReportDialog>` + [docs/MODERATION.md](docs/MODERATION.md) |
+| **Moderation: NSFW URL blocklist in fetch-url-meta**     | ✅ Phase 1C done — `supabase/functions/fetch-url-meta/blocklist.ts` |
+| **Moderation: soft-disable via `profiles.disabled_at`**  | ✅ Phase 1C done — `get_public_list` refuses disabled owners |
+| Moderation: rate limits (per-user sliding window)        | ⬜ ~1 h — design sketch in [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
+| Notification preferences UI                              | ⬜ ~1.5 h — `email_prefs` JSONB on profiles |
 | **Supabase Pro upgrade**                                 | ⬜ optional — $25/mo, unlocks image transforms + backups |
 | Share % (partial claims)                                 | ⬜ (schema has `share`, no UI) |
 | Anonymous Santa chat                                     | ⬜      |
-| **Transactional email: Santa draw**                      | ✅ `send-santa-draw` Edge Function, dry-runs without RESEND_API_KEY |
-| **Transactional email: Santa start (group invite)**      | ✅ `send-santa-start` — fires on event creation, emails every group member |
-| **Transactional email: group invite by email**           | ✅ `send-group-invite` — "send by email" affordance on each invite row in `<InviteList>` |
-| Transactional email: Santa reveal / account deletion     | ⬜ same pattern |
-| **Moderation: user reports on /share + /p/:userId**      | ✅ `public.reports` table, `<ReportDialog>`, anon insert OK — see [docs/MODERATION.md](docs/MODERATION.md) |
 
 ## Known gotchas
 
