@@ -175,3 +175,51 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
     padding-bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Long-form legal copy (privacy policy, terms). Editorial typography to
+   match the rest of the UI: italic Newsreader headings, Public Sans
+   body, terracotta links. Stays readable on small screens via the
+   PaperLayout `narrow` width clamp. */
+.legal-article {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+.legal-article h2 {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+  margin: var(--s-6) 0 var(--s-3);
+  color: var(--ink);
+}
+.legal-article h2:first-child {
+  margin-top: 0;
+}
+.legal-article p {
+  margin: var(--s-3) 0;
+}
+.legal-article ul {
+  margin: var(--s-3) 0;
+  padding-left: var(--s-5);
+}
+.legal-article li {
+  margin: var(--s-2) 0;
+}
+.legal-article a {
+  color: var(--accent-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.legal-article strong,
+.legal-article b {
+  font-weight: 600;
+  color: var(--ink);
+}
+.legal-article em {
+  font-style: italic;
+  color: var(--ink-2);
+}

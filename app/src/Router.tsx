@@ -74,6 +74,14 @@ const SantaEventScreen = lazyNamed(
   () => import('./screens/santa/SantaEventScreen'),
   'SantaEventScreen',
 );
+// Legal pages — public, rarely visited; lazy keeps the long-form text
+// out of the main bundle. Shared shell, two route entry points.
+// Not via lazyNamed because LegalScreen takes a `doc` prop and we want
+// the type-checker to see it.
+const LegalScreen = lazy(async () => {
+  const m = await import('./screens/legal/LegalScreen');
+  return { default: m.LegalScreen };
+});
 
 /**
  * Single shared frame for every authed-and-onboarded screen. Mounts the
@@ -121,6 +129,22 @@ function AppRoutes() {
       <Route path="/auth/callback" element={<AuthCallbackScreen />} />
       <Route path="/invite/:token" element={<InviteAcceptScreen />} />
       <Route path="/share/:token" element={<PublicListScreen />} />
+      <Route
+        path="/legal/privacy"
+        element={
+          <Suspense fallback={null}>
+            <LegalScreen doc="privacy" />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/legal/terms"
+        element={
+          <Suspense fallback={null}>
+            <LegalScreen doc="terms" />
+          </Suspense>
+        }
+      />
 
       {/* Authed but pre-onboarding — no app chrome */}
       <Route

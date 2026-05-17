@@ -12,7 +12,7 @@
  * already mapped to a stable code we translate via i18n.
  */
 import { useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n/useI18n';
 import { PaperLayout } from '../components/PaperLayout';
@@ -119,9 +119,41 @@ export function LoginScreen() {
           >
             {form.kind === 'sending' ? t('auth.sending') : t('auth.sendMagic')}
           </Button>
+
+          <AgeAndLegalNotice />
         </form>
       )}
     </PaperLayout>
+  );
+}
+
+/**
+ * Implicit-consent notice under the submit button: clicking "send the
+ * link" counts as confirming 13+ and accepting Terms / Privacy. CNIL
+ * accepts this pattern for processing strictly necessary to provide the
+ * service (auth) — no separate checkbox needed.
+ */
+function AgeAndLegalNotice() {
+  const { t } = useI18n();
+  return (
+    <p
+      className="mono-meta"
+      style={{
+        marginTop: 'var(--s-4)',
+        color: 'var(--ink-3)',
+        lineHeight: 1.5,
+      }}
+    >
+      {t('auth.ageConfirm')}{' '}
+      <Link to="/legal/terms" style={{ color: 'var(--ink-2)' }}>
+        {t('auth.ageConfirmTerms')}
+      </Link>{' '}
+      {t('auth.ageConfirmAnd')}{' '}
+      <Link to="/legal/privacy" style={{ color: 'var(--ink-2)' }}>
+        {t('auth.ageConfirmPrivacy')}
+      </Link>
+      .
+    </p>
   );
 }
 

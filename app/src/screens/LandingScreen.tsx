@@ -590,6 +590,7 @@ function Footer({
         display: 'flex',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
+        alignItems: 'center',
         gap: 'var(--s-4)',
         color: 'var(--ink-3)',
       }}
@@ -597,7 +598,30 @@ function Footer({
       <span className="marginalia" style={{ fontSize: 15 }}>
         {t('landing.footerTagline')}
       </span>
-      <span className="mono-meta">{t('landing.footerCopy', { year })}</span>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 'var(--s-4)',
+          alignItems: 'center',
+        }}
+      >
+        <Link
+          to="/legal/privacy"
+          className="mono-meta"
+          style={{ color: 'var(--ink-3)', textDecoration: 'none' }}
+        >
+          {t('landing.footerPrivacy')}
+        </Link>
+        <Link
+          to="/legal/terms"
+          className="mono-meta"
+          style={{ color: 'var(--ink-3)', textDecoration: 'none' }}
+        >
+          {t('landing.footerTerms')}
+        </Link>
+        <span className="mono-meta">{t('landing.footerCopy', { year })}</span>
+      </div>
     </footer>
   );
 }
