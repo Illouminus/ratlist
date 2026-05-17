@@ -190,18 +190,18 @@ What landed in 1B:
       to avoid `.notdef` rectangles. Adding a Cyrillic font subset
       doubles the bundled font weight — defer until there's real RU
       traffic.
-- [ ] **Wire the share page to use the per-token preview** —
-      currently `/share/<token>` is an SPA route, so its
-      `og:image` meta is the static landing default. To make
-      crawlers actually see the per-share preview, the share URL
-      needs to be served with route-specific meta tags. Three
-      possible paths, in increasing order of work: (a) a tiny
-      Vercel function that returns HTML with the right meta tags
-      for `/share/<token>` (Facebook-friendly, ~2 h); (b) UA
-      sniffing in `vercel.json` to send crawlers to the function
-      and users to the SPA (riskier — UA strings drift); (c) full
-      SSR for `/share/*` (closest to "real" but heaviest). The
-      Edge Function side is done; this is the remaining glue.
+- [x] **Share-page meta tags via Vercel Edge Function** —
+      `app/api/share/[token].ts` fetches `_spa.html`, patches the
+      `<head>` with per-token `<title>`, `og:title`,
+      `og:description`, `og:url`, `og:image` (pointing at
+      `/og.png?token=...`) and the matching twitter:* set, then
+      returns the patched HTML. `vercel.json` rewrites
+      `/share/:token` → `/api/share/:token` so users and crawlers
+      hit the function transparently. Lookup failures (bad token,
+      DB blip) silently fall through to the un-patched template —
+      the user still gets the SPA, crawlers see the default
+      landing card. Cached for 1 hour at the CDN, 1 minute at the
+      client; different `?token=` values are distinct cache keys.
 
 ### Things to pick up for the next contributor
 
