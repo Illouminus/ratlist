@@ -74,6 +74,7 @@ export const ru: Translation = {
     metaFetchedNote: 'заполнили: {fields}',
     metaFetchEmpty: 'ничего не нашли по этой ссылке',
     metaFetchError: 'не получилось достать данные',
+    metaBlocked: 'с этого сайта не тянем превью. вручную добавить можно как обычно.',
     priceLabel: 'цена (примерно)',
     pricePh: '€25 или €25–40',
     occasionLabel: 'для чего',

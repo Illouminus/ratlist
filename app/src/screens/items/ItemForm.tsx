@@ -98,7 +98,15 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
 
     const result = await fetchUrlMeta(trimmed);
     if (result.kind === 'error') {
-      setMetaStatus({ kind: 'error' });
+      // `blocked_host` is the Edge Function refusing to fetch a
+      // domain on the NSFW blocklist. UI flips to a distinct hint
+      // line so the user knows the issue is policy, not a transient
+      // network problem they should retry.
+      if (result.code === 'blocked_host') {
+        setMetaStatus({ kind: 'blocked' });
+      } else {
+        setMetaStatus({ kind: 'error' });
+      }
       return;
     }
 
@@ -332,7 +340,8 @@ type MetaFetchStatus =
   | { kind: 'fetching' }
   | { kind: 'ok'; filled: string[] }
   | { kind: 'empty' }
-  | { kind: 'error' };
+  | { kind: 'error' }
+  | { kind: 'blocked' };
 
 interface MetaFeedbackProps {
   status: MetaFetchStatus;
@@ -354,6 +363,13 @@ function MetaFeedback({ status, t }: MetaFeedbackProps) {
     return (
       <p style={{ marginTop: 'var(--s-2)', fontSize: 12, color: 'var(--ink-3)' }}>
         {t('add.metaFetchEmpty')}
+      </p>
+    );
+  }
+  if (status.kind === 'blocked') {
+    return (
+      <p style={{ marginTop: 'var(--s-2)', fontSize: 12, color: 'var(--accent-deep)' }}>
+        {t('add.metaBlocked')}
       </p>
     );
   }

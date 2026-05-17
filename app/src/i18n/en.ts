@@ -69,6 +69,7 @@ export const en: Translation = {
     metaFetchedNote: 'filled: {fields}',
     metaFetchEmpty: "couldn't find anything at that link",
     metaFetchError: "couldn't fetch from that link",
+    metaBlocked: "we don't fetch previews from that site. you can still add the item manually.",
     priceLabel: 'price (roughly)',
     pricePh: '€25 or €25–40',
     occasionLabel: 'for what occasion',

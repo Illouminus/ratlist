@@ -27,6 +27,7 @@
  *           or { error: string } with status 4xx/5xx.
  */
 import { bindCors } from '../_shared/cors.ts';
+import { isBlockedHost } from './blocklist.ts';
 
 interface RequestBody {
   url?: unknown;
@@ -368,6 +369,14 @@ Deno.serve(async (req) => {
   }
   if (target.protocol !== 'http:' && target.protocol !== 'https:') {
     return cors.json({ error: 'unsupported_protocol' }, 400);
+  }
+  // Refuse known-NSFW hosts upfront — we don't want their og:image
+  // ending up on someone's public wishlist or Secret Santa preview.
+  // See `blocklist.ts` for the policy. 422 (not 400) signals "we
+  // understood your request, the policy refuses it" — distinct from
+  // a malformed URL so the client can show a different message.
+  if (isBlockedHost(target.hostname)) {
+    return cors.json({ error: 'blocked_host' }, 422);
   }
 
   try {
