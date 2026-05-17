@@ -12,7 +12,7 @@
   /* ── Ink (text) ────────────────────────────────────────── */
   --ink:          #2b2620;
   --ink-2:        #5a5147; /* secondary */
-  --ink-3:        #8a7e6d; /* tertiary, meta */
+  --ink-3:        #6f6657; /* tertiary, meta — darkened from #8a7e6d so 11-14px text on paper clears WCAG AA */
 
   /* ── Hairlines ─────────────────────────────────────────── */
   --hair:         rgba(43, 38, 32, 0.12);
@@ -20,9 +20,11 @@
 
   /* ── Accents ───────────────────────────────────────────── */
   /* Default accent is terracotta; can swap to sage/ink/plum at runtime
-     by overriding --accent-* on a parent element. */
-  --accent:       #b86844;
-  --accent-deep:  #934e30;
+     by overriding --accent-* on a parent element. Both --accent and
+     --accent-deep darkened from the original Claude Design palette so
+     accent-colored body text on paper passes WCAG AA contrast. */
+  --accent:       #a25433;
+  --accent-deep:  #7d3e23;
   --accent-wash:  #ecccb8;
   --accent-soft:  #f5e1d2;
 

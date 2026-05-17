@@ -24,7 +24,7 @@ export function AuthCallbackScreen() {
   }
 
   return (
-    <PaperLayout narrow>
+    <PaperLayout narrow as="main">
       <p
         className="display-italic"
         style={{ fontSize: 24, color: 'var(--ink-2)', textAlign: 'center', marginTop: 'var(--s-8)' }}

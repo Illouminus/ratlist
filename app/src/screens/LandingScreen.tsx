@@ -25,7 +25,7 @@ export function LandingScreen() {
   const year = new Date().getFullYear();
 
   return (
-    <PaperLayout>
+    <PaperLayout as="main">
       <TopBar />
       <Hero />
       <Features />
@@ -75,7 +75,17 @@ function TopBar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
         <LangToggle />
         <Link to="/login" style={{ textDecoration: 'none' }}>
-          <Button variant="ghost" style={{ color: 'var(--ink-2)' }}>
+          {/* Padding + minHeight bring this above the 44 px touch-target
+              threshold; ghost variant defaults to padding: 0 which is too
+              tight for a primary nav affordance on mobile. */}
+          <Button
+            variant="ghost"
+            style={{
+              color: 'var(--ink-2)',
+              padding: '10px 14px',
+              minHeight: 44,
+            }}
+          >
             {t('auth.signIn')}
           </Button>
         </Link>
@@ -351,12 +361,22 @@ function Features() {
 
   return (
     <section style={{ marginBottom: 'var(--s-8)' }}>
-      <div
+      {/* Promoted to <h2> so the heading order on the landing page is
+          h1 (hero) → h2 (features) → h3 (each feature card) without a
+          gap. Visually still rendered as the small mono-meta eyebrow. */}
+      <h2
         className="mono-meta"
-        style={{ marginBottom: 'var(--s-3)', color: 'var(--ink-3)' }}
+        style={{
+          margin: '0 0 var(--s-3)',
+          color: 'var(--ink-3)',
+          fontWeight: 'inherit',
+          fontSize: 'inherit',
+          letterSpacing: 'inherit',
+          textTransform: 'inherit',
+        }}
       >
         {t('landing.featuresEyebrow')}
-      </div>
+      </h2>
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-5)' }} />
       <div
         className="landing-features"

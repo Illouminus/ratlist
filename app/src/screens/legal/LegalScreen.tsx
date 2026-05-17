@@ -45,7 +45,7 @@ export function LegalScreen({ doc }: LegalScreenProps) {
   const Content = CONTENT[doc][lang];
 
   return (
-    <PaperLayout narrow>
+    <PaperLayout narrow as="main">
       <nav
         style={{
           display: 'flex',

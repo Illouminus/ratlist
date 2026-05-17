@@ -39,7 +39,7 @@ export function OnboardingScreen() {
       return null;
     case 'error':
       return (
-        <PaperLayout narrow>
+        <PaperLayout narrow as="main">
           <p>{t('auth.genericError')}</p>
         </PaperLayout>
       );
@@ -121,7 +121,7 @@ function OnboardingForm({ profile, onComplete }: OnboardingFormProps) {
       : null;
 
   return (
-    <PaperLayout narrow>
+    <PaperLayout narrow as="main">
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--s-6)' }}>
         <LangToggle />
       </div>

@@ -71,7 +71,7 @@ export function LoginScreen() {
         : null;
 
   return (
-    <PaperLayout narrow>
+    <PaperLayout narrow as="main">
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--s-6)' }}>
         <LangToggle />
       </div>

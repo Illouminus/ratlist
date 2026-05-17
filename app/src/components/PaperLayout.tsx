@@ -20,20 +20,34 @@ interface PaperLayoutProps {
   maxWidth?: number | string;
   /** Visually distinguish narrow auth-style screens from full app screens. */
   narrow?: boolean;
+  /**
+   * Outer element. Default `'div'` for use inside `<AppLayout>` (which
+   * already provides the page-level `<main>` landmark). Pass `'main'`
+   * for pre-auth and public screens that aren't wrapped in AppLayout —
+   * Lighthouse / axe flag a missing `<main>` landmark otherwise.
+   */
+  as?: 'div' | 'main';
   style?: CSSProperties;
 }
 
-export function PaperLayout({ children, maxWidth, narrow = false, style }: PaperLayoutProps) {
+export function PaperLayout({
+  children,
+  maxWidth,
+  narrow = false,
+  as = 'div',
+  style,
+}: PaperLayoutProps) {
   const computedMax = maxWidth ?? (narrow ? 460 : 'var(--content-max)');
+  const Tag = as;
 
   return (
-    <div
+    <Tag
       style={{
         padding: 'var(--page-pad-y) var(--page-pad-x)',
         ...style,
       }}
     >
       <div style={{ maxWidth: computedMax, margin: '0 auto' }}>{children}</div>
-    </div>
+    </Tag>
   );
 }
