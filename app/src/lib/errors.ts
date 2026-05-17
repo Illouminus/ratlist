@@ -51,7 +51,9 @@ export type AppErrorCode =
   | 'santaCannotReveal'
   // storage / photos
   | 'photoTooLarge'
-  | 'photoBadType';
+  | 'photoBadType'
+  // edge-function policy refusals (fetch-url-meta)
+  | 'urlNotAllowed';
 
 /**
  * Minimal duck-typed shape we accept. Supabase's PostgrestError,
@@ -137,6 +139,16 @@ function matchMessage(message: string): AppErrorCode {
   // arrive — e.g. via a stringified message)
   if (m.includes('items_title_check')) return 'titleTooLong';
   if (m.includes('profiles_handle_format')) return 'handleInvalidFormat';
+
+  // fetch-url-meta policy refusals (HTTP 422)
+  if (
+    m.includes('blocked_host') ||
+    m.includes('private_address') ||
+    m.includes('too_many_redirects') ||
+    m.includes('unsupported_protocol')
+  ) {
+    return 'urlNotAllowed';
+  }
 
   // Storage / upload errors from our own utility
   if (m.includes('file_too_large')) return 'photoTooLarge';

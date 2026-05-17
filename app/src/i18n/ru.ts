@@ -581,6 +581,8 @@ export const ru: Translation = {
 
     photoTooLarge: 'картинка слишком тяжёлая — максимум 8 МБ.',
     photoBadType: 'нужен png, jpg или webp.',
+
+    urlNotAllowed: 'не получилось загрузить страницу — ссылка похожа на внутреннюю или взрослый сайт.',
   },
   common: {
     cancel: 'отмена',

@@ -576,6 +576,8 @@ export const en: Translation = {
 
     photoTooLarge: 'image is too big — max 8 MB.',
     photoBadType: 'png, jpg or webp only.',
+
+    urlNotAllowed: "couldn't load that link — it looks like an internal address or an adult site.",
   },
   common: {
     cancel: 'cancel',
