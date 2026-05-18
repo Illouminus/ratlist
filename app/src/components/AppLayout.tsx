@@ -20,7 +20,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="app-layout">
       <Sidebar />
       <MobileTopBar />
-      <main id="main" className="app-main">{children}</main>
+      <main id="main" tabIndex={-1} className="app-main">{children}</main>
       <BottomTabBar />
     </div>
   );

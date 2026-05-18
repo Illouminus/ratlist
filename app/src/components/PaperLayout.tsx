@@ -43,6 +43,7 @@ export function PaperLayout({
   return (
     <Tag
       id={as === 'main' ? 'main' : undefined}
+      tabIndex={as === 'main' ? -1 : undefined}
       style={{
         padding: 'var(--page-pad-y) var(--page-pad-x)',
         ...style,
