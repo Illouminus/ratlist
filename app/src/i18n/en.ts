@@ -589,4 +589,7 @@ export const en: Translation = {
     yes: 'yes',
     no: 'no',
   },
+  a11y: {
+    skipToMain: 'Skip to main content',
+  },
 };

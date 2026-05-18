@@ -594,4 +594,7 @@ export const ru: Translation = {
     yes: 'да',
     no: 'нет',
   },
+  a11y: {
+    skipToMain: 'Перейти к содержимому',
+  },
 };

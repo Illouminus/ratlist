@@ -38,6 +38,28 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   border-radius: 2px;
 }
 
+/* ── Skip link ─────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+  transform: translateY(-100%);
+  transition: transform 0.15s ease;
+  z-index: 1000;
+}
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 /* ── Typography utility classes ─────────────────────────── */
 .display        { font-family: var(--font-display); font-weight: 400; }
 .display-italic { font-family: var(--font-display); font-style: italic; font-weight: 400; }
