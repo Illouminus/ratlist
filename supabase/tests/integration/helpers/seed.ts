@@ -136,6 +136,51 @@ export async function seedSantaEvent(
   };
 }
 
+export interface EventSeed {
+  eventId: string;
+  honoreeId: string;
+}
+
+/**
+ * Create an event owned by the honoree, optionally attaching audience
+ * circles and curated items. Both audience and items are configured
+ * via service role (bypasses the per-row RLS).
+ */
+export async function seedEvent(
+  ctx: SeedContext,
+  honoree: TestUserName,
+  opts?: { audienceGroups?: string[]; curatedItems?: string[] },
+): Promise<EventSeed> {
+  const admin = adminClient();
+  const honoreeId = ctx[honoree];
+  // `kind` has a DB default of 'other'; `occurs_on` is nullable.
+  const { data: ev, error: evErr } = await admin
+    .from('events')
+    .insert({
+      honoree_id: honoreeId,
+      title: 'Birthday test',
+      occurs_on: '2026-12-01',
+    })
+    .select('id')
+    .single();
+  if (evErr || !ev) throw new Error(`insert event failed: ${evErr?.message}`);
+
+  for (const groupId of opts?.audienceGroups ?? []) {
+    const { error } = await admin
+      .from('event_circles')
+      .insert({ event_id: ev.id, group_id: groupId });
+    if (error) throw new Error(`insert event_circle failed: ${error.message}`);
+  }
+  for (const itemId of opts?.curatedItems ?? []) {
+    const { error } = await admin
+      .from('event_items')
+      .insert({ event_id: ev.id, item_id: itemId });
+    if (error) throw new Error(`insert event_item failed: ${error.message}`);
+  }
+
+  return { eventId: ev.id, honoreeId };
+}
+
 export async function insertAssignment(
   eventId: string,
   giverId: string,
