@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
+import { debounce } from '../lib/debounce';
 import type { EventKind } from '../lib/db';
 
 /** An event row enriched with honoree info + counts. */
@@ -112,24 +113,29 @@ export function useEvents(): UseEventsResult {
     setFetched(state);
   }, [user]);
 
-  // Realtime: re-fetch when any event row, audience link, or curation link
-  // changes. The RPC re-filters by visibility — much simpler than patching
-  // the local list. Same pattern as `useGroups`.
+  // Realtime: re-fetch when any event row, audience link, or curation
+  // link changes. The RPC re-filters by visibility — much simpler than
+  // patching the local list. A single user edit can fire 3-5 burst
+  // writes across these three tables; the 300 ms debounce collapses
+  // those into one RPC. Server-side `filter:` isn't viable because
+  // guest-event visibility is correlated through dynamic group
+  // membership (event_circles → group_members).
   useEffect(() => {
     if (authStatus !== 'authenticated' || !user) return undefined;
+
+    const trigger = debounce(() => {
+      void refresh();
+    }, 300);
+
     const channel = supabase
       .channel(`my-events:${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-        void refresh();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_circles' }, () => {
-        void refresh();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_items' }, () => {
-        void refresh();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, trigger)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_circles' }, trigger)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_items' }, trigger)
       .subscribe();
+
     return () => {
+      trigger.cancel();
       void supabase.removeChannel(channel);
     };
   }, [authStatus, user, refresh]);
