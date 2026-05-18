@@ -58,6 +58,13 @@ Useful URLs:
 - Mailpit (catches auth emails): http://localhost:54424
 - DB direct: `postgresql://postgres:postgres@127.0.0.1:54422/postgres`
 
+## Testing
+
+- Frontend unit + RTL: `cd app && npm test`
+- Integration (RLS + Santa draw): `eval "$(supabase status --output env | sed 's/^/export /')"; cd supabase/tests/integration && npm test`
+- Edge function Deno tests: `cd app && npm run test:edge`
+- All of the above run in CI on every PR. See `.github/workflows/ci.yml`.
+
 ## Hard conventions (do not break)
 
 ### TypeScript
