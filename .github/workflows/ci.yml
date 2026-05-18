@@ -56,7 +56,12 @@ jobs:
       - name: Start local Supabase
         run: supabase start --workdir .
       - name: Capture env from supabase status
-        run: supabase status --output env >> "$GITHUB_ENV"
+        run: |
+          # supabase status --output env writes shell-quoted values
+          # ("http://..."); $GITHUB_ENV takes the line literally, so the
+          # quotes would end up inside the value. Strip surrounding
+          # double-quotes before piping.
+          supabase status --output env | sed -E 's/^([A-Z_]+)="(.*)"$/\1=\2/' >> "$GITHUB_ENV"
       # No GUC setup needed — truncate_test_state is locked down by
       # GRANT/REVOKE only (service_role-only execute). See migration
       # 20260518091540_truncate_test_state_drop_guc.sql for the
