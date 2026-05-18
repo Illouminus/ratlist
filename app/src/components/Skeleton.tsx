@@ -18,11 +18,19 @@ interface ListSkeletonProps {
   rows?: number;
 }
 
+/**
+ * Pre-computed deterministic widths so the skeleton looks irregular but
+ * doesn't "twitch" on re-render. A pure mod-pattern keeps the rule
+ * `react-hooks/purity` happy — Math.random in render is impure.
+ */
+function widthAt(index: number): number {
+  // Spreads 60-95 across indices, wrapping with stride 13 for variety.
+  return 60 + ((index * 13 + 7) % 35);
+}
+
 export function ListSkeleton({ rows = 5 }: ListSkeletonProps) {
-  // Pick widths once on mount — re-rolling on every re-render makes the
-  // skeleton "twitch" which is worse than a static one.
   const widths = useMemo(
-    () => Array.from({ length: rows }, () => 60 + Math.floor(Math.random() * 35)),
+    () => Array.from({ length: rows }, (_, i) => widthAt(i)),
     [rows],
   );
 

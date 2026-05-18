@@ -22,7 +22,7 @@ import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n/useI18n';
 import { errorMessage } from '../lib/errors';
 import { useFocusTrap } from '../lib/useFocusTrap';
-import { useToast } from './Toast';
+import { useToast } from './useToast';
 import { Button } from './Button';
 
 export type ReportTargetType = 'share' | 'profile' | 'item' | 'group';
@@ -52,14 +52,18 @@ export function ReportDialog({ open, onClose, targetType, targetId }: ReportDial
 
   // Reset every time the dialog is reopened so a previous attempt's
   // state (selected reason, written note) doesn't bleed into a
-  // different report.
+  // different report. The dialog stays mounted across open/close
+  // cycles, so a true "fresh on open" relies on this effect. There's
+  // no pure derivation that expresses "transitioned closed→open, wipe
+  // inputs" — setState-in-effect is the right tool here.
   useEffect(() => {
-    if (open) {
-      setReason(null);
-      setNote('');
-      setError(null);
-      setBusy(false);
-    }
+    if (!open) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setReason(null);
+    setNote('');
+    setError(null);
+    setBusy(false);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [open]);
 
   useEffect(() => {

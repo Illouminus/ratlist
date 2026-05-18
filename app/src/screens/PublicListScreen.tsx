@@ -50,13 +50,14 @@ type State =
 
 export function PublicListScreen() {
   const { token } = useParams<{ token: string }>();
-  const [state, setState] = useState<State>({ kind: 'loading' });
+  // Initial state derived from token presence — avoids a setState in
+  // an effect just to push the component into `invalid`.
+  const [state, setState] = useState<State>(() =>
+    token ? { kind: 'loading' } : { kind: 'invalid' },
+  );
 
   useEffect(() => {
-    if (!token) {
-      setState({ kind: 'invalid' });
-      return undefined;
-    }
+    if (!token) return undefined;
     let cancelled = false;
     void supabase
       .rpc('get_public_list', { _token: token })

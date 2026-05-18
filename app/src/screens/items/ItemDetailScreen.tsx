@@ -27,8 +27,8 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { Button } from '../../components/Button';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/useToast';
+import { useConfirm } from '../../components/useConfirm';
 import { SittingRat } from '../../components/rats';
 
 /** ISO → "Apr 12" / "12 апр". Mirrors the eyebrow in the mockup. */

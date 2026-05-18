@@ -1,7 +1,7 @@
 /**
- * `<ConfirmDialog>` + `useConfirm()` — promise-based confirmation modal
- * in the app's editorial style. Replaces `window.confirm`, which renders
- * a chrome-native popup that breaks the visual flow.
+ * `<ConfirmDialog>` + `<ConfirmProvider>` — promise-based confirmation
+ * modal in the app's editorial style. Replaces `window.confirm`, which
+ * renders a chrome-native popup that breaks the visual flow.
  *
  * Usage:
  *
@@ -19,11 +19,12 @@
  *
  * Keyboard: Esc cancels, Enter confirms. Tab and Shift+Tab cycle
  * focus inside the dialog (see `useFocusTrap` on the card div).
+ *
+ * `useConfirm` lives in `./useConfirm.ts` so this file stays
+ * component-only for Vite Fast Refresh.
  */
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -31,25 +32,11 @@ import {
   type ReactNode,
 } from 'react';
 import { useFocusTrap } from '../lib/useFocusTrap';
-
-export interface ConfirmOptions {
-  /** Bold one-line headline (e.g. "удалить «Тестовый круг»?"). */
-  title: string;
-  /** Optional supporting paragraph. */
-  body?: string;
-  /** Label for the primary "yes" button. Default: «ок». */
-  confirmLabel?: string;
-  /** Label for the secondary "no" button. Default: «отмена». */
-  cancelLabel?: string;
-  /** Style the primary button as destructive (accent-deep text). */
-  danger?: boolean;
-}
-
-interface ConfirmApi {
-  confirm: (options: ConfirmOptions) => Promise<boolean>;
-}
-
-const ConfirmContext = createContext<ConfirmApi | null>(null);
+import {
+  ConfirmContext,
+  type ConfirmApi,
+  type ConfirmOptions,
+} from './useConfirm';
 
 interface OpenState {
   options: ConfirmOptions;
@@ -58,29 +45,30 @@ interface OpenState {
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState<OpenState | null>(null);
-  // Cache the latest open ref so the global keydown handler reads the
-  // current resolver — otherwise the effect would close over a stale
-  // state value and not actually resolve the promise.
-  const openRef = useRef<OpenState | null>(null);
-  openRef.current = open;
 
+  // `close` uses the functional setState form so it always reads the
+  // freshest state — no need for an openRef mutated during render
+  // (which `react-hooks/refs` flags as a side-effect).
   const close = useCallback((result: boolean) => {
-    const current = openRef.current;
-    if (!current) return;
-    current.resolve(result);
-    setOpen(null);
+    setOpen((current) => {
+      if (current) current.resolve(result);
+      return null;
+    });
   }, []);
 
   const confirm = useCallback<ConfirmApi['confirm']>(
-    (options) => {
-      // Already a dialog open — reject the new request silently. This
-      // mirrors how window.confirm queues: it doesn't. Better to
-      // surface a "nothing happened" than stack modals.
-      if (openRef.current) return Promise.resolve(false);
-      return new Promise<boolean>((resolve) => {
-        setOpen({ options, resolve });
-      });
-    },
+    (options) =>
+      new Promise<boolean>((resolve) => {
+        setOpen((current) => {
+          if (current) {
+            // Already a dialog open — reject the new request silently.
+            // Mirrors window.confirm: no stack/queue.
+            resolve(false);
+            return current;
+          }
+          return { options, resolve };
+        });
+      }),
     [],
   );
 
@@ -115,20 +103,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       )}
     </ConfirmContext.Provider>
   );
-}
-
-export function useConfirm(): ConfirmApi['confirm'] {
-  const ctx = useContext(ConfirmContext);
-  if (!ctx) {
-    // Same defensive fallback as useToast — log in dev, no-op in prod.
-    // Callers should still treat the returned boolean as authoritative.
-    if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.warn('useConfirm() called outside <ConfirmProvider>. Falling back to window.confirm.');
-    }
-    return (options) => Promise.resolve(window.confirm(options.body ?? options.title));
-  }
-  return ctx.confirm;
 }
 
 // ─────────────────────────── dialog UI ───────────────────────────

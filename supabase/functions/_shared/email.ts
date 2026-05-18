@@ -73,3 +73,22 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { ok: false, error: message };
   }
 }
+
+/**
+ * Sanitize a string before using it as the value of an email header
+ * (Subject, From-display, Reply-To-display). Removes CR/LF and other
+ * control characters that could be exploited for SMTP header
+ * injection (e.g. "Subject\r\nBcc: attacker@x"), collapses
+ * whitespace, trims, and caps the length to keep clients happy.
+ *
+ * Resend may already do its own sanitization, but defense in depth
+ * is cheap: do it at the source.
+ */
+export function sanitizeHeaderValue(value: string, maxLen = 200): string {
+  return value
+    // All C0 control chars (0x00-0x1F) and DEL (0x7F) → space.
+    .replace(/[\x00-\x1f\x7f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLen);
+}

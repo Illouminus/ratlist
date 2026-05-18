@@ -18,7 +18,7 @@ import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { ItemPhoto } from '../../components/ItemPhoto';
-import { useToast } from '../../components/Toast';
+import { useToast } from '../../components/useToast';
 
 export function CreateEventScreen() {
   const { t } = useI18n();

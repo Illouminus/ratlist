@@ -7,7 +7,8 @@ friend group, now publicly deployed on **`ratlist.app`**. Phase 1A
 traps, Plausible, uptime) shipped 2026-05-17. v0.2 is feature-complete:
 groups, items, public share URLs, Secret Santa, realtime, priority
 levels, an editorial landing page, account self-management,
-GDPR-compatible legal pages.
+GDPR-compatible legal pages. **Events as a first-class entity** shipped
+the same evening (M2 redesign) — see EVENTS_M2.md.
 
 > Start here. Then read [ARCHITECTURE.md](ARCHITECTURE.md) for the data
 > model and [README.md](README.md) for one-paragraph context. Memory at
@@ -17,6 +18,11 @@ GDPR-compatible legal pages.
 > **Going public?** → see [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md). It owns
 > the deployment + monetization roadmap; this file only covers
 > conventions and what's already shipped locally.
+>
+> **The product just had its biggest UX shift?** → see
+> [EVENTS_M2.md](EVENTS_M2.md). Narrative of the Events redesign —
+> what friends asked for, the 5 models considered, why M2 won, what's
+> on disk, and what's deliberately untouched.
 
 ## Stack at a glance
 
@@ -51,6 +57,13 @@ Useful URLs:
 - Supabase Studio: http://localhost:54423
 - Mailpit (catches auth emails): http://localhost:54424
 - DB direct: `postgresql://postgres:postgres@127.0.0.1:54422/postgres`
+
+## Testing
+
+- Frontend unit + RTL: `cd app && npm test`
+- Integration (RLS + Santa draw): `eval "$(supabase status --output env | sed 's/^/export /')"; cd supabase/tests/integration && npm test`
+- Edge function Deno tests: `cd app && npm run test:edge`
+- All of the above run in CI on every PR. See `.github/workflows/ci.yml`.
 
 ## Hard conventions (do not break)
 

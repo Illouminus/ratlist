@@ -1,0 +1,80 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'app/package-lock.json'
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc -b --noEmit
+      - run: npm run build
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'app/package-lock.json'
+      - run: npm ci
+      - run: npm test
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: 'v1.x'
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start local Supabase
+        run: supabase start --workdir .
+      - name: Capture env from supabase status
+        run: |
+          # supabase status --output env writes shell-quoted values
+          # ("http://..."); $GITHUB_ENV takes the line literally, so the
+          # quotes would end up inside the value. Strip surrounding
+          # double-quotes before piping.
+          supabase status --output env | sed -E 's/^([A-Z_]+)="(.*)"$/\1=\2/' >> "$GITHUB_ENV"
+      # No GUC setup needed — truncate_test_state is locked down by
+      # GRANT/REVOKE only (service_role-only execute). See migration
+      # 20260518091540_truncate_test_state_drop_guc.sql for the
+      # rationale.
+      - name: Install integration deps
+        working-directory: supabase/tests/integration
+        run: npm install
+      - name: Run RLS + Santa-draw integration tests
+        working-directory: supabase/tests/integration
+        run: npm test
+      - name: Run edge function deno tests
+        working-directory: supabase/functions
+        run: deno test --allow-net --allow-env
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --workdir . --no-backup

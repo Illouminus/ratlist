@@ -37,7 +37,7 @@ import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { LangToggle } from '../../components/LangToggle';
-import { useToast } from '../../components/Toast';
+import { useToast } from '../../components/useToast';
 
 /** Mirrors the handle CHECK constraint on profiles.handle. */
 const HANDLE_REGEX = /^[a-zA-Z][a-zA-Z0-9_-]{1,31}$/;

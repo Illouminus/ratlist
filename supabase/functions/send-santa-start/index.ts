@@ -24,7 +24,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import { bindCors } from '../_shared/cors.ts';
-import { sendEmail } from '../_shared/email.ts';
+import { sendEmail, sanitizeHeaderValue } from '../_shared/email.ts';
 import { renderSantaStartEmail, renderSantaStartText } from './template.ts';
 
 const PROD_ORIGIN = 'https://ratlist.app';
@@ -40,6 +40,7 @@ interface SantaEventWithGroup {
   created_by: string;
   group_id: string;
   draw_deadline: string | null;
+  start_emailed_at: string | null;
   groups: { name: string } | null;
 }
 
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
 
   const { data: event, error: eventErr } = await admin
     .from('santa_events')
-    .select('id, name, status, created_by, group_id, draw_deadline, groups(name)')
+    .select('id, name, status, created_by, group_id, draw_deadline, start_emailed_at, groups(name)')
     .eq('id', eventId)
     .maybeSingle();
   if (eventErr) return cors.json({ error: 'db_error', detail: eventErr.message }, 500);
@@ -135,6 +136,21 @@ Deno.serve(async (req) => {
     return cors.json({ error: 'wrong_status', status: santaEvent.status }, 409);
   }
 
+  // Atomic single-claim. See send-santa-draw for the rationale.
+  const { data: claimed, error: claimErr } = await admin
+    .from('santa_events')
+    .update({ start_emailed_at: new Date().toISOString() })
+    .eq('id', eventId)
+    .is('start_emailed_at', null)
+    .select('id')
+    .maybeSingle();
+  if (claimErr) {
+    return cors.json({ error: 'db_error', detail: claimErr.message }, 500);
+  }
+  if (!claimed) {
+    return cors.json({ error: 'already_emailed' }, 409);
+  }
+
   // Fetch all group members minus the creator. Joining `profiles`
   // pulls each member's display_name in one round-trip.
   const { data: membersData, error: membersErr } = await admin
@@ -145,7 +161,12 @@ Deno.serve(async (req) => {
   if (membersErr) return cors.json({ error: 'db_error', detail: membersErr.message }, 500);
   const members = (membersData ?? []) as unknown as MemberRow[];
   if (members.length === 0) {
-    // Organiser is the only one in the group — no one to email.
+    // Nothing to mass-mail — release the idempotency claim so a
+    // future invocation (e.g. after members join the group) can fire.
+    await admin
+      .from('santa_events')
+      .update({ start_emailed_at: null })
+      .eq('id', eventId);
     return cors.json({ ok: true, sent: 0, failed: 0, total: 0 });
   }
 
@@ -172,7 +193,11 @@ Deno.serve(async (req) => {
   }
 
   const eventUrl = `${PROD_ORIGIN}/santa/${encodeURIComponent(santaEvent.id)}`;
-  const subject = `🎄 ${organizerName} started a Secret Santa — ${santaEvent.name}`;
+  const safeOrganizer = sanitizeHeaderValue(organizerName) || 'A fellow rat';
+  const safeEventName = sanitizeHeaderValue(santaEvent.name) || 'Secret Santa';
+  const subject = sanitizeHeaderValue(
+    `🎄 ${safeOrganizer} started a Secret Santa — ${safeEventName}`,
+  );
   const drawDeadlineText = formatDeadline(santaEvent.draw_deadline);
 
   const sendOps = members.map(async (member) => {
@@ -207,6 +232,13 @@ Deno.serve(async (req) => {
   for (const s of settled) {
     if (s.status === 'fulfilled' && s.value.ok) sent++;
     else failed++;
+  }
+
+  if (sent === 0 && failed > 0) {
+    await admin
+      .from('santa_events')
+      .update({ start_emailed_at: null })
+      .eq('id', eventId);
   }
 
   return cors.json({ ok: true, sent, failed, total: members.length });
