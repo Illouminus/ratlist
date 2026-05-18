@@ -181,6 +181,20 @@ export async function seedEvent(
   return { eventId: ev.id, honoreeId };
 }
 
+export async function insertExclusion(
+  eventId: string,
+  excluderId: string,
+  excludedId: string,
+): Promise<void> {
+  const admin = adminClient();
+  const { error } = await admin.from('santa_exclusions').insert({
+    event_id: eventId,
+    user_a: excluderId,
+    user_b: excludedId,
+  });
+  if (error) throw new Error(`insert exclusion failed: ${error.message}`);
+}
+
 export async function insertAssignment(
   eventId: string,
   giverId: string,
