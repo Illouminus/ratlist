@@ -57,14 +57,10 @@ jobs:
         run: supabase start --workdir .
       - name: Capture env from supabase status
         run: supabase status --output env >> "$GITHUB_ENV"
-      - name: Configure session GUC on service_role
-        run: |
-          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54422 -U postgres -d postgres \
-            -c "alter role service_role set app.allow_test_truncate = 'on';"
-        # `supabase start` reads the repo's supabase/config.toml which
-        # pins DB to port 54422 (shifted from default 54322 because the
-        # user runs a second Supabase instance locally on the default
-        # range). CI uses the same config, same port.
+      # No GUC setup needed — truncate_test_state is locked down by
+      # GRANT/REVOKE only (service_role-only execute). See migration
+      # 20260518091540_truncate_test_state_drop_guc.sql for the
+      # rationale.
       - name: Install integration deps
         working-directory: supabase/tests/integration
         run: npm install
