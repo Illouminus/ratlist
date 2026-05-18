@@ -75,9 +75,9 @@ function stubAuthUser(userId: string): void {
     status: 'authenticated',
     user: { id: userId } as User,
     session: null,
-    signInWithMagicLink: vi.fn<[string], Promise<string | null>>(),
-    signInWithGoogle: vi.fn<[], Promise<string | null>>(),
-    signOut: vi.fn<[], Promise<void>>(),
+    signInWithMagicLink: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signOut: vi.fn(),
   });
 }
 
@@ -86,9 +86,9 @@ function stubAuthAnonymous(): void {
     status: 'anonymous',
     user: null,
     session: null,
-    signInWithMagicLink: vi.fn<[string], Promise<string | null>>(),
-    signInWithGoogle: vi.fn<[], Promise<string | null>>(),
-    signOut: vi.fn<[], Promise<void>>(),
+    signInWithMagicLink: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signOut: vi.fn(),
   });
 }
 

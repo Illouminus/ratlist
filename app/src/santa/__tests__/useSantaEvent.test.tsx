@@ -72,9 +72,9 @@ function stubAuthUser(userId: string): void {
     status: 'authenticated',
     user: { id: userId } as User,
     session: null,
-    signInWithMagicLink: vi.fn<[string], Promise<string | null>>(),
-    signInWithGoogle: vi.fn<[], Promise<string | null>>(),
-    signOut: vi.fn<[], Promise<void>>(),
+    signInWithMagicLink: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signOut: vi.fn(),
   });
 }
 
@@ -89,7 +89,7 @@ function makeSantaEventRow(overrides?: Partial<SantaEvent>): SantaEvent {
     budget_text: '500 RUB',
     gift_date: '2026-12-31',
     draw_deadline: null,
-    status: 'open',
+    status: 'collecting',
     created_by: 'user-organiser',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
@@ -193,7 +193,7 @@ beforeEach(() => {
 
 describe('useSantaEvent', () => {
   it('loads participants + (if revealed) assignments — happy path', async () => {
-    const eventRow = makeSantaEventRow({ status: 'open' });
+    const eventRow = makeSantaEventRow({ status: 'collecting' });
     stubAuthUser('user-organiser');
     stubEventLoad(eventRow);
 
@@ -214,7 +214,7 @@ describe('useSantaEvent', () => {
   });
 
   it('runDraw calls rpc(run_santa_draw) and fires send-santa-draw functions.invoke', async () => {
-    const eventRow = makeSantaEventRow({ status: 'open' });
+    const eventRow = makeSantaEventRow({ status: 'collecting' });
     stubAuthUser('user-organiser');
 
     // Initial load — queues 4 from() calls
@@ -251,7 +251,7 @@ describe('useSantaEvent', () => {
   });
 
   it('runDraw returns error if rpc fails and does NOT call functions.invoke', async () => {
-    const eventRow = makeSantaEventRow({ status: 'open' });
+    const eventRow = makeSantaEventRow({ status: 'collecting' });
     stubAuthUser('user-organiser');
 
     // Initial load
