@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useMyItems } from '../../items/useMyItems';
 import { useGroups } from '../../groups/useGroups';
-import { useToast } from '../../components/Toast';
+import { useToast } from '../../components/useToast';
 import { PaperLayout } from '../../components/PaperLayout';
 import { ItemForm } from './ItemForm';
 

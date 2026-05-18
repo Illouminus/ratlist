@@ -18,7 +18,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n/useI18n';
-import { useToast } from './Toast';
+import { useToast } from './useToast';
 import { useShareToken } from '../items/useShareToken';
 import { errorMessage } from '../lib/errors';
 import { useFocusTrap } from '../lib/useFocusTrap';
