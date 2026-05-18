@@ -14,6 +14,7 @@
 import type { ReactNode } from 'react';
 import { AuthProvider } from './auth/AuthProvider';
 import { RatDefs } from './components/rats';
+import { SkipLink } from './components/SkipLink';
 import { ToastProvider } from './components/Toast';
 import { ConfirmProvider } from './components/ConfirmDialog';
 
@@ -23,6 +24,7 @@ export default function App({ children }: { children: ReactNode }) {
       {/* Defines the shared `#ratWobble` SVG filter every rat illustration
           references. Mount once near the root so it's always available. */}
       <RatDefs />
+      <SkipLink />
       <ToastProvider>
         <ConfirmProvider>{children}</ConfirmProvider>
       </ToastProvider>
