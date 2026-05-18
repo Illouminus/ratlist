@@ -812,6 +812,7 @@ export type Database = {
       run_santa_draw: { Args: { _event_id: string }; Returns: undefined }
       set_share_token: { Args: { _enabled: boolean }; Returns: string }
       shares_group_with: { Args: { _other_user: string }; Returns: boolean }
+      truncate_test_state: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
