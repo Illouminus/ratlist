@@ -1,0 +1,79 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'app/package-lock.json'
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc -b --noEmit
+      - run: npm run build
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'app/package-lock.json'
+      - run: npm ci
+      - run: npm test
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: 'v1.x'
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start local Supabase
+        run: supabase start --workdir .
+      - name: Capture env from supabase status
+        run: supabase status --output env >> "$GITHUB_ENV"
+      - name: Configure session GUC on service_role
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54422 -U postgres -d postgres \
+            -c "alter role service_role set app.allow_test_truncate = 'on';"
+        # `supabase start` reads the repo's supabase/config.toml which
+        # pins DB to port 54422 (shifted from default 54322 because the
+        # user runs a second Supabase instance locally on the default
+        # range). CI uses the same config, same port.
+      - name: Install integration deps
+        working-directory: supabase/tests/integration
+        run: npm install
+      - name: Run RLS + Santa-draw integration tests
+        working-directory: supabase/tests/integration
+        run: npm test
+      - name: Run edge function deno tests
+        working-directory: supabase/functions
+        run: deno test --allow-net --allow-env
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --workdir . --no-backup
