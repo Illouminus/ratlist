@@ -90,3 +90,62 @@ export async function seedFresh(): Promise<SeedContext> {
     itemAliceOwns: item.id,
   };
 }
+
+export interface SantaSeed {
+  eventId: string;
+  organiserId: string;
+  participantIds: string[];
+}
+
+/**
+ * Build on top of seedFresh(): create a santa_events row owned by the
+ * organiser in the seeded group, and (optionally) sign up participants.
+ */
+export async function seedSantaEvent(
+  ctx: SeedContext,
+  organiser: TestUserName,
+  participants: TestUserName[],
+  opts?: { status?: 'collecting' | 'drawn' | 'revealed' },
+): Promise<SantaSeed> {
+  const admin = adminClient();
+  const organiserId = ctx[organiser];
+  const { data: ev, error: evErr } = await admin
+    .from('santa_events')
+    .insert({
+      group_id: ctx.groupId,
+      created_by: organiserId,
+      name: 'Test Santa',
+      status: opts?.status ?? 'collecting',
+    })
+    .select('id')
+    .single();
+  if (evErr || !ev) throw new Error(`insert santa_event failed: ${evErr?.message}`);
+
+  for (const p of participants) {
+    const { error } = await admin.from('santa_participants').insert({
+      event_id: ev.id,
+      user_id: ctx[p],
+    });
+    if (error) throw new Error(`insert santa_participant(${p}) failed: ${error.message}`);
+  }
+
+  return {
+    eventId: ev.id,
+    organiserId,
+    participantIds: participants.map((p) => ctx[p]),
+  };
+}
+
+export async function insertAssignment(
+  eventId: string,
+  giverId: string,
+  receiverId: string,
+): Promise<void> {
+  const admin = adminClient();
+  const { error } = await admin.from('santa_assignments').insert({
+    event_id: eventId,
+    giver_id: giverId,
+    receiver_id: receiverId,
+  });
+  if (error) throw new Error(`insert assignment failed: ${error.message}`);
+}
