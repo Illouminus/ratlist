@@ -31,6 +31,7 @@ The audit noted no skip-link exists. Standard pattern: a visually-hidden `<a hre
 
 - **2026-05-24**: remove the temporary `console.warn('[fetch-url-meta] blocked', ...)` in `supabase/functions/fetch-url-meta/index.ts:369`. Added 2026-05-17 to monitor false-positive rate during edge-security rollout.
 - **Branch protection** in GitHub UI: settings/branches → require `lint-build`, `frontend-tests`, `integration-tests`, `Vercel` for merge to main. (May already be done.)
+- **Vite 9 / Rolldown lands**: drop the ~10 KB-gzip `prerender-<hash>.js` chunk from the client bundle. The plugin's `manualChunks` hook should start being honored for entry inputs once Rolldown handles entry chunk merging; verify the chunk is gone after upgrade. Comment in `app/vite.config.ts` documents the current state.
 
 ## How to start the fresh session
 
