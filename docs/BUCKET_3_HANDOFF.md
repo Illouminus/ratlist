@@ -1,7 +1,7 @@
 # Bucket 3 — Realtime debounce + polish (handoff)
 
 Date: 2026-05-18
-Status: NOT STARTED. Brainstorm + spec + plan + implementation all pending.
+Status: ✅ Shipped 2026-05-18 on branch `feat/bucket-3-debounce-and-a11y` (PR #2). Design at `docs/superpowers/specs/2026-05-18-bucket-3-design.md`, plan at `docs/superpowers/plans/2026-05-18-bucket-3.md`. The original (pre-implementation) brief is preserved below for future-archaeology purposes; the "Open operational items" section is still live and tracks deferred work.
 
 ## Context
 
