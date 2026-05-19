@@ -288,6 +288,8 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Moderation: NSFW URL blocklist in fetch-url-meta**     | ✅ Phase 1C done — `supabase/functions/fetch-url-meta/blocklist.ts` |
 | **Moderation: soft-disable via `profiles.disabled_at`**  | ✅ Phase 1C done — `get_public_list` refuses disabled owners |
 | **Events as first-class entity** (M2 redesign)           | ✅ done — `events` / `event_circles` / `event_items` tables, honoree-managed curation, audience via circles, primary nav surfaces it as a tab |
+| **Realtime debounce** (`useEvents` postgres_changes burst → 1 RPC) | ✅ Bucket 3 done — `app/src/lib/debounce.ts` (300 ms trailing) wired into the realtime effect |
+| **Skip-link to `#main` (a11y)**                          | ✅ Bucket 3 done — `<SkipLink>` mounted in `App.tsx`, `id="main" tabIndex={-1}` on `<main>` in `AppLayout` + conditional in `PaperLayout` |
 | Moderation: rate limits (per-user sliding window)        | ⬜ ~1 h — design sketch in [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
 | Notification preferences UI                              | ⬜ ~1.5 h — `email_prefs` JSONB on profiles |
 | **Supabase Pro upgrade**                                 | ⬜ optional — $25/mo, unlocks image transforms + backups |
