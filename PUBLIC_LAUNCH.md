@@ -11,67 +11,33 @@ Goal: take Крысиные желания / Rat List from "feature-complete fri
 
 ## ⏯ Pick up here — next session
 
-Session 2026-05-17 (evening) shipped **Phase 1C — SEO finalization +
-transactional emails + moderation primitives**. 13 commits on `main`,
-all deployed via Vercel after a single deploy-time fix (see [Build infra
-fix](#build-infra-fix) below).
+**Phase 1C shipped 2026-05-17** (13 commits, deployed via Vercel after
+the build-timeout fix — see [Build infra fix](#build-infra-fix)
+below). **Bucket 3 of the 2026-05-17 audit shipped 2026-05-18** (PR
+#2 — realtime debounce + skip-link; spec at
+`docs/superpowers/specs/2026-05-18-bucket-3-design.md`). **All Phase
+1C manual cleanup completed 2026-05-19** — `RESEND_API_KEY` set on
+Supabase, the three new Edge Functions deployed, Vercel envs wired
+(`VITE_PLAUSIBLE_SCRIPT_ID`, `VITE_SENTRY_DSN`), Plausible custom
+goals registered, smoke-tested live.
 
-### What's already live on `ratlist.app`
+### What's live on `ratlist.app`
 
 - **Pre-rendered HTML** for `/`, `/legal/privacy`, `/legal/terms`
   (crawlers see real content, not an empty `<div id="root">`)
 - **Per-route OG previews** for share URLs: posting
   `https://ratlist.app/share/<token>` to Telegram / Twitter / Discord
-  now shows "Sarah · wishlist · 6 items" instead of the generic
-  landing card
-- **Transactional email**: Santa draw notification, Santa start
-  invitation, "send group invite by email" affordance
+  shows "Sarah · wishlist · 6 items" instead of the generic landing
+- **Transactional email actually sending** via Resend: Santa draw,
+  Santa start, group invite by email
 - **Moderation**: report button on `/share` + `/p/:userId`, NSFW URL
   blocklist in `fetch-url-meta`, soft-disable via
   `profiles.disabled_at`
-- **Plausible custom-goal events** wired in code (SignedIn,
-  ItemAdded, GroupCreated)
-
-### Manual steps still pending (10 minutes of clicking)
-
-The code is shipped but a couple of envs / dashboard tweaks need
-human touch in Vercel + Supabase + Plausible:
-
-1. **Supabase Edge secret** — `RESEND_API_KEY`. Same `re_…` key
-   that's already in Supabase Auth SMTP. Adds real email sending
-   to the three new functions (without it they dry-run + log to
-   stdout):
-   ```sh
-   supabase secrets set RESEND_API_KEY=re_xxxxxxxxxxxx \
-     --project-ref fiuheufmawxkgbqddwwu
-   ```
-2. **Deploy the new Edge Functions** (one-liner per function or
-   batched):
-   ```sh
-   supabase functions deploy send-santa-draw \
-                            send-santa-start \
-                            send-group-invite \
-                            --project-ref fiuheufmawxkgbqddwwu
-   ```
-3. **Vercel env vars**:
-   - `VITE_PLAUSIBLE_SCRIPT_ID=pa-<your-site-id>` (turns on the
-     analytics script + custom-goal sends; the value is the
-     `pa-…` token from the install snippet Plausible shows on
-     site setup. The earlier `VITE_PLAUSIBLE_DOMAIN` is obsolete
-     under Plausible's per-site loader and can be removed.)
-   - `VITE_SENTRY_DSN=...` (when the Sentry project is created)
-   - The Vercel-side Edge Function at `app/api/share/[token].ts`
-     reads `SUPABASE_URL` / `SUPABASE_ANON_KEY` — likely already
-     present as `VITE_SUPABASE_*`, the function falls back to
-     those automatically
-4. **Plausible dashboard** — Settings → Goals & funnels → +Add
-   custom event for `SignedIn`, `ItemAdded`, `GroupCreated`
-   (case-sensitive). Events are *sent* anyway once the script
-   loads; the dashboard step makes them visible as conversions
-5. **Smoke-test live** after the above: sign in, add an item,
-   create a group, check Plausible / Resend / DB
-6. *(optional)* Supabase Pro upgrade ($25/mo) — image transforms +
-   daily backups
+- **Plausible custom-goal events** firing in prod (`SignedIn`,
+  `ItemAdded`, `GroupCreated`) and visible as conversions on the
+  dashboard
+- **Sentry** capturing client errors (DSN wired)
+- **Realtime debounce + global skip-link** (bucket 3)
 
 ### Priority order for the next session
 
@@ -81,7 +47,7 @@ for a robust public-launch posture:
 1. **Rate limits** (~1 h) — Postgres triggers on `items`, `invites`,
    `reports`. Sliding window via a `rate_limit_log` table. Without
    this, a motivated abuser can DOS by spamming inserts. Detailed
-   design sketch in the session notes below — copy-paste-able.
+   design sketch later in this doc — copy-paste-able.
 2. **Notification preferences** (~1.5 h) — `email_prefs` JSONB on
    profiles + `/settings/notifications` toggles + functions respect
    the flags. GDPR-friendly opt-out. Pairs naturally with the three
@@ -93,6 +59,11 @@ for a robust public-launch posture:
 4. **Lighthouse re-pass against prod** (~15 min) — after the prerender
    work, FCP/LCP should drop visibly. Document the new numbers in
    CLAUDE.md.
+
+Optional, deferred:
+- **Supabase Pro upgrade** ($25/mo) — unlocks image transforms +
+  daily backups. Worth it once we want thumbnails or have real
+  user data to back up.
 
 Anything Phase 2+ (marketing kit, demo video, Habr/PH/HN posts) is
 genuinely a different kind of work and should wait for the above to
