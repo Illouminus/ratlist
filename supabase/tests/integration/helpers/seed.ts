@@ -145,19 +145,25 @@ export interface EventSeed {
  * Create an event owned by the honoree, optionally attaching audience
  * circles and curated items. Both audience and items are configured
  * via service role (bypasses the per-row RLS).
+ *
+ * `created_by` defaults to `honoree_id` to preserve the legacy
+ * "self-event" semantic. Pass a different user ID to test HR-mode
+ * (creator ≠ honoree).
  */
 export async function seedEvent(
   ctx: SeedContext,
   honoree: TestUserName,
-  opts?: { audienceGroups?: string[]; curatedItems?: string[] },
+  opts?: { audienceGroups?: string[]; curatedItems?: string[]; created_by?: string },
 ): Promise<EventSeed> {
   const admin = adminClient();
   const honoreeId = ctx[honoree];
   // `kind` has a DB default of 'other'; `occurs_on` is nullable.
+  // `created_by` is NOT NULL — default to honoree_id for self-events.
   const { data: ev, error: evErr } = await admin
     .from('events')
     .insert({
       honoree_id: honoreeId,
+      created_by: opts?.created_by ?? honoreeId,
       title: 'Birthday test',
       occurs_on: '2026-12-01',
     })
