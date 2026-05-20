@@ -66,7 +66,6 @@ vi.mock('../../lib/plausible', () => ({ track: vi.fn() }));
 import { useEvent, type EventWithHonoree } from '../useEvent';
 import { useAuth } from '../../auth/useAuth';
 import type { User } from '@supabase/supabase-js';
-import type { Event } from '../../lib/db';
 
 // ─────────────────────────── helpers ───────────────────────────
 
