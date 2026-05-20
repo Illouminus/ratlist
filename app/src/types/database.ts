@@ -9,6 +9,103 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      cagnotte_contributions: {
+        Row: {
+          amount_cents: number
+          cagnotte_id: string
+          contributor_id: string
+          created_at: string
+          id: string
+          mangopay_payin_id: string
+          mangopay_refund_id: string | null
+          status: string
+        }
+        Insert: {
+          amount_cents: number
+          cagnotte_id: string
+          contributor_id: string
+          created_at?: string
+          id?: string
+          mangopay_payin_id: string
+          mangopay_refund_id?: string | null
+          status?: string
+        }
+        Update: {
+          amount_cents?: number
+          cagnotte_id?: string
+          contributor_id?: string
+          created_at?: string
+          id?: string
+          mangopay_payin_id?: string
+          mangopay_refund_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cagnotte_contributions_cagnotte_id_fkey"
+            columns: ["cagnotte_id"]
+            isOneToOne: false
+            referencedRelation: "cagnottes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cagnottes: {
+        Row: {
+          coordinator_id: string
+          created_at: string
+          currency: string
+          deadline: string
+          goal_amount_cents: number
+          id: string
+          item_id: string
+          mangopay_wallet_id: string
+          message: string | null
+          refund_initiated_at: string | null
+          released_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          coordinator_id: string
+          created_at?: string
+          currency?: string
+          deadline: string
+          goal_amount_cents: number
+          id?: string
+          item_id: string
+          mangopay_wallet_id: string
+          message?: string | null
+          refund_initiated_at?: string | null
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          coordinator_id?: string
+          created_at?: string
+          currency?: string
+          deadline?: string
+          goal_amount_cents?: number
+          id?: string
+          item_id?: string
+          mangopay_wallet_id?: string
+          message?: string | null
+          refund_initiated_at?: string | null
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cagnottes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claims: {
         Row: {
           created_at: string
@@ -410,6 +507,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mangopay_users: {
+        Row: {
+          bank_account_id: string | null
+          created_at: string
+          kyc_level: string
+          mangopay_user_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bank_account_id?: string | null
+          created_at?: string
+          kyc_level?: string
+          mangopay_user_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bank_account_id?: string | null
+          created_at?: string
+          kyc_level?: string
+          mangopay_user_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
