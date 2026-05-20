@@ -19,6 +19,12 @@ the same evening (M2 redesign) — see EVENTS_M2.md.
 > the deployment + monetization roadmap; this file only covers
 > conventions and what's already shipped locally.
 >
+> **Strategy / positioning / B2B-vs-B2C / cagnotte scope?** → see
+> [STRATEGY.md](STRATEGY.md). Owns audience decisions (EN+FR first, RU
+> deprioritised), the dual-track plan (B2C-affiliate + B2B-license via
+> French enterprise), brand re-positioning (rats as mascot, not
+> identity), and the launch sequence.
+>
 > **The product just had its biggest UX shift?** → see
 > [EVENTS_M2.md](EVENTS_M2.md). Narrative of the Events redesign —
 > what friends asked for, the 5 models considered, why M2 won, what's
