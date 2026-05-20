@@ -820,6 +820,13 @@ export type Database = {
       }
       reveal_santa_event: { Args: { _event_id: string }; Returns: undefined }
       run_santa_draw: { Args: { _event_id: string }; Returns: undefined }
+      search_users_for_event: {
+        Args: { _q: string }
+        Returns: {
+          display_name: string
+          id: string
+        }[]
+      }
       set_share_token: { Args: { _enabled: boolean }; Returns: string }
       shares_group_with: { Args: { _other_user: string }; Returns: boolean }
       truncate_test_state: { Args: never; Returns: undefined }

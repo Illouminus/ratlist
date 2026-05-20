@@ -57,6 +57,17 @@ export interface CreateEventInput {
   kind: EventKind;
   occurs_on?: string | null;
   note?: string | null;
+  /**
+   * HR-mode: explicit honoree user id.  When omitted (or null), the
+   * caller is used as the honoree (self-event, legacy behaviour).
+   * Pass null together with `honoree_name` for a non-user honoree.
+   */
+  honoree_id?: string | null;
+  /**
+   * HR-mode: free-text name for a non-user honoree.  Only meaningful
+   * when `honoree_id` is null.
+   */
+  honoree_name?: string | null;
   /** Initial audience — array of group ids the honoree belongs to. */
   circle_ids?: string[];
   /** Initial item curation — array of item ids the honoree owns. */
@@ -164,10 +175,19 @@ export function useEvents(): UseEventsResult {
       // it from the detail screen. Keeping this client-side for v1 to
       // avoid a Postgres function; revisit if partial-success rates are
       // visible in Sentry.
+      // Resolve honoree: when caller passes honoree_id (HR-mode) use
+      // it (may be null for a free-text-only honoree); otherwise
+      // default to the current user (self-event, original behaviour).
+      const honoreeId: string | null =
+        input.honoree_id !== undefined ? (input.honoree_id ?? null) : user.id;
+      const honoreeName: string | null =
+        input.honoree_name?.trim() || null;
+
       const { data: inserted, error: insertErr } = await supabase
         .from('events')
         .insert({
-          honoree_id: user.id,
+          honoree_id: honoreeId ?? null,
+          honoree_name: honoreeName,
           title: input.title.trim(),
           kind: input.kind,
           occurs_on: input.occurs_on ?? null,

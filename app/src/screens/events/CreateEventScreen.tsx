@@ -1,9 +1,9 @@
 /**
  * `CreateEventScreen` — `/events/new`. Full-screen form for creating a
- * new event. The honoree is always the current user; pick title, kind,
- * date, audience circles (from your existing groups), and items (from
- * your existing wishlist). On success, navigate straight to the event
- * detail.
+ * new event. The creator can pick whether the event is for themselves
+ * (default) or for someone else (HR-mode). For HR-mode, an autocomplete
+ * over shared-circle users is shown, with a free-text fallback for
+ * non-users.
  */
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +19,7 @@ import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { useToast } from '../../components/useToast';
+import { HonoreeAutocomplete } from './HonoreeAutocomplete';
 
 export function CreateEventScreen() {
   const { t } = useI18n();
@@ -40,15 +41,37 @@ export function CreateEventScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // HR-mode: "for me" vs "for someone else"
+  const [forSelf, setForSelf] = useState(true);
+  const [selectedHonoreeId, setSelectedHonoreeId] = useState<string | null>(null);
+  const [selectedHonoreeDisplayName, setSelectedHonoreeDisplayName] = useState<string | null>(null);
+  const [honoreeFreeText, setHonoreeFreeText] = useState('');
+  // What the user is currently typing into the autocomplete input
+  const [honoreeQuery, setHonoreQuery] = useState('');
+
   const trimmedTitle = title.trim();
-  const canSubmit = !submitting && trimmedTitle.length > 0;
+  const honoreeResolved = forSelf || selectedHonoreeId !== null || honoreeFreeText.trim().length > 0;
+  const canSubmit = !submitting && trimmedTitle.length > 0 && honoreeResolved;
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
     if (!canSubmit) return;
 
+    // Validate honoree selection in HR-mode
+    if (!forSelf && selectedHonoreeId === null && !honoreeFreeText.trim()) {
+      setError(t('events.honoree.required'));
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
+
+    // Build honoree payload
+    const honoreePayload = forSelf
+      ? {}
+      : selectedHonoreeId !== null
+        ? { honoree_id: selectedHonoreeId }
+        : { honoree_id: null, honoree_name: honoreeFreeText.trim() };
 
     const result = await createEvent({
       title: trimmedTitle,
@@ -57,6 +80,7 @@ export function CreateEventScreen() {
       note: note.trim() || null,
       circle_ids: Array.from(circleIds),
       item_ids: Array.from(itemIds),
+      ...honoreePayload,
     });
 
     setSubmitting(false);
@@ -125,6 +149,121 @@ export function CreateEventScreen() {
         onSubmit={handleSubmit}
         style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-5)' }}
       >
+        {/* ── For me / for someone else toggle ── */}
+        <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
+          <legend
+            className="mono-meta"
+            style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-3)' }}
+          >
+            {t('events.honoree.label')}
+          </legend>
+          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+            <Chip
+              active={forSelf}
+              onClick={() => {
+                setForSelf(true);
+                setSelectedHonoreeId(null);
+                setSelectedHonoreeDisplayName(null);
+                setHonoreeFreeText('');
+                setHonoreQuery('');
+              }}
+              label={t('events.honoree.forMe')}
+            />
+            <Chip
+              active={!forSelf}
+              onClick={() => {
+                setForSelf(false);
+              }}
+              label={t('events.honoree.forSomeoneElse')}
+            />
+          </div>
+
+          {!forSelf && (
+            <div style={{ marginTop: 'var(--s-3)' }}>
+              {/* Show selected honoree pill */}
+              {(selectedHonoreeId !== null || honoreeFreeText) ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--s-2)',
+                    padding: '6px 0',
+                    borderBottom: '1px solid var(--hair-strong)',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: 15,
+                      color: 'var(--ink)',
+                    }}
+                  >
+                    {selectedHonoreeDisplayName ?? honoreeFreeText}
+                  </span>
+                  {/* Non-user note */}
+                  {selectedHonoreeId === null && honoreeFreeText && (
+                    <span
+                      className="marginalia"
+                      style={{ fontSize: 13, color: 'var(--ink-3)' }}
+                    >
+                      {t('events.honoree.nonUserNote', { name: honoreeFreeText })}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedHonoreeId(null);
+                      setSelectedHonoreeDisplayName(null);
+                      setHonoreeFreeText('');
+                      setHonoreQuery('');
+                    }}
+                    aria-label={t('common.cancel')}
+                    style={{
+                      marginLeft: 'auto',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-body)',
+                      fontSize: 13,
+                      color: 'var(--ink-3)',
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                /* Autocomplete input */
+                <div style={{ position: 'relative' }}>
+                  <SketchInput
+                    type="text"
+                    value={honoreeQuery}
+                    placeholder={t('events.honoree.placeholder')}
+                    onChange={(e) => setHonoreQuery(e.target.value)}
+                    autoFocus
+                  />
+                  <HonoreeAutocomplete
+                    query={honoreeQuery}
+                    onSelectUser={(id, displayName) => {
+                      setSelectedHonoreeId(id);
+                      setSelectedHonoreeDisplayName(displayName);
+                      setHonoreeFreeText('');
+                      setHonoreQuery('');
+                    }}
+                    onSelectFreeText={(name) => {
+                      setHonoreeFreeText(name);
+                      setSelectedHonoreeId(null);
+                      setSelectedHonoreeDisplayName(null);
+                      setHonoreQuery('');
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </fieldset>
+
+        <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0' }} />
+
         <Field label={t('events.field.title')}>
           <SketchInput
             type="text"
