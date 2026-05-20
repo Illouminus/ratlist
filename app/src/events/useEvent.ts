@@ -43,6 +43,15 @@ export interface EventCuratedItem {
   claims: EventClaim[];
 }
 
+/**
+ * The raw `Event` row enriched with the joined honoree profile. The join
+ * is a left-join on `profiles.id = events.honoree_id`; when `honoree_id`
+ * is null (HR-mode with a non-user honoree) the `honoree` field is null.
+ */
+export type EventWithHonoree = Event & {
+  honoree: Pick<Profile, 'id' | 'display_name' | 'handle' | 'avatar_url'> | null;
+};
+
 export type EventDetailQuery =
   | { status: 'loading'; data: null; error: null }
   | { status: 'anonymous'; data: null; error: null }
@@ -50,7 +59,7 @@ export type EventDetailQuery =
   | {
       status: 'ready';
       data: {
-        event: Event;
+        event: EventWithHonoree;
         audience: EventAudienceCircle[];
         items: EventCuratedItem[];
         /** Caller is the registered user set as honoree (may be false in HR-mode
@@ -111,7 +120,7 @@ interface RawClaimRow {
 }
 
 interface LoadedData {
-  event: Event;
+  event: EventWithHonoree;
   audience: EventAudienceCircle[];
   items: EventCuratedItem[];
   isHonoree: boolean;
@@ -124,9 +133,9 @@ async function loadEvent(
 ): Promise<{ kind: 'ok'; data: LoadedData } | { kind: 'error'; error: string }> {
   const { data: eventRow, error: eventErr } = await supabase
     .from('events')
-    .select('*')
+    .select('*, honoree:profiles(id, display_name, handle, avatar_url)')
     .eq('id', eventId)
-    .maybeSingle<Event>();
+    .maybeSingle<EventWithHonoree>();
 
   if (eventErr) return { kind: 'error', error: eventErr.message };
   if (!eventRow) return { kind: 'error', error: 'event_not_found' };

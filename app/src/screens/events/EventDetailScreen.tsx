@@ -166,14 +166,19 @@ interface HeaderEvent {
   honoree_id: string | null;
   /** Free-text fallback name when honoree_id is null (HR-mode). */
   honoree_name: string | null;
+  /** Joined profile row — present when honoree_id is set, null otherwise. */
+  honoree: { display_name: string | null } | null;
 }
 
 function GuestHeader({ event }: { event: HeaderEvent }) {
   const { t } = useI18n();
-  // honoreeDisplayName expects honoree_display_name (RPC field) + honoree_name.
-  // The raw Event row has only honoree_name; pass null for the joined field so
-  // the helper falls back to honoree_name correctly.
-  const honoree = honoreeDisplayName({ honoree_display_name: null, honoree_name: event.honoree_name });
+  // honoreeDisplayName prefers the joined profile display_name (resolves
+  // self-events and HR-events with a registered honoree), then falls back to
+  // honoree_name for non-user honorees (HR-mode with a plain text name).
+  const honoree = honoreeDisplayName({
+    honoree_display_name: event.honoree?.display_name ?? null,
+    honoree_name: event.honoree_name,
+  });
   return (
     <header style={{ marginBottom: 'var(--s-6)' }}>
       <div className="mono-meta" style={{ marginBottom: 'var(--s-3)', color: 'var(--ink-3)' }}>

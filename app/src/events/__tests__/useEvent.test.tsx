@@ -63,7 +63,7 @@ vi.mock('../../auth/useAuth', () => ({ useAuth: vi.fn() }));
 vi.mock('../../lib/plausible', () => ({ track: vi.fn() }));
 
 // Now safe to import the modules under test
-import { useEvent } from '../useEvent';
+import { useEvent, type EventWithHonoree } from '../useEvent';
 import { useAuth } from '../../auth/useAuth';
 import type { User } from '@supabase/supabase-js';
 import type { Event } from '../../lib/db';
@@ -101,7 +101,7 @@ function stubAuthAnonymous(): void {
  * Because items is empty, the claims query is short-circuited in the
  * hook (`if (itemIds.length === 0) …`) so no 4th call occurs.
  */
-function stubEventLoad(eventRow: Event): void {
+function stubEventLoad(eventRow: EventWithHonoree): void {
   // Chain for the events table — maybeSingle returns the row.
   const eventsChain = mocks.makeChain();
   (eventsChain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -152,11 +152,12 @@ beforeEach(() => {
 
 describe('useEvent', () => {
   it('loads the event row and exposes it in ready state', async () => {
-    const eventRow: Event = {
+    const eventRow: EventWithHonoree = {
       id: 'ev-1',
       created_by: 'user-honoree',
       honoree_id: 'user-honoree',
       honoree_name: null,
+      honoree: { id: 'user-honoree', display_name: 'Birthday Rat', handle: null, avatar_url: null },
       title: 'Birthday Party',
       kind: 'birthday',
       occurs_on: '2026-12-25',
@@ -182,11 +183,12 @@ describe('useEvent', () => {
 
   it('isHonoree is true when caller is the honoree', async () => {
     const honoreeId = 'user-honoree';
-    const eventRow: Event = {
+    const eventRow: EventWithHonoree = {
       id: 'ev-2',
       created_by: honoreeId,
       honoree_id: honoreeId,
       honoree_name: null,
+      honoree: { id: honoreeId, display_name: 'Self Rat', handle: null, avatar_url: null },
       title: 'My Event',
       kind: 'birthday',
       occurs_on: null,
@@ -210,11 +212,12 @@ describe('useEvent', () => {
   });
 
   it('isHonoree is false when caller is NOT the honoree', async () => {
-    const eventRow: Event = {
+    const eventRow: EventWithHonoree = {
       id: 'ev-3',
       created_by: 'user-honoree',
       honoree_id: 'user-honoree',
       honoree_name: null,
+      honoree: { id: 'user-honoree', display_name: 'Other Rat', handle: null, avatar_url: null },
       title: 'Someone Else Event',
       kind: 'birthday',
       occurs_on: null,
@@ -237,14 +240,78 @@ describe('useEvent', () => {
     }
   });
 
+  it('event.honoree carries the joined profile for self-events', async () => {
+    const selfId = 'user-self';
+    const eventRow: EventWithHonoree = {
+      id: 'ev-self',
+      created_by: selfId,
+      honoree_id: selfId,
+      honoree_name: null,
+      honoree: { id: selfId, display_name: 'Крыса Одна', handle: null, avatar_url: null },
+      title: 'My Own Birthday',
+      kind: 'birthday',
+      occurs_on: null,
+      note: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    };
+
+    stubAuthUser(selfId);
+    stubEventLoad(eventRow);
+
+    const { result } = renderHook(() => useEvent('ev-self'));
+
+    await waitFor(() => {
+      expect(result.current.query.status).toBe('ready');
+    });
+
+    if (result.current.query.status === 'ready') {
+      // Case 1: self-event — honoree.display_name must be set
+      expect(result.current.query.data.event.honoree?.display_name).toBe('Крыса Одна');
+    }
+  });
+
+  it('event.honoree is null for HR-mode with non-user honoree (honoree_name fallback)', async () => {
+    const creatorId = 'user-creator-2';
+    const eventRow: EventWithHonoree = {
+      id: 'ev-nonuser',
+      created_by: creatorId,
+      honoree_id: null,
+      honoree_name: 'Marc',
+      honoree: null,
+      title: "Marc's Retirement",
+      kind: 'other',
+      occurs_on: null,
+      note: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    };
+
+    stubAuthUser(creatorId);
+    stubEventLoad(eventRow);
+
+    const { result } = renderHook(() => useEvent('ev-nonuser'));
+
+    await waitFor(() => {
+      expect(result.current.query.status).toBe('ready');
+    });
+
+    if (result.current.query.status === 'ready') {
+      // Case 3: non-user honoree — no join, honoree_name is the fallback
+      expect(result.current.query.data.event.honoree).toBeNull();
+      expect(result.current.query.data.event.honoree_name).toBe('Marc');
+    }
+  });
+
   it('isCreator is true when caller created the event (HR-mode: creator != honoree)', async () => {
     const creatorId = 'user-creator';
-    const eventRow: Event = {
+    const eventRow: EventWithHonoree = {
       id: 'ev-4',
       created_by: creatorId,
-      // HR-mode: honoree is a non-user person
+      // HR-mode: honoree is a non-user person — no profiles join
       honoree_id: null,
       honoree_name: 'Grandma',
+      honoree: null,
       title: 'Grandma Birthday',
       kind: 'birthday',
       occurs_on: '2026-11-01',
