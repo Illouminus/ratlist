@@ -27,6 +27,7 @@ export function PeopleScreen() {
     if (eventsQ.status === 'ready') {
       for (const e of eventsQ.events) {
         if (e.is_honoree) continue; // skip my own events on People rows
+        if (!e.honoree_id) continue; // non-user honoree (HR-mode); no person to attribute to
         m.set(e.honoree_id, (m.get(e.honoree_id) ?? 0) + 1);
       }
     }

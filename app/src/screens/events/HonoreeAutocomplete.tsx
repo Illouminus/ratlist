@@ -41,7 +41,7 @@ async function fetchMatches(q: string): Promise<UserMatch[]> {
 export function HonoreeAutocomplete({ query, onSelectUser, onSelectFreeText }: Props) {
   const { t } = useI18n();
   const [state, setState] = useState<SearchState>({ kind: 'idle' });
-  const debouncedRef = useRef<ReturnType<typeof debounce> | null>(null);
+  const debouncedRef = useRef<{ (q: string): void; cancel: () => void } | null>(null);
 
   useEffect(() => {
     // Build a fresh debounced function once and keep it stable.
