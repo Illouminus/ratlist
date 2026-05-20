@@ -10,7 +10,7 @@
  */
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
-import { useEvents, type MyEvent } from '../../events/useEvents';
+import { useEvents, honoreeDisplayName, type MyEvent } from '../../events/useEvents';
 import { PaperLayout } from '../../components/PaperLayout';
 import { SittingRat } from '../../components/rats';
 import { ListSkeleton } from '../../components/Skeleton';
@@ -182,7 +182,7 @@ function EventRow({ event }: { event: MyEvent }) {
           <span className="mono-meta" style={{ color: 'var(--ink-3)' }}>
             {event.is_honoree
               ? t('events.yoursMarker')
-              : t('events.honoredBy', { name: event.honoree_display_name })}
+              : t('events.honoredBy', { name: honoreeDisplayName(event) })}
           </span>
           {meta.map((m, i) => (
             <span key={i} className="mono-meta" style={{ color: 'var(--ink-3)' }}>
