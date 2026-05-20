@@ -852,6 +852,8 @@ export type Database = {
       }
       delete_my_account: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
+      get_cagnotte_view: { Args: { _cagnotte_id: string }; Returns: Json }
+      get_my_cagnottes: { Args: never; Returns: Json }
       get_my_events: {
         Args: never
         Returns: {
