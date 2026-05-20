@@ -53,7 +53,12 @@ export type EventDetailQuery =
         event: Event;
         audience: EventAudienceCircle[];
         items: EventCuratedItem[];
+        /** Caller is the registered user set as honoree (may be false in HR-mode
+         *  when honoree is a non-user person identified only by `honoree_name`). */
         isHonoree: boolean;
+        /** Caller is the creator (`created_by`) — gates edit/delete affordances
+         *  in HR-mode where the creator manages the event, not the honoree. */
+        isCreator: boolean;
       };
       error: null;
     };
@@ -63,6 +68,10 @@ export interface UpdateEventDetailInput {
   kind?: Event['kind'];
   occurs_on?: string | null;
   note?: string | null;
+  /** HR-mode: update the linked user honoree (null clears it). */
+  honoree_id?: string | null;
+  /** HR-mode: update the text fallback name (null clears it). */
+  honoree_name?: string | null;
 }
 
 export interface UseEventResult {
@@ -106,6 +115,7 @@ interface LoadedData {
   audience: EventAudienceCircle[];
   items: EventCuratedItem[];
   isHonoree: boolean;
+  isCreator: boolean;
 }
 
 async function loadEvent(
@@ -189,7 +199,11 @@ async function loadEvent(
       event: eventRow,
       audience,
       items,
+      // honoree_id is nullable in HR-mode — only true when the caller is
+      // the registered user set as honoree.
       isHonoree: eventRow.honoree_id === userId,
+      // created_by is always set; gates edit/delete in HR-mode.
+      isCreator: eventRow.created_by === userId,
     },
   };
 }
@@ -257,6 +271,8 @@ export function useEvent(eventId: string | null): UseEventResult {
       if (input.kind !== undefined) patch.kind = input.kind;
       if (input.occurs_on !== undefined) patch.occurs_on = input.occurs_on;
       if (input.note !== undefined) patch.note = input.note?.trim() || null;
+      if (input.honoree_id !== undefined) patch.honoree_id = input.honoree_id;
+      if (input.honoree_name !== undefined) patch.honoree_name = input.honoree_name;
       if (Object.keys(patch).length === 0) return { ok: true };
 
       const { error } = await supabase.from('events').update(patch).eq('id', eventId);

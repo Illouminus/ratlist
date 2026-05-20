@@ -154,7 +154,9 @@ describe('useEvent', () => {
   it('loads the event row and exposes it in ready state', async () => {
     const eventRow: Event = {
       id: 'ev-1',
+      created_by: 'user-honoree',
       honoree_id: 'user-honoree',
+      honoree_name: null,
       title: 'Birthday Party',
       kind: 'birthday',
       occurs_on: '2026-12-25',
@@ -182,7 +184,9 @@ describe('useEvent', () => {
     const honoreeId = 'user-honoree';
     const eventRow: Event = {
       id: 'ev-2',
+      created_by: honoreeId,
       honoree_id: honoreeId,
+      honoree_name: null,
       title: 'My Event',
       kind: 'birthday',
       occurs_on: null,
@@ -208,7 +212,9 @@ describe('useEvent', () => {
   it('isHonoree is false when caller is NOT the honoree', async () => {
     const eventRow: Event = {
       id: 'ev-3',
+      created_by: 'user-honoree',
       honoree_id: 'user-honoree',
+      honoree_name: null,
       title: 'Someone Else Event',
       kind: 'birthday',
       occurs_on: null,
@@ -227,6 +233,38 @@ describe('useEvent', () => {
     });
 
     if (result.current.query.status === 'ready') {
+      expect(result.current.query.data.isHonoree).toBe(false);
+    }
+  });
+
+  it('isCreator is true when caller created the event (HR-mode: creator != honoree)', async () => {
+    const creatorId = 'user-creator';
+    const eventRow: Event = {
+      id: 'ev-4',
+      created_by: creatorId,
+      // HR-mode: honoree is a non-user person
+      honoree_id: null,
+      honoree_name: 'Grandma',
+      title: 'Grandma Birthday',
+      kind: 'birthday',
+      occurs_on: '2026-11-01',
+      note: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    };
+
+    stubAuthUser(creatorId);
+    stubEventLoad(eventRow);
+
+    const { result } = renderHook(() => useEvent('ev-4'));
+
+    await waitFor(() => {
+      expect(result.current.query.status).toBe('ready');
+    });
+
+    if (result.current.query.status === 'ready') {
+      expect(result.current.query.data.isCreator).toBe(true);
+      // In HR-mode the creator is not the honoree (honoree_id is null)
       expect(result.current.query.data.isHonoree).toBe(false);
     }
   });
