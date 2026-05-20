@@ -13,6 +13,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useEvent, type EventClaim } from '../../events/useEvent';
+import { honoreeDisplayName } from '../../events/useEvents';
 import { useGroups } from '../../groups/useGroups';
 import { useMyItems, type MyItem } from '../../items/useMyItems';
 import { useAuth } from '../../auth/useAuth';
@@ -65,7 +66,7 @@ export function EventDetailScreen() {
     );
   }
 
-  const { event, audience, items, isHonoree } = query.data;
+  const { event, audience, items, isHonoree, isCreator } = query.data;
 
   async function handleDelete() {
     const ok = await confirm({
@@ -99,7 +100,7 @@ export function EventDetailScreen() {
         ← {t('events.backToList')}
       </Link>
 
-      {isHonoree ? (
+      {isCreator ? (
         <HonoreeHeader event={event} onSave={update} />
       ) : (
         <GuestHeader event={event} />
@@ -107,13 +108,14 @@ export function EventDetailScreen() {
 
       <AudienceSection
         audience={audience}
-        isHonoree={isHonoree}
+        isCreator={isCreator}
         onAttach={attachCircle}
         onDetach={detachCircle}
       />
 
       <ItemsSection
         items={items}
+        isCreator={isCreator}
         isHonoree={isHonoree}
         myUserId={user?.id ?? null}
         onAttach={attachItem}
@@ -122,7 +124,7 @@ export function EventDetailScreen() {
         onRelease={release}
       />
 
-      {isHonoree && (
+      {isCreator && (
         <footer
           style={{
             marginTop: 'var(--s-7)',
@@ -160,16 +162,51 @@ interface HeaderEvent {
   kind: string;
   occurs_on: string | null;
   note: string | null;
+  /** Null when honoree is a non-user (HR-mode). */
+  honoree_id: string | null;
+  /** Free-text fallback name when honoree_id is null (HR-mode). */
+  honoree_name: string | null;
 }
 
 function GuestHeader({ event }: { event: HeaderEvent }) {
   const { t } = useI18n();
+  // honoreeDisplayName expects honoree_display_name (RPC field) + honoree_name.
+  // The raw Event row has only honoree_name; pass null for the joined field so
+  // the helper falls back to honoree_name correctly.
+  const honoree = honoreeDisplayName({ honoree_display_name: null, honoree_name: event.honoree_name });
   return (
     <header style={{ marginBottom: 'var(--s-6)' }}>
       <div className="mono-meta" style={{ marginBottom: 'var(--s-3)', color: 'var(--ink-3)' }}>
         {t(`events.kind.${event.kind}`)}
         {event.occurs_on && ` · ${formatDate(event.occurs_on)}`}
       </div>
+      {(event.honoree_id || event.honoree_name) && (
+        <div
+          className="mono-meta"
+          style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-2)', fontSize: 13 }}
+        >
+          {t('events.honoreeLabel')}{' '}
+          {event.honoree_id ? (
+            <Link
+              to={`/p/${event.honoree_id}`}
+              style={{ color: 'var(--accent)', textDecoration: 'underline' }}
+            >
+              {honoree}
+            </Link>
+          ) : (
+            <span>
+              {honoree}
+              {' '}
+              <span
+                className="marginalia"
+                style={{ fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic' }}
+              >
+                {t('events.honoree.nonUserNote', { name: honoree })}
+              </span>
+            </span>
+          )}
+        </div>
+      )}
       <h1
         className="display-italic"
         style={{
@@ -398,12 +435,13 @@ interface AudienceSectionProps {
     group_id: string;
     group: { id: string; name: string; emoji: string | null };
   }>;
-  isHonoree: boolean;
+  /** Creator can add/remove circles; guests are read-only. */
+  isCreator: boolean;
   onAttach: (groupId: string) => Promise<{ ok: true } | { error: string }>;
   onDetach: (groupId: string) => Promise<{ ok: true } | { error: string }>;
 }
 
-function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSectionProps) {
+function AudienceSection({ audience, isCreator, onAttach, onDetach }: AudienceSectionProps) {
   const { t } = useI18n();
   const { query: groupsQ } = useGroups();
   const [picking, setPicking] = useState(false);
@@ -417,7 +455,7 @@ function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSe
         {t('events.audienceLabel')}
       </div>
       <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-        {audience.length === 0 && !isHonoree && (
+        {audience.length === 0 && !isCreator && (
           <span style={{ color: 'var(--ink-3)', fontStyle: 'italic', fontSize: 14 }}>
             {t('events.audienceEmpty')}
           </span>
@@ -438,7 +476,7 @@ function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSe
           >
             {a.group.emoji && <span aria-hidden>{a.group.emoji}</span>}
             {a.group.name}
-            {isHonoree && (
+            {isCreator && (
               <button
                 type="button"
                 onClick={() => void onDetach(a.group_id)}
@@ -459,7 +497,7 @@ function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSe
             )}
           </span>
         ))}
-        {isHonoree && availableGroups.length > 0 && (
+        {isCreator && availableGroups.length > 0 && (
           <button
             type="button"
             onClick={() => setPicking((v) => !v)}
@@ -477,7 +515,7 @@ function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSe
           </button>
         )}
       </div>
-      {picking && isHonoree && availableGroups.length > 0 && (
+      {picking && isCreator && availableGroups.length > 0 && (
         <div
           style={{
             marginTop: 'var(--s-3)',
@@ -516,6 +554,11 @@ function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSe
 
 interface ItemsSectionProps {
   items: Array<{ item_id: string; item: MyItem | { id: string; cover_url: string | null; title: string; maker: string | null; price_text: string | null; owner_id: string }; claims: EventClaim[] }>;
+  /** Creator can add/remove items from curation. */
+  isCreator: boolean;
+  /** True when the caller is the registered honoree — hides claim buttons
+   * (you can't claim your own gifts). In HR-mode this is false for the
+   * creator, so they see the claim UI like any other guest. */
   isHonoree: boolean;
   myUserId: string | null;
   onAttach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
@@ -526,6 +569,7 @@ interface ItemsSectionProps {
 
 function ItemsSection({
   items,
+  isCreator,
   isHonoree,
   myUserId,
   onAttach,
@@ -555,7 +599,7 @@ function ItemsSection({
         <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
           {t('events.itemsLabel')}
         </div>
-        {isHonoree && availableItems.length > 0 && (
+        {isCreator && availableItems.length > 0 && (
           <button
             type="button"
             onClick={() => setPicking((v) => !v)}
@@ -575,7 +619,7 @@ function ItemsSection({
 
       {items.length === 0 ? (
         <p style={{ color: 'var(--ink-3)', fontStyle: 'italic' }}>
-          {isHonoree ? t('events.noItemsHonoree') : t('events.noItemsGuest')}
+          {isCreator ? t('events.noItemsHonoree') : t('events.noItemsGuest')}
         </p>
       ) : (
         <ul
@@ -592,6 +636,7 @@ function ItemsSection({
             <CuratedItemCard
               key={it.item_id}
               entry={it}
+              isCreator={isCreator}
               isHonoree={isHonoree}
               myUserId={myUserId}
               onDetach={() => void onDetach(it.item_id)}
@@ -602,7 +647,7 @@ function ItemsSection({
         </ul>
       )}
 
-      {picking && isHonoree && (
+      {picking && isCreator && (
         <div
           style={{
             marginTop: 'var(--s-5)',
@@ -664,6 +709,9 @@ function ItemsSection({
 
 interface CuratedItemCardProps {
   entry: ItemsSectionProps['items'][number];
+  /** Creator can remove items from curation. */
+  isCreator: boolean;
+  /** True when the caller is the registered honoree — hides claim buttons. */
   isHonoree: boolean;
   myUserId: string | null;
   onDetach: () => void;
@@ -673,6 +721,7 @@ interface CuratedItemCardProps {
 
 function CuratedItemCard({
   entry,
+  isCreator,
   isHonoree,
   myUserId,
   onDetach,
@@ -700,7 +749,7 @@ function CuratedItemCard({
         >
           <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
         </Link>
-        {isHonoree && (
+        {isCreator && (
           <button
             type="button"
             onClick={onDetach}

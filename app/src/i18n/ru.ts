@@ -286,6 +286,7 @@ export const ru: Translation = {
     open: 'открыть',
     backToList: 'к списку событий',
     audienceLabel: 'кто видит',
+    honoreeLabel: 'для',
     itemsLabel: 'в подборке',
     noItemsHonoree: 'пока ничего не добавлено. иди в свой список и отметь то, что хочешь именно к этому поводу.',
     noItemsGuest: 'хозяин ещё не выбрал что хочет к этому поводу.',

@@ -281,6 +281,7 @@ export const en: Translation = {
     open: 'open',
     backToList: 'back to events',
     audienceLabel: 'audience',
+    honoreeLabel: 'for',
     itemsLabel: 'curated',
     noItemsHonoree: 'nothing curated yet. open your list and tag what you want for this occasion.',
     noItemsGuest: 'the honoree has not curated anything for this occasion yet.',
