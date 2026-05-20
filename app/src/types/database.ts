@@ -132,7 +132,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string
           honoree_id?: string | null
           honoree_name?: string | null
           id?: string
@@ -733,11 +733,14 @@ export type Database = {
         Returns: {
           audience_circle_count: number
           created_at: string
+          created_by: string
           honoree_avatar_url: string
           honoree_display_name: string
           honoree_handle: string
           honoree_id: string
+          honoree_name: string
           id: string
+          is_creator: boolean
           is_honoree: boolean
           item_count: number
           kind: string

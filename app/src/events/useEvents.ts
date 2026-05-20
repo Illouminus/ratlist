@@ -17,9 +17,11 @@ import type { EventKind } from '../lib/db';
 /** An event row enriched with honoree info + counts. */
 export interface MyEvent {
   id: string;
-  honoree_id: string;
-  honoree_display_name: string;
-  honoree_handle: string | null;
+  created_by: string;                  // uuid of whoever created the event
+  honoree_id: string | null;           // null for non-user honorees (HR-mode)
+  honoree_name: string | null;         // text fallback when honoree_id is null
+  honoree_display_name: string | null; // from profiles join — null for non-user honorees
+  honoree_handle: string | null;       // from profiles join — null for non-user honorees
   honoree_avatar_url: string | null;
   title: string;
   kind: EventKind;
@@ -30,6 +32,18 @@ export interface MyEvent {
   item_count: number;
   audience_circle_count: number;
   is_honoree: boolean;
+  is_creator: boolean; // caller is the created_by user
+}
+
+/**
+ * Resolves the honoree's display name from either the joined profile (user
+ * honoree) or the text fallback (non-user honoree in HR-mode).
+ * Returns '(no name)' as last resort.
+ */
+export function honoreeDisplayName(
+  e: Pick<MyEvent, 'honoree_display_name' | 'honoree_name'>,
+): string {
+  return e.honoree_display_name ?? e.honoree_name ?? '(no name)';
 }
 
 export type EventsQuery =
