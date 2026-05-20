@@ -589,6 +589,12 @@ export const en: Translation = {
     photoBadType: 'png, jpg or webp only.',
 
     urlNotAllowed: "couldn't load that link — it looks like an internal address or an adult site.",
+
+    itemHasSoloClaim: "Someone has already claimed this item — can't start a kitty.",
+    itemHasOpenCagnotte: "A kitty is already running for this item — can't claim solo.",
+    itemLocked: "This item can't be modified right now.",
+    cagnotteForbidden: "You don't have access to this kitty.",
+    cagnotteNotFound: 'Kitty not found.',
   },
   common: {
     cancel: 'cancel',

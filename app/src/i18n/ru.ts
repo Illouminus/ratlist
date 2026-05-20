@@ -594,6 +594,12 @@ export const ru: Translation = {
     photoBadType: 'нужен png, jpg или webp.',
 
     urlNotAllowed: 'не получилось загрузить страницу — ссылка похожа на внутреннюю или взрослый сайт.',
+
+    itemHasSoloClaim: 'Этот item уже взял кто-то один — кагнотту не открыть.',
+    itemHasOpenCagnotte: 'На этот item уже идёт кагнотта — одиночный claim недоступен.',
+    itemLocked: 'Item сейчас нельзя изменить.',
+    cagnotteForbidden: 'Нет доступа к этой кагнотте.',
+    cagnotteNotFound: 'Кагнотта не найдена.',
   },
   common: {
     cancel: 'отмена',

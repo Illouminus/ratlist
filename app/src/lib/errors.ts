@@ -53,7 +53,13 @@ export type AppErrorCode =
   | 'photoTooLarge'
   | 'photoBadType'
   // edge-function policy refusals (fetch-url-meta)
-  | 'urlNotAllowed';
+  | 'urlNotAllowed'
+  // cagnotte / item-lock
+  | 'itemHasSoloClaim'
+  | 'itemHasOpenCagnotte'
+  | 'itemLocked'
+  | 'cagnotteForbidden'
+  | 'cagnotteNotFound';
 
 /**
  * Minimal duck-typed shape we accept. Supabase's PostgrestError,
@@ -149,6 +155,12 @@ function matchMessage(message: string): AppErrorCode {
   ) {
     return 'urlNotAllowed';
   }
+
+  if (m.includes('item_has_solo_claim')) return 'itemHasSoloClaim';
+  if (m.includes('item_has_open_cagnotte')) return 'itemHasOpenCagnotte';
+  if (m.includes('item_locked')) return 'itemLocked';
+  if (m.includes('cagnotte_forbidden')) return 'cagnotteForbidden';
+  if (m.includes('cagnotte_not_found')) return 'cagnotteNotFound';
 
   // Storage / upload errors from our own utility
   if (m.includes('file_too_large')) return 'photoTooLarge';
