@@ -120,7 +120,9 @@ export type Database = {
       events: {
         Row: {
           created_at: string
-          honoree_id: string
+          created_by: string
+          honoree_id: string | null
+          honoree_name: string | null
           id: string
           kind: string
           note: string | null
@@ -130,7 +132,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          honoree_id: string
+          created_by: string
+          honoree_id?: string | null
+          honoree_name?: string | null
           id?: string
           kind?: string
           note?: string | null
@@ -140,7 +144,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          honoree_id?: string
+          created_by?: string
+          honoree_id?: string | null
+          honoree_name?: string | null
           id?: string
           kind?: string
           note?: string | null
@@ -796,6 +802,7 @@ export type Database = {
       group_admin_count: { Args: { _group_id: string }; Returns: number }
       is_group_admin: { Args: { _group_id: string }; Returns: boolean }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
+      is_honoree_of_item: { Args: { _item_id: string }; Returns: boolean }
       is_santa_organiser: { Args: { _event_id: string }; Returns: boolean }
       is_santa_participant: { Args: { _event_id: string }; Returns: boolean }
       owns_event: { Args: { _event_id: string }; Returns: boolean }
