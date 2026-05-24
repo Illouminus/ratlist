@@ -51,36 +51,6 @@ export type Database = {
           },
         ]
       }
-      event_circles: {
-        Row: {
-          event_id: string
-          group_id: string
-        }
-        Insert: {
-          event_id: string
-          group_id: string
-        }
-        Update: {
-          event_id?: string
-          group_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_circles_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_circles_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       event_items: {
         Row: {
           added_at: string
@@ -117,6 +87,50 @@ export type Database = {
           },
         ]
       }
+      event_participants: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          joined_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -125,6 +139,7 @@ export type Database = {
           kind: string
           note: string | null
           occurs_on: string | null
+          share_token: string
           title: string
           updated_at: string
         }
@@ -135,6 +150,7 @@ export type Database = {
           kind?: string
           note?: string | null
           occurs_on?: string | null
+          share_token?: string
           title: string
           updated_at?: string
         }
@@ -145,6 +161,7 @@ export type Database = {
           kind?: string
           note?: string | null
           occurs_on?: string | null
+          share_token?: string
           title?: string
           updated_at?: string
         }
