@@ -50,3 +50,47 @@ describe('events link-first migration — schema shape', () => {
     await admin.auth.admin.deleteUser(userId);
   });
 });
+
+describe('can_see_event helper — new behavior', () => {
+  it('honoree returns true', async () => {
+    const { adminClient, clientFor } = await import('./helpers/client.ts');
+    const admin = adminClient();
+    const aliceId = '11111111-1111-1111-1111-111111111111';
+    await admin.auth.admin.createUser({
+      id: aliceId, email: 'alice@test.local', password: 'test-test-test', email_confirm: true,
+    }).catch(() => {});
+    await admin.from('profiles').upsert({
+      id: aliceId, display_name: 'alice', handle: 'alice_t',
+      onboarded_at: new Date().toISOString(),
+    });
+    const { data: ev } = await admin.from('events')
+      .insert({ honoree_id: aliceId, title: 'cse test' })
+      .select('id').single();
+    const aliceClient = await clientFor(aliceId);
+    const { data: visible, error } = await aliceClient.rpc('can_see_event', { _event_id: ev!.id });
+    expect(error).toBeNull();
+    expect(visible).toBe(true);
+    await admin.from('events').delete().eq('id', ev!.id);
+  });
+
+  it('active participant returns true; outsider returns false', async () => {
+    const { seedFresh } = await import('./helpers/seed.ts');
+    const { adminClient, clientFor } = await import('./helpers/client.ts');
+    const ctx = await seedFresh();
+    const admin = adminClient();
+    const { data: ev } = await admin.from('events')
+      .insert({ honoree_id: ctx.alice, title: 'cse-p test' })
+      .select('id').single();
+    await admin.from('event_participants')
+      .insert({ event_id: ev!.id, user_id: ctx.bob, status: 'active', joined_at: new Date().toISOString() });
+
+    const bobClient = await clientFor(ctx.bob);
+    const daveClient = await clientFor(ctx.dave);
+
+    const { data: bobSees } = await bobClient.rpc('can_see_event', { _event_id: ev!.id });
+    const { data: daveSees } = await daveClient.rpc('can_see_event', { _event_id: ev!.id });
+
+    expect(bobSees).toBe(true);
+    expect(daveSees).toBe(false);
+  });
+});
