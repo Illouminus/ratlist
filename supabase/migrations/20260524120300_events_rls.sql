@@ -4,12 +4,8 @@
 
 drop policy if exists "events: audience members can read" on public.events;
 
+-- Use can_see_event SECURITY DEFINER helper (defined at 20260524120100) to avoid
+-- infinite-recursion (42P17) between events_select and event_participants_select
+-- policies that would otherwise reference each other through inline subqueries.
 create policy events_participants_can_read on public.events for select
-  using (
-    exists (
-      select 1 from public.event_participants ep
-      where ep.event_id = events.id
-        and ep.user_id = auth.uid()
-        and ep.status = 'active'
-    )
-  );
+  using (public.can_see_event(events.id));
