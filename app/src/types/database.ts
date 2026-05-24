@@ -739,21 +739,38 @@ export type Database = {
       }
       delete_my_account: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
+      get_event_view: {
+        Args: { _token: string }
+        Returns: {
+          event_id: string
+          honoree_avatar_url: string
+          honoree_id: string
+          honoree_name: string
+          items: Json
+          kind: string
+          my_status: string
+          note: string
+          occurs_on: string
+          participant_count: number
+          title: string
+        }[]
+      }
       get_my_events: {
         Args: never
         Returns: {
-          audience_circle_count: number
           created_at: string
           honoree_avatar_url: string
           honoree_display_name: string
           honoree_handle: string
           honoree_id: string
           id: string
-          is_honoree: boolean
           item_count: number
           kind: string
+          my_status: string
           note: string
           occurs_on: string
+          participant_count: number
+          share_token: string
           title: string
           updated_at: string
         }[]
@@ -770,6 +787,17 @@ export type Database = {
           name: string
           role: string
           updated_at: string
+        }[]
+      }
+      get_my_people: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          handle: string
+          has_public_list: boolean
+          last_interaction_at: string
+          user_id: string
         }[]
       }
       get_my_santa_events: {
@@ -811,10 +839,19 @@ export type Database = {
         }[]
       }
       group_admin_count: { Args: { _group_id: string }; Returns: number }
+      invite_to_event: {
+        Args: { _event_id: string; _user_ids: string[] }
+        Returns: number
+      }
+      is_active_event_participant: {
+        Args: { _event_id: string }
+        Returns: boolean
+      }
       is_group_admin: { Args: { _group_id: string }; Returns: boolean }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       is_santa_organiser: { Args: { _event_id: string }; Returns: boolean }
       is_santa_participant: { Args: { _event_id: string }; Returns: boolean }
+      join_event_via_token: { Args: { _token: string }; Returns: string }
       owns_event: { Args: { _event_id: string }; Returns: boolean }
       owns_item: { Args: { _item_id: string }; Returns: boolean }
       redeem_invite: {

@@ -42,7 +42,7 @@ export function FriendListScreen() {
   // where they're the honoree, not generic ones from get_my_events.
   const friendEvents = useMemo<MyEvent[]>(() => {
     if (!userId || eventsQ.status !== 'ready') return [];
-    return eventsQ.events.filter((e) => e.honoree_id === userId && !e.is_honoree);
+    return eventsQ.events.filter((e) => e.honoree_id === userId && e.my_status !== 'honoree');
   }, [userId, eventsQ]);
 
   // Don't offer "report this user" against yourself — the route is

@@ -82,11 +82,6 @@ export interface UseEventResult {
 
 // ─────────────────────────── load ───────────────────────────
 
-interface RawAudienceRow {
-  group_id: string;
-  group: Pick<Group, 'id' | 'name' | 'emoji'> | null;
-}
-
 interface RawCuratedItemRow {
   item_id: string;
   position: number | null;
@@ -121,29 +116,19 @@ async function loadEvent(
   if (eventErr) return { kind: 'error', error: eventErr.message };
   if (!eventRow) return { kind: 'error', error: 'event_not_found' };
 
-  // Audience + items in parallel — both are RLS-gated, so anything we
-  // get back is something the caller is allowed to see.
-  const [audienceRes, itemsRes] = await Promise.all([
-    supabase
-      .from('event_circles')
-      .select('group_id, group:groups(id, name, emoji)')
-      .eq('event_id', eventId)
-      .returns<RawAudienceRow[]>(),
-    supabase
-      .from('event_items')
-      .select('item_id, position, added_at, item:items(*)')
-      .eq('event_id', eventId)
-      .order('position', { ascending: false, nullsFirst: false })
-      .order('added_at', { ascending: true })
-      .returns<RawCuratedItemRow[]>(),
-  ]);
+  // Items only — circles audience retired (link-first model). Coordinator
+  // UI for participants comes in Phase D; for now the audience is always [].
+  const itemsRes = await supabase
+    .from('event_items')
+    .select('item_id, position, added_at, item:items(*)')
+    .eq('event_id', eventId)
+    .order('position', { ascending: false, nullsFirst: false })
+    .order('added_at', { ascending: true })
+    .returns<RawCuratedItemRow[]>();
 
-  if (audienceRes.error) return { kind: 'error', error: audienceRes.error.message };
   if (itemsRes.error) return { kind: 'error', error: itemsRes.error.message };
 
-  const audience: EventAudienceCircle[] = (audienceRes.data ?? [])
-    .filter((a): a is RawAudienceRow & { group: NonNullable<RawAudienceRow['group']> } => a.group !== null)
-    .map((a) => ({ group_id: a.group_id, group: a.group }));
+  const audience: EventAudienceCircle[] = [];
 
   const curatedRows = (itemsRes.data ?? []).filter(
     (it): it is RawCuratedItemRow & { item: NonNullable<RawCuratedItemRow['item']> } =>
@@ -274,32 +259,22 @@ export function useEvent(eventId: string | null): UseEventResult {
     return { ok: true };
   }, [eventId]);
 
+  // Circles attach/detach retired in the link-first model. The coordinator
+  // pre-invite flow comes in Phase D (InviteFromPeopleModal + RPC
+  // invite_to_event). These no-ops keep the existing interface intact
+  // while Phase C/D rewires consumers.
   const attachCircle = useCallback(
-    async (groupId: string): Promise<{ ok: true } | { error: string }> => {
-      if (!eventId) return { error: 'no event' };
-      const { error } = await supabase
-        .from('event_circles')
-        .insert({ event_id: eventId, group_id: groupId });
-      if (error) return { error: error.message };
-      await reload();
-      return { ok: true };
+    async (): Promise<{ ok: true } | { error: string }> => {
+      return { error: 'not_supported' };
     },
-    [eventId, reload],
+    [],
   );
 
   const detachCircle = useCallback(
-    async (groupId: string): Promise<{ ok: true } | { error: string }> => {
-      if (!eventId) return { error: 'no event' };
-      const { error } = await supabase
-        .from('event_circles')
-        .delete()
-        .eq('event_id', eventId)
-        .eq('group_id', groupId);
-      if (error) return { error: error.message };
-      await reload();
-      return { ok: true };
+    async (): Promise<{ ok: true } | { error: string }> => {
+      return { error: 'not_supported' };
     },
-    [eventId, reload],
+    [],
   );
 
   const attachItem = useCallback(

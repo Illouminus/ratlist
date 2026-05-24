@@ -29,11 +29,11 @@ export type ItemPhoto   = Tables['item_photos']['Row'];
 export type Claim        = Tables['claims']['Row'];
 export type ClaimInsert  = Tables['claims']['Insert'];
 
-export type Event         = Tables['events']['Row'];
-export type EventInsert   = Tables['events']['Insert'];
-export type EventUpdate   = Tables['events']['Update'];
-export type EventCircle   = Tables['event_circles']['Row'];
-export type EventItem     = Tables['event_items']['Row'];
+export type Event             = Tables['events']['Row'];
+export type EventInsert       = Tables['events']['Insert'];
+export type EventUpdate       = Tables['events']['Update'];
+export type EventItem         = Tables['event_items']['Row'];
+export type EventParticipant  = Tables['event_participants']['Row'];
 
 /**
  * Allowed values for `items.occasion`. Mirrors the CHECK constraint in the

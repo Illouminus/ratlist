@@ -55,7 +55,6 @@ export function CreateEventScreen() {
       kind,
       occurs_on: occursOn || null,
       note: note.trim() || null,
-      circle_ids: Array.from(circleIds),
       item_ids: Array.from(itemIds),
     });
 

@@ -80,7 +80,7 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
   // mirror the item's existing attachments.
   const { query: eventsQ } = useEvents();
   const myEvents =
-    eventsQ.status === 'ready' ? eventsQ.events.filter((e) => e.is_honoree) : [];
+    eventsQ.status === 'ready' ? eventsQ.events.filter((e) => e.my_status === 'honoree') : [];
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(
     () => new Set(initial?.event_ids ?? []),
   );

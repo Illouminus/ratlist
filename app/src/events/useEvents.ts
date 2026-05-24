@@ -1,8 +1,8 @@
 /**
  * `useEvents` — list of events visible to the caller + create / update /
- * delete an event. Backed by the `get_my_events` RPC which already
- * attaches honoree profile fields, item count, audience-circle count and
- * `is_honoree` in one round-trip.
+ * delete an event. Backed by the link-first `get_my_events` RPC which
+ * attaches honoree profile fields, share_token, item count, active
+ * participant count, and the caller's role (`my_status`).
  *
  * Same shape as `useGroups` / `useSantaEvents` — async fetch is a pure
  * function, the effect only setStates from inside `.then(...)` so the
@@ -14,7 +14,10 @@ import { useAuth } from '../auth/useAuth';
 import { debounce } from '../lib/debounce';
 import type { EventKind } from '../lib/db';
 
-/** An event row enriched with honoree info + counts. */
+/** Role of the caller relative to the event. */
+export type MyEventStatus = 'honoree' | 'active' | 'pending';
+
+/** An event row enriched with honoree info + counts + caller role. */
 export interface MyEvent {
   id: string;
   honoree_id: string;
@@ -27,9 +30,10 @@ export interface MyEvent {
   note: string | null;
   created_at: string;
   updated_at: string;
+  share_token: string;
   item_count: number;
-  audience_circle_count: number;
-  is_honoree: boolean;
+  participant_count: number;
+  my_status: MyEventStatus;
 }
 
 export type EventsQuery =
@@ -43,8 +47,6 @@ export interface CreateEventInput {
   kind: EventKind;
   occurs_on?: string | null;
   note?: string | null;
-  /** Initial audience — array of group ids the honoree belongs to. */
-  circle_ids?: string[];
   /** Initial item curation — array of item ids the honoree owns. */
   item_ids?: string[];
 }
@@ -113,13 +115,11 @@ export function useEvents(): UseEventsResult {
     setFetched(state);
   }, [user]);
 
-  // Realtime: re-fetch when any event row, audience link, or curation
+  // Realtime: re-fetch when any event row, participant, or curation
   // link changes. The RPC re-filters by visibility — much simpler than
   // patching the local list. A single user edit can fire 3-5 burst
-  // writes across these three tables; the 300 ms debounce collapses
-  // those into one RPC. Server-side `filter:` isn't viable because
-  // guest-event visibility is correlated through dynamic group
-  // membership (event_circles → group_members).
+  // writes across these tables; the 300 ms debounce collapses those
+  // into one RPC.
   useEffect(() => {
     if (authStatus !== 'authenticated' || !user) return undefined;
 
@@ -130,7 +130,7 @@ export function useEvents(): UseEventsResult {
     const channel = supabase
       .channel(`my-events:${user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, trigger)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_circles' }, trigger)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_participants' }, trigger)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'event_items' }, trigger)
       .subscribe();
 
@@ -167,12 +167,6 @@ export function useEvents(): UseEventsResult {
       }
 
       const eventId = inserted.id;
-
-      if (input.circle_ids && input.circle_ids.length > 0) {
-        const rows = input.circle_ids.map((group_id) => ({ event_id: eventId, group_id }));
-        const { error } = await supabase.from('event_circles').insert(rows);
-        if (error) return { error: error.message };
-      }
 
       if (input.item_ids && input.item_ids.length > 0) {
         const rows = input.item_ids.map((item_id) => ({ event_id: eventId, item_id }));

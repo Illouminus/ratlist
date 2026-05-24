@@ -26,7 +26,7 @@ export function PeopleScreen() {
     const m = new Map<string, number>();
     if (eventsQ.status === 'ready') {
       for (const e of eventsQ.events) {
-        if (e.is_honoree) continue; // skip my own events on People rows
+        if (e.my_status === 'honoree') continue; // skip my own events on People rows
         m.set(e.honoree_id, (m.get(e.honoree_id) ?? 0) + 1);
       }
     }
