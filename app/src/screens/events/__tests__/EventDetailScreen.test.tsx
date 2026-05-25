@@ -34,6 +34,21 @@ vi.mock('../../../components/useToast', () => ({ useToast: mocks.useToast }));
 vi.mock('../../../components/useConfirm', () => ({ useConfirm: mocks.useConfirm }));
 vi.mock('../../../lib/plausible', () => ({ track: vi.fn() }));
 
+// supabase.ts throws at module-load time when env vars are missing (CI
+// without .env.local). EventDetailScreen imports InviteFromPeopleModal,
+// which imports supabase directly. We never exercise the supabase
+// client in these tests (all data goes through mocked hooks), so a
+// no-op stub is enough.
+vi.mock('../../../lib/supabase', () => ({
+  supabase: {
+    rpc: vi.fn(),
+    from: vi.fn(),
+    functions: { invoke: vi.fn() },
+    channel: vi.fn(),
+    removeChannel: vi.fn(),
+  },
+}));
+
 import { I18nProvider } from '../../../i18n';
 import { EventDetailScreen } from '../EventDetailScreen';
 
