@@ -28,7 +28,23 @@ const HANDLE_REGEX = /^[a-zA-Z][a-zA-Z0-9_-]{1,31}$/;
 export function OnboardingScreen() {
   const { status } = useAuth();
   const { query, refresh } = useProfile();
+  const location = useLocation();
   const { t } = useI18n();
+
+  // Read state.from at the top level so BOTH redirect paths (form
+  // submit + already-onboarded fallback) honor the deep-link target.
+  // Critical for the EventLandingScreen flow: after `await
+  // onComplete()` refreshes the profile, this component re-renders with
+  // `onboarded_at` set, which fires the `<Navigate to="/" />` below —
+  // and that <Navigate> would otherwise *override* the form's
+  // imperative navigate(resumeTo) and dump the user on home. With both
+  // sites reading state.from, the parent re-render targets the same
+  // place the form just navigated to, so the final URL is correct.
+  const stateFrom = (location.state as { from?: unknown } | null)?.from;
+  const resumeTo =
+    typeof stateFrom === 'string' && stateFrom.startsWith('/') && !stateFrom.startsWith('//')
+      ? stateFrom
+      : '/';
 
   if (status === 'loading') return null;
   if (status === 'anonymous') return <Navigate to="/login" replace />;
@@ -45,9 +61,20 @@ export function OnboardingScreen() {
       );
     case 'ready': {
       if (query.profile.onboarded_at) {
-        return <Navigate to="/" replace />;
+        // Already onboarded — race-safe path for the form's
+        // post-submit profile refresh: the parent re-render hits this
+        // branch, and we honor the same resumeTo as the form. End state
+        // matches whether the form's imperative navigate fires first or
+        // this declarative Navigate does.
+        return <Navigate to={resumeTo} replace />;
       }
-      return <OnboardingForm profile={query.profile} onComplete={refresh} />;
+      return (
+        <OnboardingForm
+          profile={query.profile}
+          onComplete={refresh}
+          resumeTo={resumeTo}
+        />
+      );
     }
   }
 }
@@ -57,6 +84,10 @@ export function OnboardingScreen() {
 interface OnboardingFormProps {
   profile: Profile;
   onComplete: () => Promise<void>;
+  /** Where to navigate after a successful submit. Same value the
+   *  parent uses on its already-onboarded fallback Navigate — see
+   *  the comment in OnboardingScreen for why both sites must agree. */
+  resumeTo: string;
 }
 
 interface SubmitError {
@@ -64,22 +95,9 @@ interface SubmitError {
   code: 'required' | 'handleInvalid' | 'handleTaken' | 'generic';
 }
 
-function OnboardingForm({ profile, onComplete }: OnboardingFormProps) {
+function OnboardingForm({ profile, onComplete, resumeTo }: OnboardingFormProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useI18n();
-
-  // If AuthedShellContent kicked the user here from a deep-link
-  // destination (e.g. /events/<id> after auto-join from an event share
-  // link), it stashed the original path in location.state.from. After
-  // onboarding completes, resume that journey instead of dumping the
-  // user on home. Same-origin guard at the read site so a hand-crafted
-  // state object can't redirect off-domain.
-  const stateFrom = (location.state as { from?: unknown } | null)?.from;
-  const resumeTo =
-    typeof stateFrom === 'string' && stateFrom.startsWith('/') && !stateFrom.startsWith('//')
-      ? stateFrom
-      : '/';
 
   // Seed form state from the loaded profile. No useEffect needed because
   // the parent only renders this once the profile is `ready`.
