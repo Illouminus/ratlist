@@ -10,7 +10,7 @@
  *   page just renders what comes back.
  */
 import { useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useEvent, type EventClaim } from '../../events/useEvent';
 import { useGroups } from '../../groups/useGroups';
@@ -29,6 +29,7 @@ import { Button } from '../../components/Button';
 
 export function EventDetailScreen() {
   const { eventId } = useParams<{ eventId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useI18n();
   const navigate = useNavigate();
   const toast = useToast();
@@ -66,6 +67,13 @@ export function EventDetailScreen() {
   }
 
   const { event, audience, items, isHonoree } = query.data;
+  const showShareCard = isHonoree && searchParams.get('share') === '1';
+
+  function dismissShareCard() {
+    const next = new URLSearchParams(searchParams);
+    next.delete('share');
+    setSearchParams(next, { replace: true });
+  }
 
   async function handleDelete() {
     const ok = await confirm({
@@ -98,6 +106,14 @@ export function EventDetailScreen() {
       >
         ← {t('events.backToList')}
       </Link>
+
+      {showShareCard && (
+        <ShareCard
+          shareToken={event.share_token}
+          onCopied={() => toast.show(t('events.share.copied'))}
+          onDismiss={dismissShareCard}
+        />
+      )}
 
       {isHonoree ? (
         <HonoreeHeader event={event} onSave={update} />
@@ -848,4 +864,109 @@ function formatDate(iso: string): string {
     month: 'short',
     year: 'numeric',
   });
+}
+
+// ─────────────────────────── share card ───────────────────────────
+
+function ShareCard({
+  shareToken,
+  onCopied,
+  onDismiss,
+}: {
+  shareToken: string;
+  onCopied: () => void;
+  onDismiss: () => void;
+}) {
+  const { t } = useI18n();
+  // window.location.origin in tests is "http://localhost"; in the browser
+  // it matches the deployed origin. Easier than reading SITE_URL from env
+  // here — the user only ever sees this card with whatever origin they
+  // typed into the address bar.
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ratlist.app';
+  const shareUrl = `${origin}/event/${shareToken}`;
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      onCopied();
+    } catch {
+      // Clipboard can fail in non-secure contexts or older browsers.
+      // The URL is visible on the card anyway — the user can copy by hand.
+    }
+  }
+
+  return (
+    <section
+      style={{
+        background: 'var(--paper-2, #fffdf6)',
+        border: '1px solid var(--hair)',
+        padding: 'var(--s-5)',
+        marginBottom: 'var(--s-5)',
+      }}
+    >
+      <p
+        className="marginalia"
+        style={{
+          fontSize: 22,
+          color: 'var(--accent)',
+          margin: 0,
+          marginBottom: 'var(--s-2)',
+          transform: 'rotate(-1.5deg)',
+          display: 'inline-block',
+        }}
+      >
+        {t('events.share.headline')}
+      </p>
+      <p style={{ color: 'var(--ink-2)', margin: '0 0 var(--s-3)', fontSize: 14, lineHeight: 1.4 }}>
+        {t('events.share.howToShare')}
+      </p>
+      <code
+        style={{
+          display: 'block',
+          padding: 'var(--s-2)',
+          background: 'var(--paper)',
+          border: '1px solid var(--hair)',
+          margin: '0 0 var(--s-3)',
+          fontSize: 13,
+          fontFamily: 'var(--font-mono, monospace)',
+          color: 'var(--ink)',
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {shareUrl}
+      </code>
+      <div style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={() => void handleCopy()}
+          style={{
+            background: 'var(--accent)',
+            color: 'var(--paper)',
+            border: 'none',
+            padding: '8px 16px',
+            fontFamily: 'var(--font-body)',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          {t('events.share.copy')}
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="mono-meta"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--ink-3)',
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          {t('events.share.dismiss')}
+        </button>
+      </div>
+    </section>
+  );
 }

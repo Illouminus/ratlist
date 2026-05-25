@@ -1,15 +1,19 @@
 /**
  * `CreateEventScreen` — `/events/new`. Full-screen form for creating a
- * new event. The honoree is always the current user; pick title, kind,
- * date, audience circles (from your existing groups), and items (from
- * your existing wishlist). On success, navigate straight to the event
- * detail.
+ * new event in the link-first model. Pick title, kind, date, optional
+ * note, and items from your existing wishlist. On success, navigate to
+ * `/events/:id?share=1` so the detail screen surfaces a one-time
+ * celebratory share card with the public link.
+ *
+ * Audience (circles) is intentionally absent: the link-first redesign
+ * drops the audience-first model entirely. Sharing happens by sending
+ * `share_token` to whoever you want to invite — no upfront circle
+ * selection.
  */
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useEvents } from '../../events/useEvents';
-import { useGroups } from '../../groups/useGroups';
 import { useMyItems, type MyItem } from '../../items/useMyItems';
 import { errorMessage } from '../../lib/errors';
 import { EVENT_KINDS, type EventKind } from '../../lib/db';
@@ -25,17 +29,14 @@ export function CreateEventScreen() {
   const navigate = useNavigate();
   const toast = useToast();
   const { createEvent } = useEvents();
-  const { query: groupsQ } = useGroups();
   const { query: itemsQ } = useMyItems();
 
-  const groups = groupsQ.status === 'ready' ? groupsQ.groups : [];
   const items = itemsQ.status === 'ready' ? itemsQ.items : [];
 
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<EventKind>('birthday');
   const [occursOn, setOccursOn] = useState('');
   const [note, setNote] = useState('');
-  const [circleIds, setCircleIds] = useState<Set<string>>(new Set());
   const [itemIds, setItemIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,16 +67,8 @@ export function CreateEventScreen() {
     }
 
     toast.show(t('events.createdToast'));
-    navigate(`/events/${result.event.id}`, { replace: true });
-  }
-
-  function toggleCircle(id: string) {
-    setCircleIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    // ?share=1 makes EventDetailScreen render the post-create share card.
+    navigate(`/events/${result.event.id}?share=1`, { replace: true });
   }
 
   function toggleItem(id: string) {
@@ -197,40 +190,6 @@ export function CreateEventScreen() {
           />
         </Field>
 
-        <fieldset
-          style={{
-            border: 'none',
-            margin: 0,
-            padding: 0,
-          }}
-        >
-          <legend
-            className="mono-meta"
-            style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-3)' }}
-          >
-            {t('events.field.audience')}
-          </legend>
-          {groups.length === 0 ? (
-            <p style={{ color: 'var(--ink-3)', fontStyle: 'italic', fontSize: 14 }}>
-              {t('events.field.audienceNoGroups')}
-            </p>
-          ) : (
-            <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-              {groups.map((g) => {
-                const active = circleIds.has(g.id);
-                return (
-                  <Chip
-                    key={g.id}
-                    active={active}
-                    onClick={() => toggleCircle(g.id)}
-                    label={`${g.emoji ? `${g.emoji} ` : ''}${g.name}`}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </fieldset>
-
         <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
           <legend
             className="mono-meta"
@@ -268,40 +227,6 @@ export function CreateEventScreen() {
         </div>
       </form>
     </PaperLayout>
-  );
-}
-
-// ─────────────────────────── chip ───────────────────────────
-
-function Chip({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      style={{
-        padding: '4px 12px',
-        borderRadius: 999,
-        border: '1px solid var(--hair-strong)',
-        background: active ? 'var(--accent-soft)' : 'transparent',
-        color: active ? 'var(--ink)' : 'var(--ink-2)',
-        cursor: 'pointer',
-        fontFamily: 'var(--font-body)',
-        fontSize: 13,
-        fontWeight: active ? 600 : 500,
-        boxShadow: active ? 'inset 0 0 0 1px var(--accent)' : 'none',
-      }}
-    >
-      {label}
-    </button>
   );
 }
 

@@ -328,6 +328,23 @@ export const en: Translation = {
     deleteConfirmTitle: 'delete event?',
     deleteConfirm: "the event \"{title}\" and its curation disappear. the items themselves stay in your list. can't be undone.",
     deletedToast: 'event deleted',
+    landing: {
+      forHonoree: 'for {name}',
+      participants: '{count} {countWord} joining',
+      participantOne: 'friend',
+      participantMany: 'friends',
+      signInToClaim: 'Sign in to claim a gift',
+      notFound: 'This event link is invalid or has expired.',
+      loading: 'loading event…',
+      joining: 'joining the event…',
+    },
+    share: {
+      headline: 'Ready!',
+      howToShare: "Send this link to whoever you'd like to invite. They'll see your wishlist and can sign in to claim a gift.",
+      copy: 'Copy link',
+      copied: 'link copied',
+      dismiss: 'Done',
+    },
   },
   santa: {
     eyebrow: 'secret santa',

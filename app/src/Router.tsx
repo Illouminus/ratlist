@@ -43,6 +43,7 @@ import { AuthCallbackScreen } from './screens/AuthCallbackScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
 import { PublicListScreen } from './screens/PublicListScreen';
+import { EventLandingScreen } from './screens/events/EventLandingScreen';
 import { LandingScreen } from './screens/LandingScreen';
 
 // Eager: the screens that live in Sidebar / BottomTabBar. Users flip
@@ -186,6 +187,7 @@ export function AppRoutes() {
       <Route path="/auth/callback" element={<AuthCallbackScreen />} />
       <Route path="/invite/:token" element={<InviteAcceptScreen />} />
       <Route path="/share/:token" element={<PublicListScreen />} />
+      <Route path="/event/:token" element={<EventLandingScreen />} />
       <Route path="/legal/privacy" element={<LegalScreen doc="privacy" />} />
       <Route path="/legal/terms" element={<LegalScreen doc="terms" />} />
 
