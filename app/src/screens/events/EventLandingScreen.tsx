@@ -17,21 +17,30 @@
  * critical path is "click email link → see something within 200 ms".
  */
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PaperLayout } from '../../components/PaperLayout';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { LangToggle } from '../../components/LangToggle';
 import { useI18n } from '../../i18n/useI18n';
-import { getEventView, type EventView, type EventViewItem } from '../../events/eventApi';
+import { useAuth } from '../../auth/useAuth';
+import {
+  getEventView,
+  joinEventViaToken,
+  type EventView,
+  type EventViewItem,
+} from '../../events/eventApi';
 
 type State =
   | { kind: 'loading' }
   | { kind: 'ready'; event: EventView }
+  | { kind: 'joining' }
   | { kind: 'not_found' }
   | { kind: 'error'; message: string };
 
 export function EventLandingScreen() {
   const { token } = useParams<{ token: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [state, setState] = useState<State>(() =>
     token ? { kind: 'loading' } : { kind: 'not_found' },
   );
@@ -58,11 +67,42 @@ export function EventLandingScreen() {
     };
   }, [token]);
 
+  // Auto-join + redirect: once the event is loaded AND there's an authed
+  // user, decide where to send them by my_status. The redirect is a
+  // history replace so the /event/:token page doesn't sit on the back
+  // stack. Anon stays on the landing — they get the sign-in CTA.
+  useEffect(() => {
+    if (state.kind !== 'ready' || !user || !token) return;
+    const ev = state.event;
+    if (ev.my_status === 'honoree' || ev.my_status === 'active') {
+      navigate(`/events/${ev.event_id}`, { replace: true });
+      return;
+    }
+    // guest or pending: claim a participant row, then redirect. If the
+    // RPC fails, surface a generic error — the landing UI stays so the
+    // visitor can retry.
+    setState({ kind: 'joining' });
+    let cancelled = false;
+    void joinEventViaToken(token).then(
+      (eventId) => {
+        if (!cancelled) navigate(`/events/${eventId}`, { replace: true });
+      },
+      (err: unknown) => {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err);
+        setState({ kind: 'error', message });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [state, user, token, navigate]);
+
   return (
     <PaperLayout>
       <TopRow />
 
-      {state.kind === 'loading' && (
+      {(state.kind === 'loading' || state.kind === 'joining') && (
         <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
           …
         </div>
@@ -74,7 +114,7 @@ export function EventLandingScreen() {
         <p style={{ color: 'var(--accent-deep)' }}>{state.message}</p>
       )}
 
-      {state.kind === 'ready' && <Body event={state.event} token={token!} />}
+      {state.kind === 'ready' && !user && <Body event={state.event} token={token!} />}
     </PaperLayout>
   );
 }
