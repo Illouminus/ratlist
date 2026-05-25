@@ -128,7 +128,8 @@ export function useEventParticipants(eventId: string | null): {
   }, [eventId, authStatus, refresh]);
 
   const query = useMemo<EventParticipantsQuery>(() => {
-    if (!eventId || fetched.kind === 'idle' || (fetched.kind !== 'idle' && fetched.eventId !== eventId)) {
+    if (!eventId) return { status: 'loading', participants: null, error: null };
+    if (fetched.kind === 'idle' || fetched.eventId !== eventId) {
       return { status: 'loading', participants: null, error: null };
     }
     if (fetched.kind === 'loaded') {

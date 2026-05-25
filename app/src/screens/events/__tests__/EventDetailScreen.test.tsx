@@ -124,10 +124,13 @@ describe('EventDetailScreen — post-create share card (?share=1)', () => {
 
     // The transient celebration headline only appears with ?share=1
     screen.getByText(/ready|готово/i);
-    // The full link is rendered with token (also visible in the always-on
-    // coordinator panel — see other describe)
-    expect(screen.getByText(/abc123def456/)).toBeTruthy();
-    screen.getByRole('button', { name: /copy|скопировать/i });
+    // The full link is rendered with token in TWO places under ?share=1:
+    // the celebration card AND the always-on coordinator panel. Both must
+    // carry the same URL.
+    expect(screen.getAllByText(/abc123def456/).length).toBeGreaterThanOrEqual(1);
+    // Copy button — at least one exists (celebration + coordinator panel
+    // each have their own)
+    expect(screen.getAllByRole('button', { name: /copy|скопировать/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('does NOT render celebration headline without ?share=1', () => {

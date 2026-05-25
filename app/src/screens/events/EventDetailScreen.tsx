@@ -13,6 +13,10 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useEvent, type EventClaim } from '../../events/useEvent';
+import {
+  useEventParticipants,
+  type EventParticipant,
+} from '../../events/useEventParticipants';
 import { useGroups } from '../../groups/useGroups';
 import { useMyItems, type MyItem } from '../../items/useMyItems';
 import { useAuth } from '../../auth/useAuth';
@@ -26,6 +30,7 @@ import { ListSkeleton } from '../../components/Skeleton';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
+import { InviteFromPeopleModal } from './InviteFromPeopleModal';
 
 export function EventDetailScreen() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -112,6 +117,14 @@ export function EventDetailScreen() {
           shareToken={event.share_token}
           onCopied={() => toast.show(t('events.share.copied'))}
           onDismiss={dismissShareCard}
+        />
+      )}
+
+      {isHonoree && eventId && (
+        <CoordinatorPanel
+          eventId={eventId}
+          shareToken={event.share_token}
+          showToast={(msg) => toast.show(msg)}
         />
       )}
 
@@ -969,4 +982,174 @@ function ShareCard({
       </div>
     </section>
   );
+}
+
+// ─────────────────────────── coordinator panel ───────────────────────────
+
+/**
+ * Always-on share + invite + participants section for the honoree.
+ * Distinct from the post-create `<ShareCard>`: that one is a transient
+ * celebration on `?share=1`; this one is the daily-driver coordinator
+ * controls. Honoree-only — non-honoree code paths never reach here.
+ */
+function CoordinatorPanel({
+  eventId,
+  shareToken,
+  showToast,
+}: {
+  eventId: string;
+  shareToken: string;
+  showToast: (msg: string) => void;
+}) {
+  const { t } = useI18n();
+  const { query: participantsQ } = useEventParticipants(eventId);
+  const [inviteOpen, setInviteOpen] = useState(false);
+
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin : 'https://ratlist.app';
+  const shareUrl = `${origin}/event/${shareToken}`;
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      showToast(t('events.share.copied'));
+    } catch {
+      /* clipboard can fail in non-secure contexts — URL is visible anyway */
+    }
+  }
+
+  return (
+    <section
+      style={{
+        border: '1px solid var(--hair)',
+        padding: 'var(--s-4)',
+        marginBottom: 'var(--s-5)',
+        background: 'var(--paper)',
+      }}
+    >
+      <h3
+        className="mono-meta"
+        style={{ margin: '0 0 var(--s-3)', color: 'var(--ink-3)' }}
+      >
+        {t('events.share.coordinatorTitle')}
+      </h3>
+      <code
+        style={{
+          display: 'block',
+          padding: 'var(--s-2)',
+          background: 'var(--paper-2, #fffdf6)',
+          border: '1px solid var(--hair)',
+          margin: '0 0 var(--s-3)',
+          fontSize: 13,
+          fontFamily: 'var(--font-mono, monospace)',
+          color: 'var(--ink)',
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {shareUrl}
+      </code>
+      <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => void handleCopy()}
+          style={{
+            background: 'transparent',
+            color: 'var(--accent)',
+            border: '1px solid var(--accent)',
+            padding: '8px 16px',
+            fontFamily: 'var(--font-body)',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          {t('events.share.copy')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setInviteOpen(true)}
+          style={{
+            background: 'var(--accent)',
+            color: 'var(--paper)',
+            border: 'none',
+            padding: '8px 16px',
+            fontFamily: 'var(--font-body)',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          {t('events.invite.openButton')}
+        </button>
+      </div>
+
+      {participantsQ.status === 'ready' && participantsQ.participants.length > 0 && (
+        <ParticipantList participants={participantsQ.participants} />
+      )}
+
+      <InviteFromPeopleModal
+        eventId={eventId}
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        showToast={showToast}
+      />
+    </section>
+  );
+}
+
+function ParticipantList({ participants }: { participants: EventParticipant[] }) {
+  const { t } = useI18n();
+  return (
+    <details style={{ marginTop: 'var(--s-4)' }}>
+      <summary
+        className="mono-meta"
+        style={{ color: 'var(--ink-3)', cursor: 'pointer' }}
+      >
+        {t('events.participants.title')} · {participants.length}
+      </summary>
+      <ul
+        style={{
+          listStyle: 'none',
+          padding: 0,
+          margin: 'var(--s-3) 0 0',
+        }}
+      >
+        {participants.map((p) => (
+          <li
+            key={p.user_id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 'var(--s-3)',
+              padding: 'var(--s-2) 0',
+              borderBottom: '1px solid var(--hair)',
+            }}
+          >
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: 14 }}>
+              {p.display_name}
+            </span>
+            <span
+              className="mono-meta"
+              style={{
+                fontSize: 12,
+                color:
+                  p.status === 'active'
+                    ? 'var(--accent)'
+                    : p.status === 'pending'
+                      ? 'var(--ink-3)'
+                      : 'var(--accent-deep)',
+              }}
+            >
+              {t(`events.participants.status${capitalize(p.status)}` as never)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
