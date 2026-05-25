@@ -371,6 +371,60 @@ stop` the other instance** without authorisation — the user said
 this, react-router 7 pulled its own copy of React via Vite's
 pre-bundler and broke hooks. **Don't remove the `dedupe` config.**
 
+### `index.html` is the prerendered landing — NOT a generic SPA shell
+
+This is non-obvious and has bitten production twice (Phase 1C and the
+2026-05-25 SW debacle). Re-read before touching anything in the build
+pipeline.
+
+The build runs THREE collaborating plugins on `index.html`:
+
+1. **`vite-prerender-plugin`** (`vite.config.ts`) — calls
+   `src/prerender.tsx` once per route in `PRERENDER_ROUTES` (`/`,
+   `/legal/privacy`, `/legal/terms`). For each route it
+   `renderToString`s the React tree and **writes the result into the
+   matching HTML file**. So after build:
+   - `dist/index.html` = prerendered LandingScreen markup (~24 KB).
+   - `dist/legal/privacy/index.html` = prerendered Privacy.
+   - `dist/legal/terms/index.html` = prerendered Terms.
+   - **None of these are an "empty SPA shell" anymore.**
+
+2. **`writeSpaFallback`** (custom plugin in `vite.config.ts`) — runs
+   BEFORE prerender mutates `index.html`. Snapshots the untouched
+   template to `dist/_spa.html`. **This** is the empty-root SPA
+   shell; every non-prerendered route relies on it.
+
+3. **`VitePWA` workbox** — generates the Service Worker. Workbox's
+   default `navigateFallback` is `index.html` — but for us that's
+   the prerendered landing, NOT a shell. We override:
+   `navigateFallback: '/_spa.html'`. **Never remove this override.**
+
+4. **Vercel rewrites** (`vercel.json`) — same idea at the CDN layer:
+   `/((?!assets/|legal/|share/|api/).*) → /_spa`. Anything not on
+   disk falls back to `_spa.html`, not `index.html`.
+
+**Why this is a footgun:** if you ever serve `index.html` to a
+client whose route isn't `/`, React tries to hydrate the EventsScreen
+(or whatever) tree against landing markup. Hydration mismatches in
+React 19 production can leave the wrong HTML in the DOM and render
+the correct tree alongside / underneath it — confirmed prod bug
+2026-05-25 where users saw LandingScreen at the top of `/events`
+with the real page scrollable below it.
+
+**Defense in `main.tsx`:** hydrate only when `location.pathname` is
+in a hard-coded `PRERENDERED_PATHS` whitelist. Anything else does
+`replaceChildren()` + `createRoot`, so even a misconfigured SW / CDN /
+proxy can't break the client. This is intentional belt-and-braces;
+**do not "simplify" back to `hasChildNodes()`-based detection**.
+
+If you add a new prerendered route, you need to:
+- Add it to `PRERENDER_ROUTES` in `src/prerender.tsx`.
+- Add it to `PRERENDERED_PATHS` in `src/main.tsx`.
+- Optionally exempt it from the SW navigation handler in
+  `vite.config.ts → workbox.navigateFallbackDenylist` if the route
+  has its own prerendered HTML on disk (legal pages do this; the
+  SW would otherwise replace them with the SPA shell on refresh).
+
 ### Amazon prices
 
 `fetch-url-meta` extracts title + photo from Amazon via productTitle
