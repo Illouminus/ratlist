@@ -1,25 +1,32 @@
 /**
- * `usePeople` — directory of users I share at least one group with.
+ * `usePeople` — the auto-populated friends list, derived from real event
+ * interactions (link-first model). Backed by `get_my_people()`: returns
+ * users you've shared at least one event with (as honoree or active
+ * participant). No group-share path anymore.
  *
- * Backed by the `get_people()` RPC, which already excludes the caller
- * and attaches the shared-group count.
+ * Shape mirrors the RPC: user_id renamed to `id` for compat with the
+ * legacy Link-to-friend-list `/p/:userId` consumer. Old fields
+ * (preview_titles, item_count, shared_group_count) are gone — the
+ * coordinator's view of someone happens through `/p/:userId` and
+ * `FriendListScreen`, not through previews on the directory row.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
 
 export interface Person {
+  /** auth.users.id — same value as user_id from the RPC, renamed for
+   *  compat with existing consumers that build /p/:userId links. */
   id: string;
   display_name: string;
   handle: string | null;
   avatar_url: string | null;
-  shared_group_count: number;
-  /** Total items by this user visible to the caller (excluding archived). */
-  item_count: number;
-  /** Timestamp of the most-recently-added visible item, or null if none. */
-  latest_at: string | null;
-  /** Up to 3 most-recent visible item titles, freshest first. */
-  preview_titles: string[];
+  /** True when the person has a /share/<token> wishlist available. */
+  has_public_list: boolean;
+  /** ISO timestamp of last shared-event interaction; null only if the
+   *  RPC returns nothing (won't happen in practice — at least one event
+   *  is required to populate). */
+  last_interaction_at: string | null;
 }
 
 export type PeopleQuery =
@@ -39,33 +46,25 @@ type FetchState =
   | { kind: 'failed'; userId: string; error: string };
 
 async function loadPeople(userId: string): Promise<FetchState> {
-  const { data, error } = await supabase.rpc('get_people');
+  const { data, error } = await supabase.rpc('get_my_people');
   if (error) return { kind: 'failed', userId, error: error.message };
 
-  // RPC return columns are typed as non-null at the SQL level, but the
-  // join columns (handle, avatar_url) and the new aggregate fields
-  // (latest_at, preview_titles) can be null/empty in practice. Cast
-  // through a shape that mirrors reality.
   type Row = {
-    id: string;
+    user_id: string;
     display_name: string;
     handle: string | null;
     avatar_url: string | null;
-    shared_group_count: number;
-    item_count: number | null;
-    latest_at: string | null;
-    preview_titles: string[] | null;
+    has_public_list: boolean;
+    last_interaction_at: string | null;
   };
 
   const people: Person[] = ((data ?? []) as Row[]).map((r) => ({
-    id: r.id,
+    id: r.user_id,
     display_name: r.display_name,
     handle: r.handle,
     avatar_url: r.avatar_url,
-    shared_group_count: r.shared_group_count,
-    item_count: r.item_count ?? 0,
-    latest_at: r.latest_at,
-    preview_titles: r.preview_titles ?? [],
+    has_public_list: r.has_public_list,
+    last_interaction_at: r.last_interaction_at,
   }));
 
   return { kind: 'loaded', userId, people };
