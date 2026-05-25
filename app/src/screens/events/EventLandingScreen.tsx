@@ -33,7 +33,6 @@ import {
 type State =
   | { kind: 'loading' }
   | { kind: 'ready'; event: EventView }
-  | { kind: 'joining' }
   | { kind: 'not_found' }
   | { kind: 'error'; message: string };
 
@@ -70,7 +69,9 @@ export function EventLandingScreen() {
   // Auto-join + redirect: once the event is loaded AND there's an authed
   // user, decide where to send them by my_status. The redirect is a
   // history replace so the /event/:token page doesn't sit on the back
-  // stack. Anon stays on the landing — they get the sign-in CTA.
+  // stack. Anon stays on the landing — they get the sign-in CTA. Authed
+  // viewers see a brief blank under <TopRow /> while the RPC resolves —
+  // the redirect typically lands within one render frame.
   useEffect(() => {
     if (state.kind !== 'ready' || !user || !token) return;
     const ev = state.event;
@@ -80,8 +81,8 @@ export function EventLandingScreen() {
     }
     // guest or pending: claim a participant row, then redirect. If the
     // RPC fails, surface a generic error — the landing UI stays so the
-    // visitor can retry.
-    setState({ kind: 'joining' });
+    // visitor can retry. setState only inside .then(...) per the
+    // react-hooks/set-state-in-effect convention.
     let cancelled = false;
     void joinEventViaToken(token).then(
       (eventId) => {
@@ -102,7 +103,7 @@ export function EventLandingScreen() {
     <PaperLayout>
       <TopRow />
 
-      {(state.kind === 'loading' || state.kind === 'joining') && (
+      {state.kind === 'loading' && (
         <div className="mono-meta" style={{ color: 'var(--ink-3)' }}>
           …
         </div>
