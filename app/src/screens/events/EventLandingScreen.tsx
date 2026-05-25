@@ -123,15 +123,45 @@ export function EventLandingScreen() {
 // ─────────────────────────── parts ───────────────────────────
 
 function TopRow() {
+  const { t } = useI18n();
   return (
     <div
       style={{
         display: 'flex',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        gap: 'var(--s-3)',
         marginBottom: 'var(--s-5)',
+        flexWrap: 'wrap',
       }}
     >
+      <Link
+        to="/"
+        style={{
+          textDecoration: 'none',
+          color: 'inherit',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 'var(--s-2)',
+        }}
+      >
+        <span
+          className="display-italic"
+          style={{
+            fontSize: 'var(--display-xs)',
+            lineHeight: 1.05,
+            letterSpacing: -0.4,
+          }}
+        >
+          {t('app.name')}
+        </span>
+        <span
+          className="marginalia"
+          style={{ fontSize: 14, color: 'var(--accent)', transform: 'rotate(-3deg)' }}
+        >
+          — '26
+        </span>
+      </Link>
       <LangToggle />
     </div>
   );
