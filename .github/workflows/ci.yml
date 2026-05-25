@@ -12,6 +12,17 @@ jobs:
     defaults:
       run:
         working-directory: app
+    # Stub Supabase env vars so the prerender bundle (which transitively
+    # imports app/src/lib/supabase.ts via the eagerly-loaded
+    # EventLandingScreen + PeopleScreen + EventsScreen route paths)
+    # doesn't throw at module-load time. The values aren't real
+    # credentials — they exist only to satisfy the non-empty check in
+    # supabase.ts. createClient() is lazy and doesn't make network calls
+    # at construction, so a fake URL is fine for the static SSR pass.
+    # Real values come from Vercel env at deploy time.
+    env:
+      VITE_SUPABASE_URL: https://stub.local
+      VITE_SUPABASE_ANON_KEY: stub
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,6 +37,12 @@ jobs:
 
   frontend-tests:
     runs-on: ubuntu-latest
+    # Frontend tests don't need real env vars either, but stubs prevent
+    # any latent test that doesn't mock lib/supabase from failing at
+    # import time (the failure mode that took down PR #12 first run).
+    env:
+      VITE_SUPABASE_URL: https://stub.local
+      VITE_SUPABASE_ANON_KEY: stub
     defaults:
       run:
         working-directory: app
