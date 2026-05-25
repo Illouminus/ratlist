@@ -120,14 +120,31 @@ export default defineConfig({
       // routes after first visit.
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff,woff2,webmanifest}'],
-        // Routes that must NOT be served the cached `index.html`:
+        // The SPA navigation fallback. Workbox defaults to `index.html`
+        // — but our `index.html` is the *prerendered LandingScreen*, so
+        // serving it for client-side SPA routes (`/events`, `/people`,
+        // …) on a hard refresh paints the landing into the DOM for
+        // however long it takes React to mount and replace it. On
+        // mobile that flash is permanent in some browser/SW caching
+        // states (confirmed 2026-05-25 — friend on phone refreshed
+        // `/events`, saw landing with sign-in even though they were
+        // authed and the bottom nav stayed visible).
+        //
+        // `_spa.html` is the same template *without* the prerendered
+        // content — empty `<div id="root">`. React's createRoot mounts
+        // into the empty slot and renders the correct route from
+        // scratch. No hydration mismatch, no landing flash.
+        //
+        // The forceExitAfterBuild + writeSpaFallback plugins guarantee
+        // `_spa.html` is written; the precache list above includes it.
+        navigateFallback: '/_spa.html',
+        // Routes that must NOT be served the cached SPA fallback:
         //   /og.png and /functions/* are external rewrites (Supabase
         //   Edge Functions) — the SW would otherwise hijack them.
         //   /legal/* are separately prerendered HTML files with their
-        //   own per-route metadata; falling back to /index.html
-        //   would replace them with the landing page in the browser
-        //   (visible bug — navigation appears to succeed but the
-        //   wrong HTML renders until the SPA router re-routes).
+        //   own per-route metadata; falling back to the SPA template
+        //   would replace them with the empty bootstrap shell while
+        //   React loads.
         navigateFallbackDenylist: [
           /^\/og\.png$/,
           /^\/functions\//,
