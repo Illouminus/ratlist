@@ -147,6 +147,7 @@ function AuthedShell() {
  */
 function AuthedShellContent() {
   const { query } = useProfile();
+  const location = useLocation();
 
   switch (query.status) {
     case 'loading':
@@ -163,7 +164,22 @@ function AuthedShellContent() {
       );
     case 'ready':
       if (!query.profile.onboarded_at) {
-        return <Navigate to="/onboarding" replace />;
+        // Stash the original destination so OnboardingScreen can route
+        // the user back there after they finish onboarding. Without
+        // this, a new Google signup that came in via /event/<token>
+        // → autojoin → /events/<id> → here would land on / after
+        // onboarding instead of the event they were trying to see.
+        // Skip the path if it's `/onboarding` itself or `/` (no point
+        // returning to home explicitly — that's already the default).
+        const from = location.pathname + location.search;
+        const shouldStash = from !== '/' && !from.startsWith('/onboarding');
+        return (
+          <Navigate
+            to="/onboarding"
+            replace
+            state={shouldStash ? { from } : undefined}
+          />
+        );
       }
       return (
         <AppLayout>

@@ -10,7 +10,7 @@
  * known data on mount instead of via `useEffect`.
  */
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { useProfile } from '../auth/useProfile';
 import { supabase } from '../lib/supabase';
@@ -66,7 +66,20 @@ interface SubmitError {
 
 function OnboardingForm({ profile, onComplete }: OnboardingFormProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useI18n();
+
+  // If AuthedShellContent kicked the user here from a deep-link
+  // destination (e.g. /events/<id> after auto-join from an event share
+  // link), it stashed the original path in location.state.from. After
+  // onboarding completes, resume that journey instead of dumping the
+  // user on home. Same-origin guard at the read site so a hand-crafted
+  // state object can't redirect off-domain.
+  const stateFrom = (location.state as { from?: unknown } | null)?.from;
+  const resumeTo =
+    typeof stateFrom === 'string' && stateFrom.startsWith('/') && !stateFrom.startsWith('//')
+      ? stateFrom
+      : '/';
 
   // Seed form state from the loaded profile. No useEffect needed because
   // the parent only renders this once the profile is `ready`.
@@ -110,7 +123,7 @@ function OnboardingForm({ profile, onComplete }: OnboardingFormProps) {
 
     await onComplete();
     setSubmitting(false);
-    navigate('/', { replace: true });
+    navigate(resumeTo, { replace: true });
   }
 
   const handleError =
