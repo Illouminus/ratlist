@@ -341,6 +341,7 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Moderation: NSFW URL blocklist in fetch-url-meta**     | ✅ Phase 1C done — `supabase/functions/fetch-url-meta/blocklist.ts` |
 | **Moderation: soft-disable via `profiles.disabled_at`**  | ✅ Phase 1C done — `get_public_list` refuses disabled owners |
 | **Events as first-class entity** (M2 redesign)           | ✅ done — `events` / `event_circles` / `event_items` tables, honoree-managed curation, audience via circles, primary nav surfaces it as a tab |
+| **Events link-first redesign** (M3 — replaces M2 audience model) | ✅ shipped 2026-05-25 — PRs #9–#12 (data + email + public UI + coordinator UI), #13–#18 (polish + auth round-trip fixes). `event_participants` table + `events.share_token` + 5 RPCs, public `/event/<token>` landing, auto-join after sign-in, coordinator panel with InviteFromPeopleModal, sectioned EventsScreen, magic-link + Google OAuth both confirmed working end-to-end on prod. See `~/.claude/projects/.../memory/project_events_link_first.md` for the full narrative. |
 | **Realtime debounce** (`useEvents` postgres_changes burst → 1 RPC) | ✅ Bucket 3 done — `app/src/lib/debounce.ts` (300 ms trailing) wired into the realtime effect |
 | **Skip-link to `#main` (a11y)**                          | ✅ Bucket 3 done — `<SkipLink>` mounted in `App.tsx`, `id="main" tabIndex={-1}` on `<main>` in `AppLayout` + conditional in `PaperLayout` |
 | Moderation: rate limits (per-user sliding window)        | ⬜ ~1 h — design sketch in [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
