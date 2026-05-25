@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   getEventView: vi.fn(),
   joinEventViaToken: vi.fn(),
   useAuth: vi.fn(),
+  navigate: vi.fn(),
 }));
 
 vi.mock('../../../events/eventApi', () => ({
@@ -22,6 +23,11 @@ vi.mock('../../../auth/useAuth', () => ({
   useAuth: mocks.useAuth,
 }));
 
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return { ...actual, useNavigate: () => mocks.navigate };
+});
+
 vi.mock('../../../lib/plausible', () => ({ track: vi.fn() }));
 
 import { I18nProvider } from '../../../i18n';
@@ -31,6 +37,17 @@ function stubAnon(): void {
   mocks.useAuth.mockReturnValue({
     status: 'anonymous',
     user: null,
+    session: null,
+    signInWithMagicLink: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signOut: vi.fn(),
+  });
+}
+
+function stubAuthed(userId: string): void {
+  mocks.useAuth.mockReturnValue({
+    status: 'authenticated',
+    user: { id: userId } as { id: string },
     session: null,
     signInWithMagicLink: vi.fn(),
     signInWithGoogle: vi.fn(),
@@ -54,6 +71,7 @@ beforeEach(() => {
   mocks.getEventView.mockReset();
   mocks.joinEventViaToken.mockReset();
   mocks.useAuth.mockReset();
+  mocks.navigate.mockReset();
   // Default i18n lang is EN (loadInitialLang reads localStorage; jsdom is empty).
   localStorage.clear();
 });
@@ -107,5 +125,109 @@ describe('EventLandingScreen — anon view', () => {
 
     await waitFor(() => screen.getByText(/not found|link is invalid/i));
     expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
+  });
+});
+
+describe('EventLandingScreen — authed auto-join', () => {
+  it('honoree: redirects to /events/:id with ?share=1 without calling join_event_via_token', async () => {
+    stubAuthed('u-honoree');
+    mocks.getEventView.mockResolvedValueOnce({
+      event_id: 'e1',
+      title: 'X',
+      kind: 'birthday',
+      occurs_on: null,
+      note: null,
+      honoree_id: 'u-honoree',
+      honoree_name: 'Honoree',
+      honoree_avatar_url: null,
+      my_status: 'honoree',
+      participant_count: 0,
+      items: [],
+    });
+
+    renderAt();
+
+    await waitFor(() => {
+      expect(mocks.navigate).toHaveBeenCalledWith('/events/e1', { replace: true });
+    });
+    expect(mocks.joinEventViaToken).not.toHaveBeenCalled();
+  });
+
+  it('active participant: redirects without re-joining', async () => {
+    stubAuthed('u-bob');
+    mocks.getEventView.mockResolvedValueOnce({
+      event_id: 'e1',
+      title: 'Y',
+      kind: 'birthday',
+      occurs_on: null,
+      note: null,
+      honoree_id: 'u-honoree',
+      honoree_name: 'Honoree',
+      honoree_avatar_url: null,
+      my_status: 'active',
+      participant_count: 1,
+      items: [],
+    });
+
+    renderAt();
+
+    await waitFor(() => {
+      expect(mocks.navigate).toHaveBeenCalledWith('/events/e1', { replace: true });
+    });
+    expect(mocks.joinEventViaToken).not.toHaveBeenCalled();
+  });
+
+  it('guest: calls join_event_via_token then redirects', async () => {
+    stubAuthed('u-bob');
+    mocks.getEventView.mockResolvedValueOnce({
+      event_id: 'e1',
+      title: 'Z',
+      kind: 'birthday',
+      occurs_on: null,
+      note: null,
+      honoree_id: 'u-honoree',
+      honoree_name: 'Honoree',
+      honoree_avatar_url: null,
+      my_status: 'guest',
+      participant_count: 0,
+      items: [],
+    });
+    mocks.joinEventViaToken.mockResolvedValueOnce('e1');
+
+    renderAt();
+
+    await waitFor(() => {
+      expect(mocks.joinEventViaToken).toHaveBeenCalledWith('abc123def456');
+    });
+    await waitFor(() => {
+      expect(mocks.navigate).toHaveBeenCalledWith('/events/e1', { replace: true });
+    });
+  });
+
+  it('pending: calls join_event_via_token then redirects', async () => {
+    stubAuthed('u-bob');
+    mocks.getEventView.mockResolvedValueOnce({
+      event_id: 'e1',
+      title: 'P',
+      kind: 'birthday',
+      occurs_on: null,
+      note: null,
+      honoree_id: 'u-honoree',
+      honoree_name: 'Honoree',
+      honoree_avatar_url: null,
+      my_status: 'pending',
+      participant_count: 0,
+      items: [],
+    });
+    mocks.joinEventViaToken.mockResolvedValueOnce('e1');
+
+    renderAt();
+
+    await waitFor(() => {
+      expect(mocks.joinEventViaToken).toHaveBeenCalledWith('abc123def456');
+    });
+    await waitFor(() => {
+      expect(mocks.navigate).toHaveBeenCalledWith('/events/e1', { replace: true });
+    });
   });
 });
