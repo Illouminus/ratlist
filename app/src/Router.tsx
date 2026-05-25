@@ -32,11 +32,12 @@
  * `BrowserRouter` for `entry-client.tsx`, `StaticRouter` for
  * `prerender.tsx`.
  */
-import { lazy, Suspense, type ComponentType } from 'react';
-import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useRef, type ComponentType } from 'react';
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth/useAuth';
 import { useProfile } from './auth/useProfile';
 import { RequireAuth } from './auth/RequireAuth';
+import { consumeNextPath } from './auth/nextPathStorage';
 import { AppLayout } from './components/AppLayout';
 import { LoginScreen } from './screens/LoginScreen';
 import { AuthCallbackScreen } from './screens/AuthCallbackScreen';
@@ -175,13 +176,58 @@ function AuthedShellContent() {
 }
 
 /**
+ * Post-auth deep-link redirect. Lives inside the router so it can call
+ * `useNavigate`. Watches for the `loading → authenticated` transition
+ * and, if a deep-link target is stashed in sessionStorage by
+ * `rememberNextPath` (sign-in CTA from /event/<token>, etc.), navigates
+ * the user there — regardless of where they actually landed.
+ *
+ * Why this exists separately from `AuthCallbackScreen`'s built-in
+ * redirect: Supabase's OAuth flow sometimes lands the user on `/` (the
+ * Site URL fallback) instead of the `redirectTo` URL — confirmed in
+ * prod 2026-05-25 with the Maria smoke. If AuthCallbackScreen is never
+ * mounted, the deep-link target is stranded. This component runs
+ * everywhere, so it catches both the /auth/callback path AND the Site
+ * URL fallback path.
+ *
+ * Single-fire per session: a ref guards against the race where the
+ * effect re-runs (status object identity changes, location changes
+ * after navigate) and tries to re-consume the storage. consumeNextPath
+ * clears the storage anyway, so the worst case is a no-op; the ref is
+ * insurance against navigating twice in pathological cases.
+ */
+export function PostAuthRedirect() {
+  const { status } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const handled = useRef(false);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || handled.current) return;
+    const next = consumeNextPath();
+    if (!next) return;
+    handled.current = true;
+    // Skip the navigate if we're already on the target path (e.g.
+    // AuthCallbackScreen already redirected us there). Same-pathname
+    // comparison is enough — fragment/query parts of `next` should be
+    // preserved by the navigate call.
+    if (next === location.pathname) return;
+    navigate(next, { replace: true });
+  }, [status, location.pathname, navigate]);
+
+  return null;
+}
+
+/**
  * Routes definition. Wrap in a Router from the entry point — this
  * component is router-agnostic so it works in both `<BrowserRouter>`
  * (client) and `<StaticRouter>` (prerender).
  */
 export function AppRoutes() {
   return (
-    <Routes>
+    <>
+      <PostAuthRedirect />
+      <Routes>
       {/* Public — no auth required */}
       <Route path="/login" element={<LoginScreen />} />
       <Route path="/auth/callback" element={<AuthCallbackScreen />} />
@@ -223,5 +269,6 @@ export function AppRoutes() {
       {/* Unknown path → home (and let AuthedShell decide where they go). */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }
