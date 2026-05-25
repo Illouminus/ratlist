@@ -135,6 +135,58 @@ tables, re-verify after.**
 The draw runs in a `SECURITY DEFINER` Postgres function
 (`run_santa_draw`); clients never INSERT into `santa_assignments`.
 
+### Testing & deploy discipline (lessons from 2026-05-25 smoke)
+
+The link-first redesign passed CI green on every PR yet shipped four
+visible bugs to prod. Each one teaches a rule worth following:
+
+1. **Migrations and code ship together — atomically.** Vercel
+   auto-deploys the frontend on merge to `main`; the
+   `Deploy migrations to prod` workflow
+   ([docs/DEPLOY_MIGRATIONS_SETUP.md](docs/DEPLOY_MIGRATIONS_SETUP.md))
+   does the same for schema. Don't merge a PR that contains both
+   migrations + frontend code unless the migrations workflow secrets
+   are in place, otherwise prod serves code expecting columns that
+   don't exist yet (the `share_token = undefined` bug).
+
+2. **Auto-generated types lie when prod schema diverges.**
+   `app/src/types/database.ts` reflects the LOCAL schema. If a PR
+   merges with the matching migration but the migration hasn't reached
+   prod, prod data won't have the columns the types promise. Defensive
+   UI for newly-added nullable-but-typed-non-null fields:
+   render a loader or hide the block when the value is falsy. Don't
+   trust `${event.share_token}` to be defined just because TS says so.
+
+3. **Cross-component flows need integration tests OR an explicit
+   manual smoke checklist in the PR description.** Unit tests pass
+   each component in isolation. The `?next=` round-trip
+   (EventLandingScreen → LoginScreen → AuthProvider → AuthCallbackScreen
+   → back to landing) had a passing test on every component and was
+   still completely broken — because each test mocked the consumer
+   away. Either:
+   - Mount the full chain in one vitest test that exercises every hop,
+   - Or list manual steps in the PR ("open `/event/<token>` in
+     incognito → sign in → expect redirect to `/event/<token>` →
+     expect row in `event_participants`") and walk through them.
+
+4. **Assertions exact, not "at least one".** Use `toHaveLength(N)`,
+   not `toBeGreaterThanOrEqual(N)`. Use `toBeNull()` not
+   `toBeFalsy()`. The post-create share card duplicated the share URL
+   for weeks because the test asserted "URL appears ≥ 1 time" — it
+   was 2, the test passed. A `toHaveLength(1)` would have caught it
+   the moment CoordinatorPanel landed.
+
+5. **Smoke before claiming "shipped".** Tests passing ≠ feature
+   working. After CI is green AND the deploy lands, open the actual
+   user flow in incognito and walk through it ONCE. If you can't do
+   it, say so in the PR description so the human knows to smoke
+   themselves. "All green, ready to merge" is not a substitute for
+   "I clicked the button and it worked."
+
+These aren't aspirational — they're the price of the four prod bugs
+fixed in PR #13. Re-read this section before claiming completion on
+anything that touches schema, auth, or multi-component flows.
+
 ## File map
 
 ```
@@ -265,6 +317,7 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | Responsive sidebar/bottom-tab layout                     | ✅      |
 | Code-split routes via React.lazy                         | ✅      |
 | **Deploy on `ratlist.app`** (Vercel + prod Supabase)     | ✅ Phase 1A done (2026-05-17) |
+| **Auto-push migrations on merge to main**                | ✅ 2026-05-25 — see [docs/DEPLOY_MIGRATIONS_SETUP.md](docs/DEPLOY_MIGRATIONS_SETUP.md). Requires `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD` secrets. |
 | **Email transactional** (Resend + branded magic-link)    | ✅ Phase 1A done |
 | **Legal: Privacy / Terms / 13+ gate**                    | ✅ Phase 1A done — `/legal/*` routes |
 | **Account self-management** (`/settings`, delete, export)| ✅ Phase 1A done |
