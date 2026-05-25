@@ -122,3 +122,13 @@ describe('OnboardingScreen — resume deep-link after submit', () => {
     });
   });
 });
+
+// Note: the parent's "already-onboarded → Navigate to resumeTo" path
+// shares the exact same resumeTo computation as the form's submit
+// path (computed once at the top of OnboardingScreen and passed via
+// prop). The form-submit tests above cover the resumeTo logic; we
+// don't add separate tests for the declarative <Navigate> path
+// because <Navigate> uses react-router's internal useNavigate
+// dispatch (not our mocked export), so we'd have to assert on
+// rendered routes instead — extra ceremony for a code path that's
+// guaranteed-correct by construction (same variable, same guard).
