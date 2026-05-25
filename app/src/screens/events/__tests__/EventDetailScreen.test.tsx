@@ -139,13 +139,13 @@ describe('EventDetailScreen — post-create share card (?share=1)', () => {
 
     // The transient celebration headline only appears with ?share=1
     screen.getByText(/ready|готово/i);
-    // The full link is rendered with token in TWO places under ?share=1:
-    // the celebration card AND the always-on coordinator panel. Both must
-    // carry the same URL.
-    expect(screen.getAllByText(/abc123def456/).length).toBeGreaterThanOrEqual(1);
-    // Copy button — at least one exists (celebration + coordinator panel
-    // each have their own)
-    expect(screen.getAllByRole('button', { name: /copy|скопировать/i }).length).toBeGreaterThanOrEqual(1);
+    // De-dup: only the celebration card shows URL+Copy under ?share=1.
+    // The always-on coordinator panel suppresses its own share block so
+    // the user doesn't see the same URL twice.
+    expect(screen.getAllByText(/abc123def456/)).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /copy|скопировать/i })).toHaveLength(1);
+    // Invite button stays visible (coordinator panel keeps that part)
+    screen.getByRole('button', { name: /invite friends|позвать друзей/i });
   });
 
   it('does NOT render celebration headline without ?share=1', () => {

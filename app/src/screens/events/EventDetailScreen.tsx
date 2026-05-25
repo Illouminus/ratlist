@@ -125,6 +125,11 @@ export function EventDetailScreen() {
           eventId={eventId}
           shareToken={event.share_token}
           showToast={(msg) => toast.show(msg)}
+          // When the post-create celebration card is up it already
+          // shows the URL + Copy button; the coordinator panel hides
+          // its redundant share section and surfaces only the invite
+          // button + participants list.
+          hideShareBlock={showShareCard}
         />
       )}
 
@@ -996,10 +1001,15 @@ function CoordinatorPanel({
   eventId,
   shareToken,
   showToast,
+  hideShareBlock = false,
 }: {
   eventId: string;
   shareToken: string;
   showToast: (msg: string) => void;
+  /** When the post-create `<ShareCard>` is up it already surfaces the
+   *  URL + Copy button; this prop hides the redundant share block so
+   *  the panel only renders the invite button + participants list. */
+  hideShareBlock?: boolean;
 }) {
   const { t } = useI18n();
   const { query: participantsQ } = useEventParticipants(eventId);
@@ -1027,44 +1037,50 @@ function CoordinatorPanel({
         background: 'var(--paper)',
       }}
     >
-      <h3
-        className="mono-meta"
-        style={{ margin: '0 0 var(--s-3)', color: 'var(--ink-3)' }}
-      >
-        {t('events.share.coordinatorTitle')}
-      </h3>
-      <code
-        style={{
-          display: 'block',
-          padding: 'var(--s-2)',
-          background: 'var(--paper-2, #fffdf6)',
-          border: '1px solid var(--hair)',
-          margin: '0 0 var(--s-3)',
-          fontSize: 13,
-          fontFamily: 'var(--font-mono, monospace)',
-          color: 'var(--ink)',
-          overflowWrap: 'anywhere',
-        }}
-      >
-        {shareUrl}
-      </code>
+      {!hideShareBlock && (
+        <>
+          <h3
+            className="mono-meta"
+            style={{ margin: '0 0 var(--s-3)', color: 'var(--ink-3)' }}
+          >
+            {t('events.share.coordinatorTitle')}
+          </h3>
+          <code
+            style={{
+              display: 'block',
+              padding: 'var(--s-2)',
+              background: 'var(--paper-2, #fffdf6)',
+              border: '1px solid var(--hair)',
+              margin: '0 0 var(--s-3)',
+              fontSize: 13,
+              fontFamily: 'var(--font-mono, monospace)',
+              color: 'var(--ink)',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {shareUrl}
+          </code>
+        </>
+      )}
       <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          onClick={() => void handleCopy()}
-          style={{
-            background: 'transparent',
-            color: 'var(--accent)',
-            border: '1px solid var(--accent)',
-            padding: '8px 16px',
-            fontFamily: 'var(--font-body)',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          {t('events.share.copy')}
-        </button>
+        {!hideShareBlock && (
+          <button
+            type="button"
+            onClick={() => void handleCopy()}
+            style={{
+              background: 'transparent',
+              color: 'var(--accent)',
+              border: '1px solid var(--accent)',
+              padding: '8px 16px',
+              fontFamily: 'var(--font-body)',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {t('events.share.copy')}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setInviteOpen(true)}
