@@ -333,6 +333,23 @@ export const ru: Translation = {
     deleteConfirmTitle: 'удалить событие?',
     deleteConfirm: 'событие «{title}» и подборка к нему пропадут. сами айтемы останутся в твоём списке. это действие не отменить.',
     deletedToast: 'событие удалено',
+    landing: {
+      forHonoree: 'для {name}',
+      participants: '{count} {countWord} участвуют',
+      participantOne: 'друг',
+      participantMany: 'друзей',
+      signInToClaim: 'Войти, чтобы взять подарок',
+      notFound: 'Ссылка на событие неверна или истекла.',
+      loading: 'загружаем событие…',
+      joining: 'присоединяемся к событию…',
+    },
+    share: {
+      headline: 'Готово!',
+      howToShare: 'Отправь ссылку тем, кого зовёшь. Они увидят твою подборку и смогут войти, чтобы взять подарок.',
+      copy: 'Скопировать ссылку',
+      copied: 'ссылка скопирована',
+      dismiss: 'Готово',
+    },
   },
   santa: {
     eyebrow: 'тайный санта',

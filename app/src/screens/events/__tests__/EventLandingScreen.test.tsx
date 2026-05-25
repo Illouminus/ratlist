@@ -89,17 +89,15 @@ describe('EventLandingScreen — anon view', () => {
 
     renderAt();
 
-    await waitFor(() => {
-      expect(screen.getByText('Olia birthday')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Concert ticket')).toBeInTheDocument();
+    // getByText throws if not found — the find is itself the assertion.
+    await waitFor(() => screen.getByText('Olia birthday'));
+    screen.getByText('Concert ticket');
     // Sign-in CTA for anon viewer; href carries the next= back-redirect.
     const cta = screen.getByRole('link', { name: /sign in/i });
-    expect(cta).toBeInTheDocument();
     expect(cta.getAttribute('href')).toContain('/login');
     expect(cta.getAttribute('href')).toContain('event%2Fabc123def456');
     // No claim status surfaced — anon viewer never sees who took what.
-    expect(screen.queryByText(/taken|claimed/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/taken|claimed/i)).toBeNull();
   });
 
   it('renders a not-found state when token is invalid', async () => {
@@ -107,9 +105,7 @@ describe('EventLandingScreen — anon view', () => {
 
     renderAt('badbadbadbadbadx');
 
-    await waitFor(() => {
-      expect(screen.getByText(/not found|link is invalid/i)).toBeInTheDocument();
-    });
-    expect(screen.queryByRole('link', { name: /sign in/i })).not.toBeInTheDocument();
+    await waitFor(() => screen.getByText(/not found|link is invalid/i));
+    expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
   });
 });

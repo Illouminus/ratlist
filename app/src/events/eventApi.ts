@@ -50,7 +50,10 @@ export interface EventView {
 export async function getEventView(token: string): Promise<EventView> {
   const { data, error } = await supabase.rpc('get_event_view', { _token: token });
   if (error) throw error;
-  const rows = (data as EventView[] | null) ?? [];
+  // The RPC returns items as JSONB — supabase-js types it as `Json`. The
+  // SQL function packs items with the exact shape EventViewItem expects;
+  // we cast through unknown to acknowledge the boundary.
+  const rows = (data as unknown as EventView[] | null) ?? [];
   const row = rows[0];
   if (!row) throw new Error('event_not_found');
   return row;
