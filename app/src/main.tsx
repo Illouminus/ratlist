@@ -70,13 +70,41 @@ const tree = (
   </StrictMode>
 );
 
-// In production the container has prerendered HTML (see `prerender.tsx`)
-// so we hydrate. In dev there's nothing prerendered — `index.html` ships
-// an empty `<div id="root">` — so falling back to `createRoot` avoids the
-// "no hydration mismatches found because the server rendered an empty
-// container" warning and the behaviour change React 19 made around it.
-if (container.hasChildNodes()) {
+// Only the three prerendered routes ship with content in `<div id="root">`
+// at HTTP-response time — see `prerender.tsx` and the PRERENDER_ROUTES
+// constant there. Everything else (every authed screen, /share/:token,
+// /event/:token, /login, /auth/callback) ships empty-root and renders
+// 100% client-side.
+//
+// We MUST distinguish at mount time: hydrating the wrong tree against
+// a prerendered root produces a catastrophic mismatch that, in some
+// recovery paths, leaves the old HTML in the DOM and renders the new
+// tree underneath it — confirmed in prod 2026-05-25 when a stale
+// Service Worker served `index.html` (prerendered LandingScreen) for
+// every navigation including `/events`. The PWA fix went out as PR #20
+// (workbox `navigateFallback: '/_spa.html'`) but THIS is defence in
+// depth: even if some future SW/CDN/proxy serves the wrong HTML for
+// a non-prerendered route, the client clears the root and starts fresh.
+//
+// Hydration stays enabled for the three known-prerendered paths so the
+// SEO/critical-render win from prerender.tsx isn't undone.
+const PRERENDERED_PATHS: ReadonlySet<string> = new Set([
+  '/',
+  '/legal/privacy',
+  '/legal/terms',
+]);
+
+const isPrerenderedPath = PRERENDERED_PATHS.has(window.location.pathname);
+
+if (isPrerenderedPath && container.hasChildNodes()) {
   hydrateRoot(container, tree);
 } else {
+  // Anything in the root from a wrong-fallback HTML — wipe it before
+  // mounting. `replaceChildren()` with no args is the safe DOM API to
+  // detach all children (no parsing, no XSS surface, unlike
+  // innerHTML='').
+  if (container.hasChildNodes()) {
+    container.replaceChildren();
+  }
   createRoot(container).render(tree);
 }
