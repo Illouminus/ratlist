@@ -51,6 +51,41 @@ export type Database = {
           },
         ]
       }
+      event_email_log: {
+        Row: {
+          created_at: string
+          email_type: string
+          event_id: string
+          id: string
+          recipient_id: string
+          sent_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_type: string
+          event_id: string
+          id?: string
+          recipient_id: string
+          sent_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_type?: string
+          event_id?: string
+          id?: string
+          recipient_id?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_email_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_items: {
         Row: {
           added_at: string
