@@ -121,14 +121,13 @@ export function PeopleScreen() {
 
 function PersonRow({ person, eventCount }: { person: Person; eventCount: number }) {
   const { t, lang } = useI18n();
-  // Mirrors the design-v2 friend row: avatar + italic "{handle}'s list",
-  // item count on the right (tnum), a single line of `·`-joined recent
-  // titles, then a Caveat "updated X" stamp.
+  // Link-first model: People is auto-populated from event co-participants,
+  // so the row foregrounds the social signal (shared events + last seen)
+  // and links to /p/:userId for the actual list. Old preview-titles +
+  // item-count are gone (the previous group-share path provided that
+  // data through a different RPC); /p/:userId still shows everything.
   const headline = person.handle ? `${person.handle}'s list` : person.display_name;
-  const updated = formatRelativeTime(person.latest_at, lang);
-  const previewLine = person.preview_titles.length > 0
-    ? person.preview_titles.join(' · ')
-    : t('people.emptyList');
+  const updated = formatRelativeTime(person.last_interaction_at, lang);
 
   return (
     <li style={{ borderBottom: '1px solid var(--hair)' }}>
@@ -145,49 +144,20 @@ function PersonRow({ person, eventCount }: { person: Person; eventCount: number 
       >
         <Avatar name={person.display_name} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div
+          <h3
+            className="display-italic"
             style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-              gap: 'var(--s-2)',
-            }}
-          >
-            <h3
-              className="display-italic"
-              style={{
-                margin: 0,
-                fontSize: 'var(--display-xs)',
-                lineHeight: 1.1,
-                color: 'var(--ink)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {headline}
-            </h3>
-            <span
-              className="mono-meta"
-              style={{ color: 'var(--ink-3)', fontFeatureSettings: '"tnum"', flexShrink: 0 }}
-              title={t('people.sharedGroups', { count: person.shared_group_count })}
-            >
-              {person.item_count}
-            </span>
-          </div>
-
-          <div
-            style={{
-              marginTop: 2,
-              fontSize: 11,
-              color: 'var(--ink-3)',
+              margin: 0,
+              fontSize: 'var(--display-xs)',
+              lineHeight: 1.1,
+              color: 'var(--ink)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
           >
-            {previewLine}
-          </div>
+            {headline}
+          </h3>
 
           {(updated || eventCount > 0) && (
             <div

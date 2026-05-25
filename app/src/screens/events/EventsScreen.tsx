@@ -1,16 +1,23 @@
 /**
- * `EventsScreen` — list of every event the caller can see (own + audience).
+ * `EventsScreen` — list of every event the caller can see, including
+ * pending invitations.
  *
- * Slice 1 is read-only: header + list. The "new event" flow lands in
- * slice 2 (`CreateEventScreen` at `/events/new`); for now there's a
- * placeholder link so the empty state isn't a dead end.
+ * Pending rows show an "invitation from {inviter}" badge with inline
+ * Accept (calls join_event_via_token, navigates into the event) and
+ * Decline (UPDATEs the participant row to status='declined' — RLS
+ * permits the own-row update). Honoree + active rows render as before.
  *
  * Same editorial shape as `SantaListScreen`: paper background, eyebrow
  * label, italic display heading, hairline-separated rows.
  */
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useEvents, type MyEvent } from '../../events/useEvents';
+import { useAuth } from '../../auth/useAuth';
+import { useToast } from '../../components/useToast';
+import { supabase } from '../../lib/supabase';
+import { errorMessage } from '../../lib/errors';
 import { PaperLayout } from '../../components/PaperLayout';
 import { SittingRat } from '../../components/rats';
 import { ListSkeleton } from '../../components/Skeleton';
@@ -135,6 +142,7 @@ function EventList({ query }: { query: ReturnType<typeof useEvents>['query'] }) 
         {query.events.map((e) => (
           <EventRow key={e.id} event={e} />
         ))}
+
       </ul>
     </section>
   );
@@ -142,6 +150,12 @@ function EventList({ query }: { query: ReturnType<typeof useEvents>['query'] }) 
 
 function EventRow({ event }: { event: MyEvent }) {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+
+  const isPending = event.my_status === 'pending';
 
   // "Birthday · 23 May 2026 · 4 items"-style meta line, comma-separated
   // pieces that render naturally even when occurs_on is null.
@@ -149,6 +163,38 @@ function EventRow({ event }: { event: MyEvent }) {
   meta.push(t(`events.kind.${event.kind}`));
   if (event.occurs_on) meta.push(formatDate(event.occurs_on));
   meta.push(t('events.itemCount', { count: String(event.item_count) }));
+
+  async function handleAccept() {
+    if (busy) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc('join_event_via_token', {
+      _token: event.share_token,
+    });
+    if (error) {
+      toast.show(errorMessage(t, error));
+      setBusy(false);
+      return;
+    }
+    navigate(`/events/${data as string}`);
+  }
+
+  async function handleDecline() {
+    if (busy || !user) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from('event_participants')
+      .update({ status: 'declined' })
+      .eq('event_id', event.id)
+      .eq('user_id', user.id);
+    if (error) {
+      toast.show(errorMessage(t, error));
+      setBusy(false);
+      return;
+    }
+    toast.show(t('events.pending.declinedToast'));
+    setBusy(false);
+    // useEvents realtime subscription will pull the change; no manual refresh.
+  }
 
   return (
     <li
@@ -179,11 +225,23 @@ function EventRow({ event }: { event: MyEvent }) {
             flexWrap: 'wrap',
           }}
         >
-          <span className="mono-meta" style={{ color: 'var(--ink-3)' }}>
-            {event.my_status === 'honoree'
-              ? t('events.yoursMarker')
-              : t('events.honoredBy', { name: event.honoree_display_name })}
-          </span>
+          {isPending ? (
+            <span
+              className="mono-meta"
+              style={{
+                color: 'var(--accent)',
+                fontWeight: 600,
+              }}
+            >
+              {t('events.pending.invitedBy', { name: event.honoree_display_name })}
+            </span>
+          ) : (
+            <span className="mono-meta" style={{ color: 'var(--ink-3)' }}>
+              {event.my_status === 'honoree'
+                ? t('events.yoursMarker')
+                : t('events.honoredBy', { name: event.honoree_display_name })}
+            </span>
+          )}
           {meta.map((m, i) => (
             <span key={i} className="mono-meta" style={{ color: 'var(--ink-3)' }}>
               · {m}
@@ -191,13 +249,52 @@ function EventRow({ event }: { event: MyEvent }) {
           ))}
         </div>
       </div>
-      <Link
-        to={`/events/${event.id}`}
-        className="mono-meta"
-        style={{ color: 'var(--accent)', textDecoration: 'none' }}
-      >
-        {t('events.open')}
-      </Link>
+      {isPending ? (
+        <div style={{ display: 'flex', gap: 'var(--s-3)', flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => void handleDecline()}
+            disabled={busy}
+            className="mono-meta"
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--hair-strong)',
+              color: 'var(--ink-2)',
+              padding: '6px 12px',
+              cursor: busy ? 'default' : 'pointer',
+              fontFamily: 'var(--font-body)',
+              fontSize: 13,
+            }}
+          >
+            {t('events.pending.decline')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleAccept()}
+            disabled={busy}
+            style={{
+              background: busy ? 'var(--ink-3)' : 'var(--accent)',
+              color: 'var(--paper)',
+              border: 'none',
+              padding: '6px 12px',
+              cursor: busy ? 'default' : 'pointer',
+              fontFamily: 'var(--font-body)',
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            {t('events.pending.accept')}
+          </button>
+        </div>
+      ) : (
+        <Link
+          to={`/events/${event.id}`}
+          className="mono-meta"
+          style={{ color: 'var(--accent)', textDecoration: 'none' }}
+        >
+          {t('events.open')}
+        </Link>
+      )}
     </li>
   );
 }
