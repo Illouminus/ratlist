@@ -1,0 +1,108 @@
+# .github/workflows/deploy-migrations.yml
+#
+# Pushes any new `supabase/migrations/*.sql` files to the production
+# Supabase project as soon as they land on `main`. Triggered only by
+# changes inside the migrations directory so unrelated PRs don't burn
+# minutes — and so a merge that contains both migrations + frontend code
+# can rely on the schema being applied **before** Vercel finishes
+# building the new frontend bundle.
+#
+# Why this exists: the 2026-05-25 prod smoke failed because the
+# link-first migrations were merged + Vercel deployed the new frontend
+# but `supabase db push` was done by hand later. Result: prod served
+# code that expected columns/tables that didn't exist yet
+# (`events.share_token`, `event_participants`), users got `undefined`
+# in the share UI. See PR #13 and the lessons-learned memory file.
+#
+# Required GitHub secrets (Repo → Settings → Secrets and variables →
+# Actions). Without these the job logs a clear failure on first run:
+#
+#   SUPABASE_ACCESS_TOKEN
+#     Personal access token from
+#     https://supabase.com/dashboard/account/tokens.
+#     Used by `supabase link` to authenticate the CLI.
+#
+#   SUPABASE_DB_PASSWORD
+#     Database password for the linked project. Found at
+#     https://supabase.com/dashboard/project/<ref>/settings/database
+#     Used by `supabase db push --password`.
+#
+#   SUPABASE_PROJECT_REF
+#     The project ref (e.g. `fiuheufmawxkgbqddwwu`). Hardcoded as a
+#     fallback below in case the secret isn't set, but stored as a
+#     secret makes future rotation safer.
+#
+# Safety properties:
+#   - `--include-all` is NOT used. Only migrations not yet applied to
+#     prod are pushed. Idempotent — re-running the workflow is a no-op
+#     if everything is already applied.
+#   - We do NOT use `--no-verify`-like flags. If a constraint violation
+#     happens on prod data, the push fails loudly and the workflow
+#     surfaces the error — better than silent partial schema.
+#   - Concurrency lock: only one migration push runs at a time. If two
+#     merges race, the second waits for the first to finish so we never
+#     interleave two sets of migrations against the same DB.
+
+name: Deploy migrations to prod
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**.sql'
+      # Re-deploy if the workflow file itself changes — useful for
+      # iterating on the workflow in a branch and merging it.
+      - '.github/workflows/deploy-migrations.yml'
+  workflow_dispatch:
+    # Manual trigger from the Actions tab for the rare case where you
+    # need to re-run without a code change (e.g. secrets were wrong on
+    # the first run, fixed, want to re-attempt).
+
+concurrency:
+  group: deploy-migrations-prod
+  cancel-in-progress: false
+
+jobs:
+  push-migrations:
+    runs-on: ubuntu-latest
+    # GitHub environment for prod — gives a clean audit trail in the
+    # Actions UI and lets us require approval later if we want to
+    # gate destructive migrations behind a manual review step. The
+    # environment itself is created on first use; no extra config
+    # needed until we add protection rules.
+    environment: production
+    env:
+      # All secrets exposed at job level so individual steps stay
+      # concise. Only secrets.* values land here — no github.event.*
+      # interpolation, so command-injection is not a concern.
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || 'fiuheufmawxkgbqddwwu' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Link to prod project
+        run: |
+          # `supabase link` writes to .supabase/ and config.toml; we
+          # already track config.toml in the repo. The link step only
+          # needs the access token (read from env automatically).
+          supabase link --project-ref "$PROJECT_REF"
+      - name: List pending migrations
+        run: |
+          # Surface what's about to be pushed in the log before we
+          # actually push — easy to audit after the fact.
+          supabase migration list --linked
+      - name: Push migrations
+        run: |
+          # --linked uses the project we linked above. --password feeds
+          # the DB password from the secret so the CLI doesn't prompt.
+          # No --dry-run: this is the deploy job; the time to dry-run is
+          # locally before merge (CLAUDE.md → Hard conventions).
+          supabase db push --linked --password "$SUPABASE_DB_PASSWORD"
+      - name: Confirm post-deploy state
+        run: |
+          # Final list should show local == remote for every migration —
+          # useful evidence in case anyone audits the run later.
+          supabase migration list --linked
