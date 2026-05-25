@@ -12,7 +12,7 @@
  * already mapped to a stable code we translate via i18n.
  */
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n/useI18n';
 import { PaperLayout } from '../components/PaperLayout';
@@ -32,11 +32,22 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function LoginScreen() {
   const { t } = useI18n();
   const { signInWithMagicLink, status } = useAuth();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [form, setForm] = useState<FormState>({ kind: 'idle' });
 
-  // Already signed in? Skip the form.
-  if (status === 'authenticated') return <Navigate to="/" replace />;
+  // Preserve the deep-link target across the auth round-trip. Used for
+  // flows like clicking «Sign in» on /event/<token> → we want to come
+  // back to that page (which then auto-joins). Only same-origin paths
+  // are honored; AuthProvider drops anything suspicious.
+  const nextPath = searchParams.get('next');
+
+  // Already signed in? Skip the form. Respect ?next= so a logged-in
+  // visitor who clicked an event link still lands on the event.
+  if (status === 'authenticated') {
+    const safeNext = nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/';
+    return <Navigate to={safeNext} replace />;
+  }
 
   function handleEmailChange(next: string): void {
     setEmail(next);
@@ -54,7 +65,7 @@ export function LoginScreen() {
     }
 
     setForm({ kind: 'sending' });
-    const err = await signInWithMagicLink(email);
+    const err = await signInWithMagicLink(email, nextPath);
     if (err) {
       setForm({ kind: 'error', code: err === 'invalidEmail' ? 'invalidEmail' : 'generic' });
       return;
@@ -98,7 +109,7 @@ export function LoginScreen() {
         <SentNotice email={form.email} />
       ) : (
         <>
-          <GoogleButton />
+          <GoogleButton nextPath={nextPath} />
           <OrDivider />
           <form onSubmit={handleSubmit} noValidate>
             <Field label={t('auth.emailLabel')} error={errorText}>
@@ -140,12 +151,12 @@ export function LoginScreen() {
  * whole window away — by the time we'd render "loading" the user is
  * already on accounts.google.com.
  */
-function GoogleButton() {
+function GoogleButton({ nextPath }: { nextPath: string | null }) {
   const { signInWithGoogle } = useAuth();
   const { t } = useI18n();
 
   async function handleClick(): Promise<void> {
-    await signInWithGoogle();
+    await signInWithGoogle(nextPath);
     // If Supabase returns an error we currently just no-op — Supabase
     // already logs to the console and the user can fall back to the
     // magic-link form below.

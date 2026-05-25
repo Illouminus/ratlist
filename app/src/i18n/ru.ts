@@ -374,6 +374,9 @@ export const ru: Translation = {
       decline: 'Отклонить',
       declinedToast: 'отклонено',
     },
+    sectionPending: 'приглашения',
+    sectionHonoree: 'твои события',
+    sectionActive: 'где ты участвуешь',
   },
   santa: {
     eyebrow: 'тайный санта',

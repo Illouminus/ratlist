@@ -13,9 +13,25 @@ import type { AuthError, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { AuthContext, type AuthContextValue, type AuthStatus } from './auth-context';
 
-/** Where Supabase should redirect after the user clicks the magic link. */
-function authCallbackUrl(): string {
-  return `${window.location.origin}/auth/callback`;
+/**
+ * Where Supabase should redirect after the user clicks the magic link
+ * (or completes the OAuth round-trip).
+ *
+ * `nextPath` is a same-origin URL path (`/event/<token>`, `/events`,
+ * etc.). When present, we append it as a query param so
+ * `AuthCallbackScreen` can read it after the session is established and
+ * navigate the user there. Only paths starting with `/` and not `//`
+ * are honored — anything else is treated as missing (drops silently to
+ * avoid surfacing open-redirect errors to the UI).
+ */
+function authCallbackUrl(nextPath?: string | null): string {
+  const base = `${window.location.origin}/auth/callback`;
+  if (!nextPath) return base;
+  // Reject protocol-relative URLs (`//evil.com`) and anything not starting
+  // with `/`. The remaining shapes — `/foo`, `/foo?bar=1`, `/foo#hash` —
+  // are all same-origin.
+  if (!nextPath.startsWith('/') || nextPath.startsWith('//')) return base;
+  return `${base}?next=${encodeURIComponent(nextPath)}`;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -43,21 +59,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signInWithMagicLink = useCallback(async (email: string): Promise<string | null> => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: authCallbackUrl() },
-    });
-    return error ? mapAuthError(error) : null;
-  }, []);
+  const signInWithMagicLink = useCallback(
+    async (email: string, nextPath?: string | null): Promise<string | null> => {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { emailRedirectTo: authCallbackUrl(nextPath) },
+      });
+      return error ? mapAuthError(error) : null;
+    },
+    [],
+  );
 
-  const signInWithGoogle = useCallback(async (): Promise<string | null> => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: authCallbackUrl() },
-    });
-    return error ? mapAuthError(error) : null;
-  }, []);
+  const signInWithGoogle = useCallback(
+    async (nextPath?: string | null): Promise<string | null> => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: authCallbackUrl(nextPath) },
+      });
+      return error ? mapAuthError(error) : null;
+    },
+    [],
+  );
 
   const signOut = useCallback(async (): Promise<void> => {
     await supabase.auth.signOut();

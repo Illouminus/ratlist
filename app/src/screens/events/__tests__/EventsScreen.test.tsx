@@ -178,6 +178,54 @@ describe('EventsScreen — pending UX', () => {
     });
   });
 
+  it('renders three sections in order (pending, honoree, active) when all present', () => {
+    stubEvents([
+      { id: 'e-active', title: 'Friend party', my_status: 'active', share_token: 'a' },
+      { id: 'e-mine', title: 'My party', my_status: 'honoree', share_token: 'b' },
+      {
+        id: 'e-pending',
+        title: 'Invite party',
+        my_status: 'pending',
+        share_token: 'c',
+        honoree_display_name: 'Tanya',
+      },
+    ]);
+
+    renderScreen();
+
+    // Pending row sits ABOVE honoree which sits ABOVE active in DOM order.
+    // Using event titles as the anchor (the section headers contain
+    // generic words like "joined" that can collide with row content).
+    const html = document.body.innerHTML;
+    const pendingIdx = html.indexOf('Invite party');
+    const mineIdx = html.indexOf('My party');
+    const activeIdx = html.indexOf('Friend party');
+    expect(pendingIdx).toBeGreaterThan(-1);
+    expect(mineIdx).toBeGreaterThan(pendingIdx);
+    expect(activeIdx).toBeGreaterThan(mineIdx);
+    // And the three section header strings appear somewhere in the DOM.
+    // i18n defaults to EN (jsdom localStorage is empty), so RU strings
+    // aren't rendered in this test environment.
+    expect(html).toMatch(/invitations/i);
+    expect(html).toMatch(/your events/i);
+    expect(html).toMatch(/>joined</i); // header (vs row content)
+  });
+
+  it('omits empty sections', () => {
+    stubEvents([
+      { id: 'e-mine', title: 'My party', my_status: 'honoree', share_token: 'b' },
+    ]);
+
+    renderScreen();
+
+    // Only the honoree section is rendered
+    const html = document.body.innerHTML;
+    expect(html).toMatch(/your events/i);
+    expect(html).not.toMatch(/invitations/i);
+    expect(html).not.toMatch(/>joined</i); // header absent
+
+  });
+
   it('Decline → UPDATE event_participants set status=declined', async () => {
     stubEvents([
       {
