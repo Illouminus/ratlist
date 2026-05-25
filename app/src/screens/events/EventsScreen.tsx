@@ -124,10 +124,34 @@ function EventList({ query }: { query: ReturnType<typeof useEvents>['query'] }) 
     );
   }
 
+  // Split by my_status so each social bucket gets its own section. Order
+  // is intentional: pending sits first (most actionable — every row has
+  // accept/decline buttons), then own events, then joined ones. Within
+  // each section the hook already orders by occurs_on/created_at.
+  const pendingEvents = query.events.filter((e) => e.my_status === 'pending');
+  const honoreeEvents = query.events.filter((e) => e.my_status === 'honoree');
+  const activeEvents = query.events.filter((e) => e.my_status === 'active');
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-7)' }}>
+      {pendingEvents.length > 0 && (
+        <EventSection title={t('events.sectionPending')} events={pendingEvents} />
+      )}
+      {honoreeEvents.length > 0 && (
+        <EventSection title={t('events.sectionHonoree')} events={honoreeEvents} />
+      )}
+      {activeEvents.length > 0 && (
+        <EventSection title={t('events.sectionActive')} events={activeEvents} />
+      )}
+    </div>
+  );
+}
+
+function EventSection({ title, events }: { title: string; events: MyEvent[] }) {
   return (
     <section>
       <div className="mono-meta" style={{ marginBottom: 'var(--s-3)', color: 'var(--ink-3)' }}>
-        {t('events.yours')}
+        {title}
       </div>
       <ul
         style={{
@@ -139,7 +163,7 @@ function EventList({ query }: { query: ReturnType<typeof useEvents>['query'] }) 
           gap: 'var(--s-4)',
         }}
       >
-        {query.events.map((e) => (
+        {events.map((e) => (
           <EventRow key={e.id} event={e} />
         ))}
 

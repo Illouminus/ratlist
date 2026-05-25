@@ -369,6 +369,9 @@ export const en: Translation = {
       decline: 'Decline',
       declinedToast: 'declined',
     },
+    sectionPending: 'invitations',
+    sectionHonoree: 'your events',
+    sectionActive: 'joined',
   },
   santa: {
     eyebrow: 'secret santa',
