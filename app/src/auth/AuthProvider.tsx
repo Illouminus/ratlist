@@ -12,26 +12,11 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import type { AuthError, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { AuthContext, type AuthContextValue, type AuthStatus } from './auth-context';
+import { rememberNextPath } from './nextPathStorage';
 
-/**
- * Where Supabase should redirect after the user clicks the magic link
- * (or completes the OAuth round-trip).
- *
- * `nextPath` is a same-origin URL path (`/event/<token>`, `/events`,
- * etc.). When present, we append it as a query param so
- * `AuthCallbackScreen` can read it after the session is established and
- * navigate the user there. Only paths starting with `/` and not `//`
- * are honored — anything else is treated as missing (drops silently to
- * avoid surfacing open-redirect errors to the UI).
- */
-function authCallbackUrl(nextPath?: string | null): string {
-  const base = `${window.location.origin}/auth/callback`;
-  if (!nextPath) return base;
-  // Reject protocol-relative URLs (`//evil.com`) and anything not starting
-  // with `/`. The remaining shapes — `/foo`, `/foo?bar=1`, `/foo#hash` —
-  // are all same-origin.
-  if (!nextPath.startsWith('/') || nextPath.startsWith('//')) return base;
-  return `${base}?next=${encodeURIComponent(nextPath)}`;
+/** Where Supabase should redirect after the OAuth round-trip / magic link. */
+function authCallbackUrl(): string {
+  return `${window.location.origin}/auth/callback`;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -61,9 +46,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithMagicLink = useCallback(
     async (email: string, nextPath?: string | null): Promise<string | null> => {
+      // Stash next BEFORE Supabase fires the email. The link in the email
+      // points at our bare /auth/callback (the URI allow-list doesn't
+      // accept query-string variants), so the callback screen reads next
+      // from sessionStorage. The browser session needs to be the same
+      // one that clicked the link — fine for the same-tab path, breaks
+      // if user opens the email on another device. That fallback (no
+      // stored next → navigate to /) is acceptable.
+      rememberNextPath(nextPath);
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { emailRedirectTo: authCallbackUrl(nextPath) },
+        options: { emailRedirectTo: authCallbackUrl() },
       });
       return error ? mapAuthError(error) : null;
     },
@@ -72,9 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(
     async (nextPath?: string | null): Promise<string | null> => {
+      // Same pattern as magic-link: stash next, then trigger OAuth. Google
+      // OAuth stays in the same tab, so sessionStorage round-trips
+      // reliably. signInWithOAuth navigates the whole window — by the
+      // time the user returns, sessionStorage is still warm.
+      rememberNextPath(nextPath);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: authCallbackUrl(nextPath) },
+        options: { redirectTo: authCallbackUrl() },
       });
       return error ? mapAuthError(error) : null;
     },

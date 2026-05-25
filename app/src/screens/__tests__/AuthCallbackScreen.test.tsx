@@ -1,9 +1,13 @@
 // app/src/screens/__tests__/AuthCallbackScreen.test.tsx
 //
-// Regression tests for the `next=` round-trip fix. The /event/<token>
-// flow depends on AuthCallbackScreen reading ?next= after the OAuth
-// redirect and navigating the user there — without this, auto-join
-// never fires (the bug that took down the 2026-05-25 smoke).
+// Regression tests for the `next=` round-trip. AuthCallbackScreen reads
+// the stored path from sessionStorage (set by AuthProvider before
+// signInWith* triggers the OAuth navigation). URL-based `?next=` was
+// the original approach but Supabase strips query params off the
+// redirect URL when the bare callback URL is what's in the allow-list —
+// confirmed in prod 2026-05-25 (Maria's signup landed on / instead of
+// /event/<token>). sessionStorage survives the OAuth round-trip
+// reliably because it's browser-local, not URL-mediated.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -70,46 +74,66 @@ beforeEach(() => {
   mocks.track.mockReset();
 });
 
-describe('AuthCallbackScreen — next= propagation', () => {
-  it('authenticated + no next → navigates to /', () => {
+describe('AuthCallbackScreen — next= propagation via sessionStorage', () => {
+  beforeEach(() => {
+    // Each test starts with an empty session store. Real prod tabs are
+    // either empty (first sign-in) or have a single key set by the
+    // matching signInWith* call.
+    sessionStorage.clear();
+  });
+
+  it('authenticated + no stored next → navigates to /', () => {
     stubAuth('authenticated');
     renderAt('/auth/callback');
     expect(mocks.navigate).toHaveBeenCalledWith('/');
   });
 
-  it('authenticated + same-origin next → navigates to that path', () => {
+  it('authenticated + safe stored next → navigates to that path', () => {
+    sessionStorage.setItem('auth_next_path', '/event/abc123def456');
     stubAuth('authenticated');
-    renderAt('/auth/callback?next=%2Fevent%2Fabc123def456');
+    renderAt('/auth/callback');
     expect(mocks.navigate).toHaveBeenCalledWith('/event/abc123def456');
+    // Single-use: storage cleared after consumption (refresh doesn't replay)
+    expect(sessionStorage.getItem('auth_next_path')).toBeNull();
   });
 
-  it('authenticated + cross-origin next → falls back to / (open-redirect guard)', () => {
+  it('authenticated + cross-origin stored next → falls back to / (open-redirect guard)', () => {
+    sessionStorage.setItem('auth_next_path', 'https://evil.com/phish');
     stubAuth('authenticated');
-    renderAt('/auth/callback?next=https%3A%2F%2Fevil.com%2Fphish');
+    renderAt('/auth/callback');
     expect(mocks.navigate).toHaveBeenCalledWith('/');
   });
 
-  it('authenticated + protocol-relative next → falls back to / (open-redirect guard)', () => {
+  it('authenticated + protocol-relative stored next → falls back to / (open-redirect guard)', () => {
+    sessionStorage.setItem('auth_next_path', '//evil.com/phish');
     stubAuth('authenticated');
-    renderAt('/auth/callback?next=%2F%2Fevil.com%2Fphish');
+    renderAt('/auth/callback');
     expect(mocks.navigate).toHaveBeenCalledWith('/');
   });
 
-  it('anonymous → navigates to /login preserving next', () => {
+  it('anonymous + stored next → /login preserves next via URL for the retry', () => {
+    sessionStorage.setItem('auth_next_path', '/event/abc');
     stubAuth('anonymous');
-    renderAt('/auth/callback?next=%2Fevent%2Fabc');
+    renderAt('/auth/callback');
+    // URL-based pass-through to LoginScreen here is fine — LoginScreen
+    // re-stashes it in sessionStorage before the next signInWith* call.
     expect(mocks.navigate).toHaveBeenCalledWith('/login?next=%2Fevent%2Fabc');
   });
 
-  it('anonymous + no next → navigates to /login without query', () => {
+  it('anonymous + no stored next → /login without query', () => {
     stubAuth('anonymous');
     renderAt('/auth/callback');
     expect(mocks.navigate).toHaveBeenCalledWith('/login');
   });
 
   it('loading → does not navigate yet', () => {
+    sessionStorage.setItem('auth_next_path', '/event/abc');
     stubAuth('loading');
-    renderAt('/auth/callback?next=%2Fevent%2Fabc');
+    renderAt('/auth/callback');
     expect(mocks.navigate).not.toHaveBeenCalled();
+    // Storage NOT consumed while loading — first render reads it via
+    // useState(() => consumeNextPath()), so once status flips to
+    // authenticated, the value is held in component state and storage
+    // can be empty. We just check that navigate didn't fire.
   });
 });
