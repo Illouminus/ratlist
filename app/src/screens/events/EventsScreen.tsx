@@ -180,7 +180,7 @@ function EventRow({ event }: { event: MyEvent }) {
           }}
         >
           <span className="mono-meta" style={{ color: 'var(--ink-3)' }}>
-            {event.is_honoree
+            {event.my_status === 'honoree'
               ? t('events.yoursMarker')
               : t('events.honoredBy', { name: event.honoree_display_name })}
           </span>

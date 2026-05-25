@@ -10,9 +10,9 @@ describe('Invariant C — event_items visibility through audience circles', () =
     ctx = await seedFresh();
   });
 
-  it('audience member sees event_items the honoree added', async () => {
+  it('active participant sees event_items the honoree added', async () => {
     const ev = await seedEvent(ctx, 'alice', {
-      audienceGroups: [ctx.groupId],
+      participants: ['bob'],
       curatedItems: [ctx.itemAliceOwns],
     });
     const bobClient = await clientFor(ctx.bob);
@@ -25,7 +25,7 @@ describe('Invariant C — event_items visibility through audience circles', () =
     expect(data?.[0]?.item_id).toBe(ctx.itemAliceOwns);
   });
 
-  it('audience member does NOT see honoree items not added to the event', async () => {
+  it('active participant does NOT see honoree items not added to the event', async () => {
     const admin = adminClient();
     const { data: item2, error: i2err } = await admin
       .from('items')
@@ -35,7 +35,7 @@ describe('Invariant C — event_items visibility through audience circles', () =
     expect(i2err).toBeNull();
 
     await seedEvent(ctx, 'alice', {
-      audienceGroups: [ctx.groupId],
+      participants: ['bob'],
       curatedItems: [ctx.itemAliceOwns],
     });
 
@@ -50,18 +50,11 @@ describe('Invariant C — event_items visibility through audience circles', () =
     expect(ids).not.toContain(item2!.id);
   });
 
-  it('non-audience user sees nothing about the event', async () => {
-    const admin = adminClient();
-    const { data: priv, error: pgErr } = await admin
-      .from('groups')
-      .insert({ name: 'Private circle', created_by: ctx.carol })
-      .select('id')
-      .single();
-    expect(pgErr).toBeNull();
-    // carol is auto-admin via trigger; no need to insert.
-
+  it('non-participant user sees nothing about the event', async () => {
+    // Event with only carol as participant — bob is in seed group with alice but
+    // is NOT a participant in this event.
     const ev = await seedEvent(ctx, 'alice', {
-      audienceGroups: [priv!.id],
+      participants: ['carol'],
       curatedItems: [ctx.itemAliceOwns],
     });
 

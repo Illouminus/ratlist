@@ -93,28 +93,26 @@ function stubAuthAnonymous(): void {
 }
 
 /**
- * Stubs three supabase.from() calls in sequence:
+ * Stubs two supabase.from() calls in sequence (link-first model, no
+ * event_circles fetch):
  *   1. from('events') → maybeSingle resolves with `eventRow`
- *   2. from('event_circles') → chain.then resolves with empty audience []
- *   3. from('event_items') → chain.then resolves with empty items []
+ *   2. from('event_items') → chain.then resolves with empty items []
  *
  * Because items is empty, the claims query is short-circuited in the
- * hook (`if (itemIds.length === 0) …`) so no 4th call occurs.
+ * hook (`if (itemIds.length === 0) …`) so no 3rd call occurs.
  */
 function stubEventLoad(eventRow: Event): void {
+  // Reset mockReturnValueOnce queue (vi.clearAllMocks() doesn't fully
+  // clear it; a leftover from a prior test can shift the order).
+  mocks.supabase.from.mockReset();
+  mocks.supabase.from.mockReturnValue(mocks.defaultChain);
+
   // Chain for the events table — maybeSingle returns the row.
   const eventsChain = mocks.makeChain();
   (eventsChain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
     data: eventRow,
     error: null,
   });
-
-  // Chain for event_circles — awaitable via .then, returns empty array.
-  const circlesChain = mocks.makeChain();
-  circlesChain.then = (resolve: (v: { data: unknown[]; error: null }) => void) => {
-    resolve({ data: [], error: null });
-    return Promise.resolve();
-  };
 
   // Chain for event_items — awaitable via .then, returns empty array.
   const itemsChain = mocks.makeChain();
@@ -123,10 +121,9 @@ function stubEventLoad(eventRow: Event): void {
     return Promise.resolve();
   };
 
-  // Return these chains in order for the three from() calls.
+  // Return these chains in order for the two from() calls.
   mocks.supabase.from
     .mockReturnValueOnce(eventsChain)
-    .mockReturnValueOnce(circlesChain)
     .mockReturnValueOnce(itemsChain);
 }
 
@@ -161,6 +158,7 @@ describe('useEvent', () => {
       note: null,
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
+      share_token: 'mocktoken1234567',
     };
 
     stubAuthUser('user-honoree');
@@ -189,6 +187,7 @@ describe('useEvent', () => {
       note: null,
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
+      share_token: 'mocktoken1234567',
     };
 
     stubAuthUser(honoreeId);
@@ -215,6 +214,7 @@ describe('useEvent', () => {
       note: null,
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
+      share_token: 'mocktoken1234567',
     };
 
     stubAuthUser('user-guest');

@@ -579,6 +579,8 @@ export const en: Translation = {
     photoBadType: 'png, jpg or webp only.',
 
     urlNotAllowed: "couldn't load that link — it looks like an internal address or an adult site.",
+
+    eventNotFound: 'event not found or the link is invalid.',
   },
   common: {
     cancel: 'cancel',

@@ -142,14 +142,15 @@ export interface EventSeed {
 }
 
 /**
- * Create an event owned by the honoree, optionally attaching audience
- * circles and curated items. Both audience and items are configured
- * via service role (bypasses the per-row RLS).
+ * Create an event owned by the honoree, optionally attaching active
+ * participants and curated items. Configured via service role (bypasses
+ * per-row RLS). Replaces the legacy `audienceGroups` parameter — circles
+ * are retired from the event flow per the 2026-05-24 link-first redesign.
  */
 export async function seedEvent(
   ctx: SeedContext,
   honoree: TestUserName,
-  opts?: { audienceGroups?: string[]; curatedItems?: string[] },
+  opts?: { participants?: TestUserName[]; pendingInvites?: TestUserName[]; curatedItems?: string[] },
 ): Promise<EventSeed> {
   const admin = adminClient();
   const honoreeId = ctx[honoree];
@@ -165,11 +166,23 @@ export async function seedEvent(
     .single();
   if (evErr || !ev) throw new Error(`insert event failed: ${evErr?.message}`);
 
-  for (const groupId of opts?.audienceGroups ?? []) {
+  for (const name of opts?.participants ?? []) {
     const { error } = await admin
-      .from('event_circles')
-      .insert({ event_id: ev.id, group_id: groupId });
-    if (error) throw new Error(`insert event_circle failed: ${error.message}`);
+      .from('event_participants')
+      .insert({
+        event_id: ev.id, user_id: ctx[name],
+        status: 'active', joined_at: new Date().toISOString(),
+      });
+    if (error) throw new Error(`insert event_participant failed: ${error.message}`);
+  }
+  for (const name of opts?.pendingInvites ?? []) {
+    const { error } = await admin
+      .from('event_participants')
+      .insert({
+        event_id: ev.id, user_id: ctx[name],
+        status: 'pending', invited_by: honoreeId, invited_at: new Date().toISOString(),
+      });
+    if (error) throw new Error(`insert event_participant (pending) failed: ${error.message}`);
   }
   for (const itemId of opts?.curatedItems ?? []) {
     const { error } = await admin

@@ -584,6 +584,8 @@ export const ru: Translation = {
     photoBadType: 'нужен png, jpg или webp.',
 
     urlNotAllowed: 'не получилось загрузить страницу — ссылка похожа на внутреннюю или взрослый сайт.',
+
+    eventNotFound: 'event не найден или ссылка неверна.',
   },
   common: {
     cancel: 'отмена',

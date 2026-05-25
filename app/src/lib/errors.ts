@@ -53,7 +53,9 @@ export type AppErrorCode =
   | 'photoTooLarge'
   | 'photoBadType'
   // edge-function policy refusals (fetch-url-meta)
-  | 'urlNotAllowed';
+  | 'urlNotAllowed'
+  // events link-first
+  | 'eventNotFound';
 
 /**
  * Minimal duck-typed shape we accept. Supabase's PostgrestError,
@@ -160,7 +162,10 @@ function matchMessage(message: string): AppErrorCode {
   // Network / fetch failures
   if (m.includes('Failed to fetch') || m.includes('NetworkError')) return 'network';
 
-  if (m.includes('not authenticated')) return 'notAuthenticated';
+  if (m.includes('not authenticated') || m.includes('not_authenticated')) return 'notAuthenticated';
+
+  // events link-first
+  if (m.includes('event_not_found')) return 'eventNotFound';
 
   return 'generic';
 }
