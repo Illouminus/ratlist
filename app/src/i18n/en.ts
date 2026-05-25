@@ -138,7 +138,7 @@ export const en: Translation = {
     annotation: '(they have good taste)',
     sub: "tap a rat to see their list and claim a gift.",
     empty: 'just you in here for now.',
-    emptyBody: 'invite someone via a circle or accept an invite link.',
+    emptyBody: 'friends will appear here after your first event — share an occasion with someone and they land here.',
     sharedGroups: 'shared circles: {count}',
     openList: 'open list →',
     emptyList: 'no items yet',
