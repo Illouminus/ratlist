@@ -212,4 +212,95 @@ describe('useMyItems', () => {
 
     expect(mockSupabase.from.mock.calls.length).toBeGreaterThan(fromCallsBefore);
   });
+
+  describe('updateItemPriority', () => {
+    it('updates priority and returns ok on success', async () => {
+      stubAuthUser('user-1');
+      stubItemsResponse([]);
+      chain.update.mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+      });
+
+      const { result } = renderHook(() => useMyItems());
+      await waitFor(() => expect(result.current.query.status).toBe('ready'));
+
+      let outcome: { ok: true } | { error: string } | undefined;
+      await act(async () => {
+        outcome = await result.current.updateItemPriority('item-1', 3);
+      });
+
+      expect(outcome).toEqual({ ok: true });
+      expect(mockSupabase.from).toHaveBeenCalledWith('items');
+      expect(chain.update).toHaveBeenCalledWith({ priority: 3 });
+    });
+
+    it('returns an error string when the UPDATE fails', async () => {
+      stubAuthUser('user-1');
+      stubItemsResponse([]);
+      chain.update.mockReturnValue({
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'permission denied', code: '42501' },
+        }),
+      });
+
+      const { result } = renderHook(() => useMyItems());
+      await waitFor(() => expect(result.current.query.status).toBe('ready'));
+
+      let outcome: { ok: true } | { error: string } | undefined;
+      await act(async () => {
+        outcome = await result.current.updateItemPriority('item-1', 1);
+      });
+
+      expect(outcome).toHaveProperty('error');
+      expect((outcome as { error: string }).error.length).toBeGreaterThan(0);
+    });
+
+    it('optimistically updates local items, then keeps them on success', async () => {
+      stubAuthUser('user-1');
+      stubItemsResponse([
+        { id: 'item-1', owner_id: 'user-1', title: 'X', priority: 2,
+          item_groups: [], event_items: [] },
+      ]);
+      chain.update.mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+      });
+
+      const { result } = renderHook(() => useMyItems());
+      await waitFor(() => expect(result.current.query.status).toBe('ready'));
+
+      await act(async () => {
+        await result.current.updateItemPriority('item-1', 1);
+      });
+
+      const items = result.current.query.status === 'ready' ? result.current.query.items : [];
+      const updated = items.find((i) => i.id === 'item-1');
+      expect(updated?.priority).toBe(1);
+    });
+
+    it('reverts local state when the UPDATE fails', async () => {
+      stubAuthUser('user-1');
+      stubItemsResponse([
+        { id: 'item-1', owner_id: 'user-1', title: 'X', priority: 2,
+          item_groups: [], event_items: [] },
+      ]);
+      chain.update.mockReturnValue({
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'boom', code: 'XXXXX' },
+        }),
+      });
+
+      const { result } = renderHook(() => useMyItems());
+      await waitFor(() => expect(result.current.query.status).toBe('ready'));
+
+      await act(async () => {
+        await result.current.updateItemPriority('item-1', 1);
+      });
+
+      const items = result.current.query.status === 'ready' ? result.current.query.items : [];
+      const reverted = items.find((i) => i.id === 'item-1');
+      expect(reverted?.priority).toBe(2);
+    });
+  });
 });
