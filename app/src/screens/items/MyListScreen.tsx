@@ -18,6 +18,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { useProfile } from '../../auth/useProfile';
 import { useMyItems } from '../../items/useMyItems';
 import { useIsMobile } from '../../lib/useMediaQuery';
+import { useToast } from '../../components/useToast';
 import type { Occasion } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
@@ -33,7 +34,8 @@ export function MyListScreen() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { query: profileQ } = useProfile();
-  const { query: itemsQ } = useMyItems();
+  const { query: itemsQ, updateItemPriority } = useMyItems();
+  const { show: toast } = useToast();
 
   const isMobile = useIsMobile();
   const [view, setView] = useState<ViewMode>('grid');
@@ -89,7 +91,16 @@ export function MyListScreen() {
           {effectiveView === 'grid' ? (
             <ItemGrid items={filteredItems} />
           ) : (
-            <ItemList items={filteredItems} />
+            <ItemList
+              items={filteredItems}
+              mode="sectioned-dnd"
+              onPriorityChange={async (itemId, level) => {
+                const result = await updateItemPriority(itemId, level);
+                if ('error' in result) {
+                  toast(result.error);
+                }
+              }}
+            />
           )}
           {filteredItems.length === 0 && (
             <p
