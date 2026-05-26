@@ -32,8 +32,11 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
+  type Active,
+  type Announcements,
   type DragStartEvent,
   type DragEndEvent,
+  type Over,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -180,6 +183,50 @@ function SectionedListEditable({ items, onPriorityChange }: SectionedEditablePro
   // The item being dragged — used to render the DragOverlay ghost.
   const activeItem = activeId !== null ? items.find((i) => i.id === activeId) : null;
 
+  // ── Accessibility announcements ─────────────────────────────────────
+  // Translates drag events into screen-reader narration using the
+  // priority.a11y* keys.  The helper resolves a priority level to its
+  // section label string so we don't repeat the three-way ternary.
+  function sectionLabelFor(level: PriorityLevel): string {
+    if (level === 1) return t('priority.sectionHigh');
+    if (level === 3) return t('priority.sectionLow');
+    return t('priority.sectionMid');
+  }
+
+  // Given an `over` target (item id or empty-section drop-zone id), try
+  // to determine which priority section it belongs to.
+  function levelFromOver(over: Over | null): PriorityLevel | undefined {
+    if (!over) return undefined;
+    const overId = String(over.id);
+    if (overId.startsWith('section-')) {
+      const n = Number(overId.slice('section-'.length));
+      return n === 1 ? 1 : n === 3 ? 3 : 2;
+    }
+    const target = items.find((i) => i.id === overId);
+    if (target) return (target.priority === 1 || target.priority === 3 ? target.priority : 2);
+    return undefined;
+  }
+
+  const announcements: Announcements = {
+    onDragStart({ active }: { active: Active }) {
+      const item = items.find((i) => i.id === String(active.id));
+      return t('priority.a11yGrabbed', { title: item?.title ?? String(active.id) });
+    },
+    onDragOver({ over }: { active: Active; over: Over | null }) {
+      const lvl = levelFromOver(over);
+      if (lvl === undefined) return undefined;
+      return t('priority.a11yMovedTo', { section: sectionLabelFor(lvl) });
+    },
+    onDragEnd({ over }: { active: Active; over: Over | null }) {
+      const lvl = levelFromOver(over);
+      if (lvl === undefined) return t('priority.a11yCanceled');
+      return t('priority.a11yDropped', { section: sectionLabelFor(lvl) });
+    },
+    onDragCancel() {
+      return t('priority.a11yCanceled');
+    },
+  };
+
   // Running index for globally sequential number badges.
   let rowIndex = 0;
 
@@ -189,6 +236,7 @@ function SectionedListEditable({ items, onPriorityChange }: SectionedEditablePro
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
+      accessibility={{ announcements }}
     >
       {sections.map((section) => (
         <section key={section.level}>

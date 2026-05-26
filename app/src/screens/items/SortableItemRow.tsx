@@ -61,7 +61,7 @@ export function SortableItemRow({ id, children }: SortableItemRowProps) {
       <button
         type="button"
         data-testid="drag-handle"
-        aria-label={t('priority.a11yGrabbed', { title: id })}
+        aria-label={t('priority.a11yHandle')}
         {...attributes}
         {...listeners}
         style={{

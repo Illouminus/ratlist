@@ -119,6 +119,7 @@ export const en: Translation = {
     sectionMid:       'Want',
     sectionLow:       'If found',
     sectionEmptyHint: 'empty — drag something here',
+    a11yHandle:       'Drag to change priority',
     a11yGrabbed:      'Grabbed: {title}. Use arrows to move.',
     a11yMovedTo:      'Moved to "{section}".',
     a11yDropped:      'Saved to "{section}".',
