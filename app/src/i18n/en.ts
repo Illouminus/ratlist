@@ -114,6 +114,16 @@ export const en: Translation = {
     privateOnly: 'private to you',
     publishedIn: 'visible in {groups}',
   },
+  priority: {
+    sectionHigh:      'Really want',
+    sectionMid:       'Want',
+    sectionLow:       'If found',
+    sectionEmptyHint: 'empty — drag something here',
+    a11yGrabbed:      'Grabbed: {title}. Use arrows to move.',
+    a11yMovedTo:      'Moved to "{section}".',
+    a11yDropped:      'Saved to "{section}".',
+    a11yCanceled:     'Cancelled.',
+  },
   friend: {
     eyebrow: "friend's list",
     backToPeople: '‹ to people',
