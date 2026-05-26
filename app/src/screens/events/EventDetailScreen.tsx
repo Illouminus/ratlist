@@ -17,7 +17,6 @@ import {
   useEventParticipants,
   type EventParticipant,
 } from '../../events/useEventParticipants';
-import { useGroups } from '../../groups/useGroups';
 import { useMyItems, type MyItem } from '../../items/useMyItems';
 import { useAuth } from '../../auth/useAuth';
 import { useToast } from '../../components/useToast';
@@ -43,12 +42,11 @@ export function EventDetailScreen() {
   const toast = useToast();
   const confirm = useConfirm();
   const { user } = useAuth();
+  const [inviteOpen, setInviteOpen] = useState(false);
   const {
     query,
     update,
     remove,
-    attachCircle,
-    detachCircle,
     attachItem,
     detachItem,
     claim,
@@ -74,7 +72,7 @@ export function EventDetailScreen() {
     );
   }
 
-  const { event, audience, items, isHonoree } = query.data;
+  const { event, items, isHonoree } = query.data;
   const showShareCard = isHonoree && searchParams.get('share') === '1';
 
   function dismissShareCard() {
@@ -123,31 +121,21 @@ export function EventDetailScreen() {
         />
       )}
 
-      {isHonoree && eventId && (
-        <CoordinatorPanel
-          eventId={eventId}
-          shareToken={event.share_token}
-          showToast={(msg) => toast.show(msg)}
-          // When the post-create celebration card is up it already
-          // shows the URL + Copy button; the coordinator panel hides
-          // its redundant share section and surfaces only the invite
-          // button + participants list.
-          hideShareBlock={showShareCard}
-        />
-      )}
-
       {isHonoree ? (
         <HonoreeHeader event={event} onSave={update} />
       ) : (
         <GuestHeader event={event} />
       )}
 
-      <AudienceSection
-        audience={audience}
-        isHonoree={isHonoree}
-        onAttach={attachCircle}
-        onDetach={detachCircle}
-      />
+      {isHonoree && event.share_token && !showShareCard && (
+        <InlineShareActions
+          shareToken={event.share_token}
+          onCopied={() => toast.show(t('events.share.copied'))}
+          onInvite={() => setInviteOpen(true)}
+        />
+      )}
+
+      {isHonoree && eventId && <ParticipantsSection eventId={eventId} />}
 
       <ItemsSection
         items={items}
@@ -184,6 +172,15 @@ export function EventDetailScreen() {
             {t('events.deleteCta')}
           </button>
         </footer>
+      )}
+
+      {isHonoree && eventId && (
+        <InviteFromPeopleModal
+          eventId={eventId}
+          open={inviteOpen}
+          onClose={() => setInviteOpen(false)}
+          showToast={(msg) => toast.show(msg)}
+        />
       )}
     </PaperLayout>
   );
@@ -428,123 +425,109 @@ const selectStyle = {
   outline: 'none',
 } as const;
 
-// ─────────────────────────── audience ───────────────────────────
+// ─────────────────────────── inline share + participants ───────────────────────────
 
-interface AudienceSectionProps {
-  audience: Array<{
-    group_id: string;
-    group: { id: string; name: string; emoji: string | null };
-  }>;
-  isHonoree: boolean;
-  onAttach: (groupId: string) => Promise<{ ok: true } | { error: string }>;
-  onDetach: (groupId: string) => Promise<{ ok: true } | { error: string }>;
+interface InlineShareActionsProps {
+  shareToken: string;
+  onCopied: () => void;
+  onInvite: () => void;
 }
 
-function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSectionProps) {
+/**
+ * `<InlineShareActions>` — the new compact share-and-invite affordance
+ * for honoree mode. Replaces the heavy URL+buttons block that used to
+ * sit at the top of the page. Three mono-meta tokens, separated by
+ * middots: passive label, copy action, invite action.
+ */
+function InlineShareActions({ shareToken, onCopied, onInvite }: InlineShareActionsProps) {
   const { t } = useI18n();
-  const { query: groupsQ } = useGroups();
-  const [picking, setPicking] = useState(false);
-  const allGroups = groupsQ.status === 'ready' ? groupsQ.groups : [];
-  const attachedIds = new Set(audience.map((a) => a.group_id));
-  const availableGroups = allGroups.filter((g) => !attachedIds.has(g.id));
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin : 'https://ratlist.app';
+  const shareUrl = `${origin}/event/${shareToken}`;
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      onCopied();
+    } catch {
+      // Clipboard API can fail in non-secure contexts or strict iframes.
+      // Silently no-op — the user can still get the link from the email
+      // invite. (A retry via document.execCommand is deprecated.)
+    }
+  }
 
   return (
-    <section style={{ marginBottom: 'var(--s-6)' }}>
-      <div className="mono-meta" style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-3)' }}>
-        {t('events.audienceLabel')}
-      </div>
-      <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-        {audience.length === 0 && !isHonoree && (
-          <span style={{ color: 'var(--ink-3)', fontStyle: 'italic', fontSize: 14 }}>
-            {t('events.audienceEmpty')}
-          </span>
-        )}
-        {audience.map((a) => (
-          <span
-            key={a.group_id}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '2px 10px',
-              border: '1px solid var(--hair-strong)',
-              borderRadius: 999,
-              fontSize: 13,
-              color: 'var(--ink-2)',
-            }}
-          >
-            {a.group.emoji && <span aria-hidden>{a.group.emoji}</span>}
-            {a.group.name}
-            {isHonoree && (
-              <button
-                type="button"
-                onClick={() => void onDetach(a.group_id)}
-                aria-label={t('events.removeCircle', { name: a.group.name })}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  padding: 0,
-                  marginLeft: 2,
-                  color: 'var(--ink-3)',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  lineHeight: 1,
-                }}
-              >
-                ×
-              </button>
-            )}
-          </span>
-        ))}
-        {isHonoree && availableGroups.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setPicking((v) => !v)}
-            className="mono-meta"
-            style={{
-              background: 'transparent',
-              border: '1px dashed var(--hair-strong)',
-              padding: '2px 10px',
-              borderRadius: 999,
-              color: 'var(--accent)',
-              cursor: 'pointer',
-            }}
-          >
-            {picking ? t('events.collapse') : t('events.addCircle')}
-          </button>
-        )}
-      </div>
-      {picking && isHonoree && availableGroups.length > 0 && (
-        <div
-          style={{
-            marginTop: 'var(--s-3)',
-            display: 'flex',
-            gap: 'var(--s-2)',
-            flexWrap: 'wrap',
-          }}
-        >
-          {availableGroups.map((g) => (
-            <button
-              key={g.id}
-              type="button"
-              onClick={() => void onAttach(g.id)}
-              style={{
-                padding: '4px 12px',
-                borderRadius: 999,
-                border: '1px dashed var(--accent)',
-                background: 'var(--accent-soft)',
-                color: 'var(--ink)',
-                fontFamily: 'var(--font-body)',
-                fontSize: 13,
-                cursor: 'pointer',
-              }}
-            >
-              + {g.emoji ? `${g.emoji} ` : ''}
-              {g.name}
-            </button>
-          ))}
-        </div>
-      )}
+    <div
+      style={{
+        marginTop: 'calc(-1 * var(--s-3))',
+        marginBottom: 'var(--s-6)',
+        display: 'flex',
+        gap: 'var(--s-3)',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: 0.06,
+        textTransform: 'uppercase',
+      }}
+    >
+      <span style={{ color: 'var(--ink-3)' }}>{t('events.share.linkLabel')}</span>
+      <span style={{ color: 'var(--hair-strong)' }} aria-hidden>·</span>
+      <button
+        type="button"
+        onClick={() => void handleCopy()}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          color: 'var(--accent)',
+          cursor: 'pointer',
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          letterSpacing: 'inherit',
+          textTransform: 'inherit',
+        }}
+      >
+        {t('events.share.copyShort')}
+      </button>
+      <span style={{ color: 'var(--hair-strong)' }} aria-hidden>·</span>
+      <button
+        type="button"
+        onClick={onInvite}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          color: 'var(--accent)',
+          cursor: 'pointer',
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          letterSpacing: 'inherit',
+          textTransform: 'inherit',
+        }}
+      >
+        {t('events.share.inviteShort')}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * `<ParticipantsSection>` — honoree-only summary of who's in the event.
+ * Replaces the old `<CoordinatorPanel>` shell: share/invite affordances
+ * moved out to `<InlineShareActions>` above, leaving just the rendered
+ * participants list (collapsible <details>) when at least one
+ * participant exists. When the list is empty, this component renders
+ * nothing — no chrome wasted on a zero-state.
+ */
+function ParticipantsSection({ eventId }: { eventId: string }) {
+  const { query: participantsQ } = useEventParticipants(eventId);
+  if (participantsQ.status !== 'ready' || participantsQ.participants.length === 0) {
+    return null;
+  }
+  return (
+    <section style={{ marginBottom: 'var(--s-5)' }}>
+      <ParticipantList participants={participantsQ.participants} />
     </section>
   );
 }
@@ -948,130 +931,6 @@ function ShareCard({
           {t('events.share.dismiss')}
         </button>
       </div>
-    </section>
-  );
-}
-
-// ─────────────────────────── coordinator panel ───────────────────────────
-
-/**
- * Always-on share + invite + participants section for the honoree.
- * Distinct from the post-create `<ShareCard>`: that one is a transient
- * celebration on `?share=1`; this one is the daily-driver coordinator
- * controls. Honoree-only — non-honoree code paths never reach here.
- */
-function CoordinatorPanel({
-  eventId,
-  shareToken,
-  showToast,
-  hideShareBlock = false,
-}: {
-  eventId: string;
-  shareToken: string;
-  showToast: (msg: string) => void;
-  /** When the post-create `<ShareCard>` is up it already surfaces the
-   *  URL + Copy button; this prop hides the redundant share block so
-   *  the panel only renders the invite button + participants list. */
-  hideShareBlock?: boolean;
-}) {
-  const { t } = useI18n();
-  const { query: participantsQ } = useEventParticipants(eventId);
-  const [inviteOpen, setInviteOpen] = useState(false);
-
-  const origin =
-    typeof window !== 'undefined' ? window.location.origin : 'https://ratlist.app';
-  const shareUrl = `${origin}/event/${shareToken}`;
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      showToast(t('events.share.copied'));
-    } catch {
-      /* clipboard can fail in non-secure contexts — URL is visible anyway */
-    }
-  }
-
-  return (
-    <section
-      style={{
-        border: '1px solid var(--hair)',
-        padding: 'var(--s-4)',
-        marginBottom: 'var(--s-5)',
-        background: 'var(--paper)',
-      }}
-    >
-      {!hideShareBlock && (
-        <>
-          <h3
-            className="mono-meta"
-            style={{ margin: '0 0 var(--s-3)', color: 'var(--ink-3)' }}
-          >
-            {t('events.share.coordinatorTitle')}
-          </h3>
-          <code
-            style={{
-              display: 'block',
-              padding: 'var(--s-2)',
-              background: 'var(--paper-2, #fffdf6)',
-              border: '1px solid var(--hair)',
-              margin: '0 0 var(--s-3)',
-              fontSize: 13,
-              fontFamily: 'var(--font-mono, monospace)',
-              color: 'var(--ink)',
-              overflowWrap: 'anywhere',
-            }}
-          >
-            {shareUrl}
-          </code>
-        </>
-      )}
-      <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
-        {!hideShareBlock && (
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            style={{
-              background: 'transparent',
-              color: 'var(--accent)',
-              border: '1px solid var(--accent)',
-              padding: '8px 16px',
-              fontFamily: 'var(--font-body)',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            {t('events.share.copy')}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setInviteOpen(true)}
-          style={{
-            background: 'var(--accent)',
-            color: 'var(--paper)',
-            border: 'none',
-            padding: '8px 16px',
-            fontFamily: 'var(--font-body)',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          {t('events.invite.openButton')}
-        </button>
-      </div>
-
-      {participantsQ.status === 'ready' && participantsQ.participants.length > 0 && (
-        <ParticipantList participants={participantsQ.participants} />
-      )}
-
-      <InviteFromPeopleModal
-        eventId={eventId}
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-        showToast={showToast}
-      />
     </section>
   );
 }
