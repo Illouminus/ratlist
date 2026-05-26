@@ -33,6 +33,7 @@ import { Button } from '../../components/Button';
 import { InviteFromPeopleModal } from './InviteFromPeopleModal';
 import { groupByPriority } from '../../items/groupByPriority';
 import { PrioritySectionHeader } from '../../components/PrioritySectionHeader';
+import { ClaimControl } from './ClaimControl';
 
 export function EventDetailScreen() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -833,75 +834,6 @@ function CuratedItemCard({
         )}
       </div>
     </li>
-  );
-}
-
-function ClaimControl({
-  myClaim,
-  othersClaim,
-  onClaim,
-  onRelease,
-}: {
-  myClaim: EventClaim | null;
-  othersClaim: EventClaim | null;
-  onClaim: () => void;
-  onRelease: () => void;
-}) {
-  const { t } = useI18n();
-
-  if (myClaim) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-2)' }}>
-        <span
-          className="marginalia"
-          style={{ fontSize: 13, color: 'var(--accent)', transform: 'rotate(-1deg)' }}
-        >
-          {t('friend.youClaim')} ✓
-        </span>
-        <button
-          type="button"
-          onClick={onRelease}
-          className="mono-meta"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            color: 'var(--ink-3)',
-            cursor: 'pointer',
-          }}
-        >
-          {t('friend.release')}
-        </button>
-      </div>
-    );
-  }
-  if (othersClaim) {
-    return (
-      <span className="marginalia" style={{ fontSize: 13, color: 'var(--ink-3)' }}>
-        {t('friend.claimedBy', { name: othersClaim.user.display_name })}
-      </span>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClaim}
-      style={{
-        background: 'transparent',
-        border: '1px solid var(--ink)',
-        padding: '4px 10px',
-        borderRadius: 'var(--r-1)',
-        cursor: 'pointer',
-        fontFamily: 'var(--font-body)',
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        color: 'var(--ink)',
-      }}
-    >
-      {t('friend.claim')}
-    </button>
   );
 }
 
