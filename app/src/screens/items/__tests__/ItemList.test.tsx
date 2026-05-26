@@ -92,4 +92,10 @@ describe('<ItemList mode>', () => {
     expect(screen.getByText('Хочу')).toBeTruthy();
     expect(screen.queryByText('Если найдётся')).toBeNull();
   });
+
+  it('mode="sectioned-dnd" mounts an aria-live announcement region', () => {
+    renderList(<ItemList items={items} mode="sectioned-dnd" onPriorityChange={vi.fn()} />);
+    const live = document.querySelector('[role="status"][aria-live]');
+    expect(live).not.toBeNull();
+  });
 });
