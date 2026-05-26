@@ -27,8 +27,10 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { PriorityDots } from '../../components/PriorityDots';
+import { PrioritySectionHeader } from '../../components/PrioritySectionHeader';
 import { ReportDialog } from '../../components/ReportDialog';
 import { SittingRat, RunningRat } from '../../components/rats';
+import { groupByPriority } from '../../items/groupByPriority';
 
 export function FriendListScreen() {
   const { t } = useI18n();
@@ -272,16 +274,23 @@ interface ItemsListProps {
 function ItemsList({ items, myUserId, onClaim, onRelease }: ItemsListProps) {
   return (
     <div>
-      {items.map((item, i) => (
-        <FriendItemRow
-          key={item.id}
-          item={item}
-          myUserId={myUserId}
-          onClaim={() => onClaim(item.id)}
-          onRelease={() => onRelease(item.id)}
-          last={i === items.length - 1}
-        />
-      ))}
+      {groupByPriority(items).map((section) =>
+        section.items.length === 0 ? null : (
+          <section key={section.level}>
+            <PrioritySectionHeader level={section.level} count={section.items.length} />
+            {section.items.map((item, i) => (
+              <FriendItemRow
+                key={item.id}
+                item={item}
+                myUserId={myUserId}
+                onClaim={() => onClaim(item.id)}
+                onRelease={() => onRelease(item.id)}
+                last={i === section.items.length - 1}
+              />
+            ))}
+          </section>
+        ),
+      )}
       {/* a small rat trailing the list */}
       {items.length > 0 && (
         <div
