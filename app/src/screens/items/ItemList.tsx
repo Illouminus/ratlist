@@ -22,14 +22,17 @@
  *   PointerSensor / TouchSensor / KeyboardSensor is mounted at this
  *   level; dropping fires `onPriorityChange(itemId, newLevel)`.
  */
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
+  type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -127,7 +130,20 @@ function SectionedListEditable({ items, onPriorityChange }: SectionedEditablePro
 
   const sections = groupByPriority(items);
 
+  // Track the active dragged item ID so DragOverlay can render a ghost.
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  function handleDragStart(event: DragStartEvent): void {
+    setActiveId(String(event.active.id));
+  }
+
+  function handleDragCancel(): void {
+    setActiveId(null);
+  }
+
   function handleDragEnd(event: DragEndEvent): void {
+    setActiveId(null);
+
     const { active, over } = event;
     if (!over) return;
     const overId = String(over.id);
@@ -161,11 +177,19 @@ function SectionedListEditable({ items, onPriorityChange }: SectionedEditablePro
     onPriorityChange?.(String(active.id), newLevel);
   }
 
+  // The item being dragged — used to render the DragOverlay ghost.
+  const activeItem = activeId !== null ? items.find((i) => i.id === activeId) : null;
+
   // Running index for globally sequential number badges.
   let rowIndex = 0;
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
       {sections.map((section) => (
         <section key={section.level}>
           <PrioritySectionHeader level={section.level} count={section.items.length} />
@@ -195,6 +219,23 @@ function SectionedListEditable({ items, onPriorityChange }: SectionedEditablePro
           </SortableContext>
         </section>
       ))}
+      {/* DragOverlay must be a direct child of DndContext (not inside a
+          SortableContext) so the floating ghost follows the cursor across
+          all three sections. The source row fades to 0.6 opacity via
+          SortableItemRow; this overlay renders a fully-opaque lifted copy. */}
+      <DragOverlay>
+        {activeItem != null ? (
+          <div
+            style={{
+              boxShadow: '0 8px 20px rgba(43, 38, 32, 0.18)',
+              background: 'var(--paper)',
+              cursor: 'grabbing',
+            }}
+          >
+            <ItemRow item={activeItem} index={0} last={true} />
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
