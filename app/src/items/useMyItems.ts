@@ -57,6 +57,11 @@ export interface UseMyItemsResult {
   updateItem: (id: string, input: CreateItemInput) => Promise<{ item: MyItem } | { error: string }>;
   deleteItem: (itemId: string) => Promise<{ ok: true } | { error: string }>;
   updateStatus: (itemId: string, status: ItemStatus) => Promise<{ ok: true } | { error: string }>;
+  /**
+   * Change an item's priority level. Optimistically updates the local
+   * cache, then issues the UPDATE. Reverts the cache on server error.
+   */
+  updateItemPriority: (itemId: string, priority: 1 | 2 | 3) => Promise<{ ok: true } | { error: string }>;
 }
 
 type FetchState =
@@ -321,5 +326,54 @@ export function useMyItems(): UseMyItemsResult {
     [user],
   );
 
-  return { query, refresh, createItem, updateItem, deleteItem, updateStatus };
+  const updateItemPriority = useCallback(
+    async (itemId: string, priority: 1 | 2 | 3): Promise<{ ok: true } | { error: string }> => {
+      // Snapshot the prior priority from the current closure state BEFORE the
+      // optimistic update. React batches setState updaters and they don't run
+      // synchronously, so a side-effect-in-updater would still be null when
+      // the await resolves — read from `fetched` directly instead.
+      const priorPriority =
+        fetched.kind === 'loaded'
+          ? (fetched.items.find((i) => i.id === itemId)?.priority ?? null)
+          : null;
+
+      // Optimistic update: flip the local state immediately.
+      setFetched((prev) => {
+        if (prev.kind !== 'loaded') return prev;
+        const items = prev.items.map((i) =>
+          i.id === itemId ? { ...i, priority } : i,
+        );
+        return { ...prev, items };
+      });
+
+      const { error } = await supabase
+        .from('items')
+        .update({ priority })
+        .eq('id', itemId);
+
+      if (error) {
+        // Revert the optimistic change.
+        if (priorPriority !== null) {
+          const snapshot = priorPriority;
+          setFetched((prev) => {
+            if (prev.kind !== 'loaded') return prev;
+            const items = prev.items.map((i) =>
+              i.id === itemId ? { ...i, priority: snapshot } : i,
+            );
+            return { ...prev, items };
+          });
+        }
+        return { error: error.message };
+      }
+
+      track('ItemPriorityChanged', { from: priorPriority ?? 'unknown', to: priority });
+      return { ok: true };
+    },
+    // `fetched` is required to read the prior priority synchronously. The
+    // callback identity changing on every state update is fine — MyListScreen
+    // uses it inline in the JSX, not as a memoization key.
+    [fetched],
+  );
+
+  return { query, refresh, createItem, updateItem, deleteItem, updateStatus, updateItemPriority };
 }

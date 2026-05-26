@@ -64,7 +64,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - uses: denoland/setup-deno@v1
+      # Pinned to v1.5.2 (specific tag) instead of @v1 — the @v1 mover tag
+      # resolves to a SHA that GitHub Actions can't fetch from codeload.
+      # 2026-05-26 CI broke on PR #23 with the bare @v1 ref; the specific
+      # tarballs (v1.5.2, v2.0.4) remained reachable. Stays on Deno 1.x
+      # for compatibility with our Edge Function tests.
+      - uses: denoland/setup-deno@v1.5.2
         with:
           deno-version: 'v1.x'
       - uses: supabase/setup-cli@v1

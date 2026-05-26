@@ -916,6 +916,7 @@ export type Database = {
         occasion: string | null
         note: string | null
         cover_url: string | null
+        priority: number | null
         created_at: string | null
       }
       public_owner: {

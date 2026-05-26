@@ -9,25 +9,310 @@
  * Layout works the same on mobile and desktop (the row is naturally
  * compact). On desktop it reads more like an editorial inventory than
  * the wide grid; on mobile it replaces the grid entirely.
+ *
+ * ## Modes
+ * - `'flat'` (default): today's behavior — items rendered in a single
+ *   undecorated list, no section headers.
+ * - `'sectioned'`: items grouped into 3 priority sections with
+ *   `<PrioritySectionHeader>` per group. Empty sections are hidden.
+ *   Read-only; no drag handles.
+ * - `'sectioned-dnd'`: same grouping but all 3 headers are always
+ *   visible (empty sections show a drop-zone placeholder). Each row is
+ *   wrapped in `<SortableItemRow>`. A `<DndContext>` with
+ *   PointerSensor / TouchSensor / KeyboardSensor is mounted at this
+ *   level; dropping fires `onPriorityChange(itemId, newLevel)`.
  */
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type Active,
+  type Announcements,
+  type DragStartEvent,
+  type DragEndEvent,
+  type Over,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
 import { useI18n } from '../../i18n/useI18n';
 import type { MyItem } from '../../items/useMyItems';
+import { groupByPriority, type PriorityLevel } from '../../items/groupByPriority';
+import { PrioritySectionHeader } from '../../components/PrioritySectionHeader';
+import { SortableItemRow } from './SortableItemRow';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { PriorityDots } from '../../components/PriorityDots';
 import type { Occasion } from '../../lib/db';
 
-interface ItemListProps {
+// ─────────────────────────── public API ───────────────────────────
+
+export type ItemListMode = 'flat' | 'sectioned' | 'sectioned-dnd';
+
+export interface ItemListProps {
   items: MyItem[];
+  mode?: ItemListMode;
+  /** Required when mode='sectioned-dnd'. Called with (itemId, newLevel) on drop. */
+  onPriorityChange?: (itemId: string, level: PriorityLevel) => void;
 }
 
-export function ItemList({ items }: ItemListProps) {
+export function ItemList({ items, mode = 'flat', onPriorityChange }: ItemListProps) {
+  if (mode === 'flat') return <FlatList items={items} />;
+  if (mode === 'sectioned') return <SectionedListReadOnly items={items} />;
+  return <SectionedListEditable items={items} onPriorityChange={onPriorityChange} />;
+}
+
+// ─────────────────────────── flat list ───────────────────────────
+
+function FlatList({ items }: { items: MyItem[] }) {
   return (
     <div>
       {items.map((item, i) => (
         <ItemRow key={item.id} item={item} index={i} last={i === items.length - 1} />
       ))}
+    </div>
+  );
+}
+
+// ─────────────────────────── sectioned read-only ───────────────────────────
+
+function SectionedListReadOnly({ items }: { items: MyItem[] }) {
+  const sections = groupByPriority(items);
+  // Running index so the number badge in each row stays globally sequential.
+  let rowIndex = 0;
+  return (
+    <div>
+      {sections.map((section) => {
+        if (section.items.length === 0) return null;
+        return (
+          <section key={section.level}>
+            <PrioritySectionHeader level={section.level} count={section.items.length} />
+            {section.items.map((item) => {
+              const idx = rowIndex++;
+              return (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  index={idx}
+                  last={false}
+                />
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────── sectioned + drag-and-drop ───────────────────────────
+
+interface SectionedEditableProps {
+  items: MyItem[];
+  onPriorityChange?: (itemId: string, level: PriorityLevel) => void;
+}
+
+function SectionedListEditable({ items, onPriorityChange }: SectionedEditableProps) {
+  const { t } = useI18n();
+
+  // useSensors always called at top of this component — no conditional hook issue.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const sections = groupByPriority(items);
+
+  // Track the active dragged item ID so DragOverlay can render a ghost.
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  function handleDragStart(event: DragStartEvent): void {
+    setActiveId(String(event.active.id));
+  }
+
+  function handleDragCancel(): void {
+    setActiveId(null);
+  }
+
+  function handleDragEnd(event: DragEndEvent): void {
+    setActiveId(null);
+
+    const { active, over } = event;
+    if (!over) return;
+    const overId = String(over.id);
+    let newLevel: PriorityLevel | null = null;
+
+    if (overId.startsWith('section-')) {
+      // Dropped onto an empty-section drop zone — extract the level from the ID.
+      const lvl = Number(overId.slice('section-'.length));
+      newLevel = lvl === 1 ? 1 : lvl === 3 ? 3 : 2;
+    } else {
+      // Dropped onto another item row — adopt that item's priority section.
+      const targetItem = items.find((i) => i.id === overId);
+      if (targetItem) {
+        newLevel = targetItem.priority === 1 || targetItem.priority === 3
+          ? targetItem.priority
+          : 2;
+      }
+    }
+
+    if (newLevel === null) return;
+
+    // Bail out if the item is already in the target section (no-op).
+    const activeItem = items.find((i) => i.id === String(active.id));
+    if (!activeItem) return;
+    const currentLevel: PriorityLevel =
+      activeItem.priority === 1 || activeItem.priority === 3
+        ? activeItem.priority
+        : 2;
+    if (currentLevel === newLevel) return;
+
+    onPriorityChange?.(String(active.id), newLevel);
+  }
+
+  // The item being dragged — used to render the DragOverlay ghost.
+  const activeItem = activeId !== null ? items.find((i) => i.id === activeId) : null;
+
+  // ── Accessibility announcements ─────────────────────────────────────
+  // Translates drag events into screen-reader narration using the
+  // priority.a11y* keys.  The helper resolves a priority level to its
+  // section label string so we don't repeat the three-way ternary.
+  function sectionLabelFor(level: PriorityLevel): string {
+    if (level === 1) return t('priority.sectionHigh');
+    if (level === 3) return t('priority.sectionLow');
+    return t('priority.sectionMid');
+  }
+
+  // Given an `over` target (item id or empty-section drop-zone id), try
+  // to determine which priority section it belongs to.
+  function levelFromOver(over: Over | null): PriorityLevel | undefined {
+    if (!over) return undefined;
+    const overId = String(over.id);
+    if (overId.startsWith('section-')) {
+      const n = Number(overId.slice('section-'.length));
+      return n === 1 ? 1 : n === 3 ? 3 : 2;
+    }
+    const target = items.find((i) => i.id === overId);
+    if (target) return (target.priority === 1 || target.priority === 3 ? target.priority : 2);
+    return undefined;
+  }
+
+  const announcements: Announcements = {
+    onDragStart({ active }: { active: Active }) {
+      const item = items.find((i) => i.id === String(active.id));
+      return t('priority.a11yGrabbed', { title: item?.title ?? String(active.id) });
+    },
+    onDragOver({ over }: { active: Active; over: Over | null }) {
+      const lvl = levelFromOver(over);
+      if (lvl === undefined) return undefined;
+      return t('priority.a11yMovedTo', { section: sectionLabelFor(lvl) });
+    },
+    onDragEnd({ over }: { active: Active; over: Over | null }) {
+      const lvl = levelFromOver(over);
+      if (lvl === undefined) return t('priority.a11yCanceled');
+      return t('priority.a11yDropped', { section: sectionLabelFor(lvl) });
+    },
+    onDragCancel() {
+      return t('priority.a11yCanceled');
+    },
+  };
+
+  // Running index for globally sequential number badges.
+  let rowIndex = 0;
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+      accessibility={{ announcements }}
+    >
+      {sections.map((section) => (
+        <section key={section.level}>
+          <PrioritySectionHeader level={section.level} count={section.items.length} />
+          <SortableContext
+            items={
+              section.items.length > 0
+                ? section.items.map((i) => i.id)
+                : [`section-${section.level}`]
+            }
+            strategy={verticalListSortingStrategy}
+          >
+            {section.items.length === 0 ? (
+              <EmptySectionDropZone
+                level={section.level}
+                placeholder={t('priority.sectionEmptyHint')}
+              />
+            ) : (
+              section.items.map((item) => {
+                const idx = rowIndex++;
+                return (
+                  <SortableItemRow key={item.id} id={item.id}>
+                    <ItemRow item={item} index={idx} last={false} />
+                  </SortableItemRow>
+                );
+              })
+            )}
+          </SortableContext>
+        </section>
+      ))}
+      {/* DragOverlay must be a direct child of DndContext (not inside a
+          SortableContext) so the floating ghost follows the cursor across
+          all three sections. The source row fades to 0.6 opacity via
+          SortableItemRow; this overlay renders a fully-opaque lifted copy. */}
+      <DragOverlay>
+        {activeItem != null ? (
+          <div
+            style={{
+              boxShadow: '0 8px 20px rgba(43, 38, 32, 0.18)',
+              background: 'var(--paper)',
+              cursor: 'grabbing',
+            }}
+          >
+            <ItemRow item={activeItem} index={0} last={true} />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+// ─────────────────────────── empty drop zone ───────────────────────────
+
+function EmptySectionDropZone({
+  level,
+  placeholder,
+}: {
+  level: PriorityLevel;
+  placeholder: string;
+}) {
+  const { setNodeRef, isOver } = useSortable({ id: `section-${level}` });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        padding: 'var(--s-3) var(--s-2)',
+        fontFamily: 'var(--font-hand)',
+        fontSize: 14,
+        fontStyle: 'italic',
+        color: 'var(--ink-3)',
+        background: isOver ? 'var(--accent-soft)' : 'transparent',
+        border: isOver ? '1px dashed var(--accent)' : '1px dashed transparent',
+        transition: 'background 120ms ease, border-color 120ms ease',
+      }}
+    >
+      {placeholder}
     </div>
   );
 }

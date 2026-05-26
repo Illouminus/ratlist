@@ -119,6 +119,17 @@ export const ru: Translation = {
     privateOnly: 'только тебе видно',
     publishedIn: 'видно в {groups}',
   },
+  priority: {
+    sectionHigh:      'Очень хочу',
+    sectionMid:       'Хочу',
+    sectionLow:       'Если найдётся',
+    sectionEmptyHint: 'здесь пусто — перетащи сюда что-то',
+    a11yHandle:       'Перетащи чтобы изменить приоритет',
+    a11yGrabbed:      'Взято: {title}. Используй стрелки чтобы переместить.',
+    a11yMovedTo:      'Перемещено в «{section}».',
+    a11yDropped:      'Сохранено в «{section}».',
+    a11yCanceled:     'Отменено.',
+  },
   friend: {
     eyebrow: 'список друга',
     backToPeople: '‹ к крысятам',

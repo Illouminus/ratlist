@@ -25,7 +25,8 @@
 export type PlausibleGoal =
   | 'SignedIn' // user just completed a sign-in (magic link or OAuth)
   | 'ItemAdded' // user successfully created a wishlist item
-  | 'GroupCreated'; // user successfully created a friend circle
+  | 'GroupCreated' // user successfully created a friend circle
+  | 'ItemPriorityChanged'; // user changed the priority of a wishlist item
 
 type PlausibleProps = Record<string, string | number | boolean>;
 
