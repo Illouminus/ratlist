@@ -9,25 +9,221 @@
  * Layout works the same on mobile and desktop (the row is naturally
  * compact). On desktop it reads more like an editorial inventory than
  * the wide grid; on mobile it replaces the grid entirely.
+ *
+ * ## Modes
+ * - `'flat'` (default): today's behavior — items rendered in a single
+ *   undecorated list, no section headers.
+ * - `'sectioned'`: items grouped into 3 priority sections with
+ *   `<PrioritySectionHeader>` per group. Empty sections are hidden.
+ *   Read-only; no drag handles.
+ * - `'sectioned-dnd'`: same grouping but all 3 headers are always
+ *   visible (empty sections show a drop-zone placeholder). Each row is
+ *   wrapped in `<SortableItemRow>`. A `<DndContext>` with
+ *   PointerSensor / TouchSensor / KeyboardSensor is mounted at this
+ *   level; dropping fires `onPriorityChange(itemId, newLevel)`.
  */
 import { Link } from 'react-router-dom';
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
 import { useI18n } from '../../i18n/useI18n';
 import type { MyItem } from '../../items/useMyItems';
+import { groupByPriority, type PriorityLevel } from '../../items/groupByPriority';
+import { PrioritySectionHeader } from '../../components/PrioritySectionHeader';
+import { SortableItemRow } from './SortableItemRow';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { PriorityDots } from '../../components/PriorityDots';
 import type { Occasion } from '../../lib/db';
 
-interface ItemListProps {
+// ─────────────────────────── public API ───────────────────────────
+
+export type ItemListMode = 'flat' | 'sectioned' | 'sectioned-dnd';
+
+export interface ItemListProps {
   items: MyItem[];
+  mode?: ItemListMode;
+  /** Required when mode='sectioned-dnd'. Called with (itemId, newLevel) on drop. */
+  onPriorityChange?: (itemId: string, level: PriorityLevel) => void;
 }
 
-export function ItemList({ items }: ItemListProps) {
+export function ItemList({ items, mode = 'flat', onPriorityChange }: ItemListProps) {
+  if (mode === 'flat') return <FlatList items={items} />;
+  if (mode === 'sectioned') return <SectionedListReadOnly items={items} />;
+  return <SectionedListEditable items={items} onPriorityChange={onPriorityChange} />;
+}
+
+// ─────────────────────────── flat list ───────────────────────────
+
+function FlatList({ items }: { items: MyItem[] }) {
   return (
     <div>
       {items.map((item, i) => (
         <ItemRow key={item.id} item={item} index={i} last={i === items.length - 1} />
       ))}
+    </div>
+  );
+}
+
+// ─────────────────────────── sectioned read-only ───────────────────────────
+
+function SectionedListReadOnly({ items }: { items: MyItem[] }) {
+  const sections = groupByPriority(items);
+  // Running index so the number badge in each row stays globally sequential.
+  let rowIndex = 0;
+  return (
+    <div>
+      {sections.map((section) => {
+        if (section.items.length === 0) return null;
+        return (
+          <section key={section.level}>
+            <PrioritySectionHeader level={section.level} count={section.items.length} />
+            {section.items.map((item) => {
+              const idx = rowIndex++;
+              return (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  index={idx}
+                  last={false}
+                />
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────── sectioned + drag-and-drop ───────────────────────────
+
+interface SectionedEditableProps {
+  items: MyItem[];
+  onPriorityChange?: (itemId: string, level: PriorityLevel) => void;
+}
+
+function SectionedListEditable({ items, onPriorityChange }: SectionedEditableProps) {
+  const { t } = useI18n();
+
+  // useSensors always called at top of this component — no conditional hook issue.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const sections = groupByPriority(items);
+
+  function handleDragEnd(event: DragEndEvent): void {
+    const { active, over } = event;
+    if (!over) return;
+    const overId = String(over.id);
+    let newLevel: PriorityLevel | null = null;
+
+    if (overId.startsWith('section-')) {
+      // Dropped onto an empty-section drop zone — extract the level from the ID.
+      const lvl = Number(overId.slice('section-'.length));
+      newLevel = lvl === 1 ? 1 : lvl === 3 ? 3 : 2;
+    } else {
+      // Dropped onto another item row — adopt that item's priority section.
+      const targetItem = items.find((i) => i.id === overId);
+      if (targetItem) {
+        newLevel = targetItem.priority === 1 || targetItem.priority === 3
+          ? targetItem.priority
+          : 2;
+      }
+    }
+
+    if (newLevel === null) return;
+
+    // Bail out if the item is already in the target section (no-op).
+    const activeItem = items.find((i) => i.id === String(active.id));
+    if (!activeItem) return;
+    const currentLevel: PriorityLevel =
+      activeItem.priority === 1 || activeItem.priority === 3
+        ? activeItem.priority
+        : 2;
+    if (currentLevel === newLevel) return;
+
+    onPriorityChange?.(String(active.id), newLevel);
+  }
+
+  // Running index for globally sequential number badges.
+  let rowIndex = 0;
+
+  return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      {sections.map((section) => (
+        <section key={section.level}>
+          <PrioritySectionHeader level={section.level} count={section.items.length} />
+          <SortableContext
+            items={
+              section.items.length > 0
+                ? section.items.map((i) => i.id)
+                : [`section-${section.level}`]
+            }
+            strategy={verticalListSortingStrategy}
+          >
+            {section.items.length === 0 ? (
+              <EmptySectionDropZone
+                level={section.level}
+                placeholder={t('priority.sectionEmptyHint')}
+              />
+            ) : (
+              section.items.map((item) => {
+                const idx = rowIndex++;
+                return (
+                  <SortableItemRow key={item.id} id={item.id}>
+                    <ItemRow item={item} index={idx} last={false} />
+                  </SortableItemRow>
+                );
+              })
+            )}
+          </SortableContext>
+        </section>
+      ))}
+    </DndContext>
+  );
+}
+
+// ─────────────────────────── empty drop zone ───────────────────────────
+
+function EmptySectionDropZone({
+  level,
+  placeholder,
+}: {
+  level: PriorityLevel;
+  placeholder: string;
+}) {
+  const { setNodeRef, isOver } = useSortable({ id: `section-${level}` });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        padding: 'var(--s-3) var(--s-2)',
+        fontFamily: 'var(--font-hand)',
+        fontSize: 14,
+        fontStyle: 'italic',
+        color: 'var(--ink-3)',
+        background: isOver ? 'var(--accent-soft)' : 'transparent',
+        border: isOver ? '1px dashed var(--accent)' : '1px dashed transparent',
+        transition: 'background 120ms ease, border-color 120ms ease',
+      }}
+    >
+      {placeholder}
     </div>
   );
 }

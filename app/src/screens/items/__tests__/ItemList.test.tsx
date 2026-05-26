@@ -10,16 +10,16 @@ beforeEach(() => {
   localStorage.setItem('kryska.lang', 'ru');
 });
 
-function mkItem(overrides: Partial<MyItem> & { id: string }): MyItem {
+function mkItem({ id, title, priority = 2, ...rest }: Partial<MyItem> & { id: string }): MyItem {
   return {
-    id: overrides.id,
+    id,
     owner_id: 'user-1',
-    title: overrides.title ?? `Item ${overrides.id}`,
+    title: title ?? `Item ${id}`,
     maker: null,
     url: null,
     price_text: null,
     occasion: 'anytime',
-    priority: overrides.priority ?? 2,
+    priority,
     status: 'open',
     note: null,
     cover_url: null,
@@ -27,7 +27,7 @@ function mkItem(overrides: Partial<MyItem> & { id: string }): MyItem {
     updated_at: new Date().toISOString(),
     group_ids: [],
     event_ids: [],
-    ...overrides,
+    ...rest,
   } as MyItem;
 }
 
