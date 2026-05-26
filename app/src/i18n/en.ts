@@ -356,7 +356,11 @@ export const en: Translation = {
       copied: 'link copied',
       dismiss: 'Done',
       coordinatorTitle: 'Share link',
+      linkLabel: 'share link',
+      copyShort: 'copy ↗',
+      inviteShort: 'invite friends →',
     },
+    emptySign: 'empty',
     invite: {
       openButton: 'Invite friends',
       modalTitle: 'Who to invite?',
@@ -648,5 +652,8 @@ export const en: Translation = {
   },
   a11y: {
     skipToMain: 'Skip to main content',
+  },
+  placeholder: {
+    noPhoto: 'no photo',
   },
 };

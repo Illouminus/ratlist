@@ -361,7 +361,11 @@ export const ru: Translation = {
       copied: 'ссылка скопирована',
       dismiss: 'Готово',
       coordinatorTitle: 'Ссылка для приглашения',
+      linkLabel: 'ссылка для гостей',
+      copyShort: 'скопировать ↗',
+      inviteShort: 'позвать друзей →',
     },
+    emptySign: 'empty',
     invite: {
       openButton: 'Позвать друзей',
       modalTitle: 'Кого позвать?',
@@ -653,5 +657,8 @@ export const ru: Translation = {
   },
   a11y: {
     skipToMain: 'Перейти к содержимому',
+  },
+  placeholder: {
+    noPhoto: 'без фото',
   },
 };
