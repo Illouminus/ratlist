@@ -9,7 +9,7 @@
  *   any claim row (see `claims` RLS in 20260516120000_init.sql), so this
  *   page just renders what comes back.
  */
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useEvent, type EventClaim } from '../../events/useEvent';
@@ -32,7 +32,9 @@ import { Button } from '../../components/Button';
 import { InviteFromPeopleModal } from './InviteFromPeopleModal';
 import { groupByPriority } from '../../items/groupByPriority';
 import { PrioritySectionHeader } from '../../components/PrioritySectionHeader';
-import { ClaimControl } from './ClaimControl';
+import { HeroCuratedItem } from './HeroCuratedItem';
+import { TileCuratedItem } from './TileCuratedItem';
+import { SittingRat } from '../../components/rats/SittingRat';
 
 export function EventDetailScreen() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -594,42 +596,67 @@ function ItemsSection({
       </div>
 
       {items.length === 0 ? (
-        <p style={{ color: 'var(--ink-3)', fontStyle: 'italic' }}>
-          {isHonoree ? t('events.noItemsHonoree') : t('events.noItemsGuest')}
-        </p>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 'var(--s-4)',
+            padding: 'var(--s-6) 0',
+            color: 'var(--ink-3)',
+            fontStyle: 'italic',
+          }}
+        >
+          <SittingRat size={80} sign signText={t('events.emptySign')} />
+          <p style={{ margin: 0 }}>
+            {isHonoree ? t('events.noItemsHonoree') : t('events.noItemsGuest')}
+          </p>
+        </div>
       ) : (
         <>
           {groupByPriority(
             items.map((it) => ({ ...it, priority: it.item.priority })),
-          ).map((section) =>
-            section.items.length === 0 ? null : (
-              <section key={section.level}>
+          ).map((section) => {
+            if (section.items.length === 0) return null;
+            const [first, ...rest] = section.items;
+            if (!first) return null;
+            return (
+              <section key={section.level} style={{ marginBottom: 'var(--s-6)' }}>
                 <PrioritySectionHeader level={section.level} count={section.items.length} />
-                <ul
-                  style={{
-                    listStyle: 'none',
-                    padding: 0,
-                    margin: 0,
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                    gap: 'var(--s-5)',
-                  }}
-                >
-                  {section.items.map((it) => (
-                    <CuratedItemCard
-                      key={it.item_id}
-                      entry={it}
-                      isHonoree={isHonoree}
-                      myUserId={myUserId}
-                      onDetach={() => void onDetach(it.item_id)}
-                      onClaim={() => void onClaim(it.item_id)}
-                      onRelease={() => void onRelease(it.item_id)}
-                    />
-                  ))}
-                </ul>
+                <HeroCuratedItem
+                  entry={first}
+                  isHonoree={isHonoree}
+                  myUserId={myUserId}
+                  onDetach={() => void onDetach(first.item_id)}
+                  onClaim={() => void onClaim(first.item_id)}
+                  onRelease={() => void onRelease(first.item_id)}
+                />
+                {rest.length > 0 && (
+                  <ul
+                    style={{
+                      listStyle: 'none',
+                      padding: 0,
+                      margin: 0,
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                      gap: 'var(--s-4)',
+                    }}
+                  >
+                    {rest.map((entry) => (
+                      <li key={entry.item_id}>
+                        <TileCuratedItem
+                          entry={entry}
+                          isHonoree={isHonoree}
+                          myUserId={myUserId}
+                          onDetach={() => void onDetach(entry.item_id)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
-            ),
-          )}
+            );
+          })}
         </>
       )}
 
@@ -690,133 +717,6 @@ function ItemsSection({
         </div>
       )}
     </section>
-  );
-}
-
-interface CuratedItemCardProps {
-  entry: ItemsSectionProps['items'][number];
-  isHonoree: boolean;
-  myUserId: string | null;
-  onDetach: () => void;
-  onClaim: () => void;
-  onRelease: () => void;
-}
-
-function CuratedItemCard({
-  entry,
-  isHonoree,
-  myUserId,
-  onDetach,
-  onClaim,
-  onRelease,
-}: CuratedItemCardProps) {
-  const { t } = useI18n();
-  const { item, claims } = entry;
-  const myClaim = useMemo(
-    () => (myUserId ? claims.find((c) => c.user_id === myUserId) ?? null : null),
-    [claims, myUserId],
-  );
-  const othersClaim = useMemo(
-    () => claims.find((c) => c.user_id !== myUserId) ?? null,
-    [claims, myUserId],
-  );
-  const dimmed = !isHonoree && claims.length > 0 && !myClaim;
-
-  return (
-    <li>
-      <div style={{ opacity: dimmed ? 0.55 : 1, position: 'relative' }}>
-        <Link
-          to={`/i/${item.id}`}
-          style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-        >
-          <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
-        </Link>
-        {isHonoree && (
-          <button
-            type="button"
-            onClick={onDetach}
-            aria-label={t('events.removeItem', { title: item.title })}
-            style={{
-              position: 'absolute',
-              top: 6,
-              right: 6,
-              width: 26,
-              height: 26,
-              borderRadius: '50%',
-              background: 'var(--paper)',
-              color: 'var(--ink-2)',
-              border: '1px solid var(--hair-strong)',
-              cursor: 'pointer',
-              fontSize: 14,
-              lineHeight: 1,
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            ×
-          </button>
-        )}
-      </div>
-      <div style={{ paddingTop: 'var(--s-3)' }}>
-        <h3
-          style={{
-            margin: 0,
-            fontFamily: 'var(--font-body)',
-            fontWeight: 600,
-            fontSize: 15,
-            color: 'var(--ink)',
-            lineHeight: 1.3,
-            textDecoration: dimmed ? 'line-through' : 'none',
-          }}
-        >
-          {item.title}
-        </h3>
-        {item.maker && (
-          <div style={{ marginTop: 2, fontSize: 12, color: 'var(--ink-3)' }}>{item.maker}</div>
-        )}
-        {item.price_text && (
-          <div
-            style={{
-              marginTop: 4,
-              fontFamily: 'var(--font-display)',
-              fontStyle: 'italic',
-              fontSize: 14,
-              color: 'var(--accent)',
-            }}
-          >
-            {item.price_text}
-          </div>
-        )}
-        {/* Owner's personal note — same 2-line clamp + ink-2 treatment used
-            on MyList / friend list / public share. */}
-        {item.note && (
-          <div
-            style={{
-              marginTop: 'var(--s-2)',
-              fontSize: 12,
-              color: 'var(--ink-2)',
-              lineHeight: 1.4,
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {item.note}
-          </div>
-        )}
-        {!isHonoree && (
-          <div style={{ marginTop: 'var(--s-3)' }}>
-            <ClaimControl
-              myClaim={myClaim}
-              othersClaim={othersClaim}
-              onClaim={onClaim}
-              onRelease={onRelease}
-            />
-          </div>
-        )}
-      </div>
-    </li>
   );
 }
 
