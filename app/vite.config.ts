@@ -151,9 +151,12 @@ export default defineConfig({
           /^\/legal\//,
         ],
       },
-      // Inline the registration script into index.html so we don't need
-      // an extra round-trip on first paint.
-      injectRegister: 'inline',
+      // We register the service worker ourselves in src/registerSW.ts
+      // so we can wrap it in a try/catch and downgrade transient mobile
+      // failures from unhandled-rejection / high-priority Sentry alerts
+      // to plain warnings. vite-plugin-pwa's `'inline'` mode emits a
+      // raw `navigator.serviceWorker.register(...)` without .catch().
+      injectRegister: false,
       devOptions: {
         enabled: false,
       },

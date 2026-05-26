@@ -18,6 +18,7 @@ import { I18nProvider } from './i18n';
 import App from './App';
 import { AppRoutes } from './Router';
 import { initPlausible } from './lib/plausible';
+import { registerServiceWorker } from './registerSW';
 import './styles/global.css';
 
 // Plausible analytics — privacy-respecting, no cookies, no personal
@@ -108,3 +109,9 @@ if (isPrerenderedPath && container.hasChildNodes()) {
   }
   createRoot(container).render(tree);
 }
+
+// Register the service worker AFTER React mounts so we don't compete
+// for main-thread time during first paint. Replaces
+// vite-plugin-pwa's `injectRegister: 'inline'` (which had no .catch()).
+// See src/registerSW.ts for the rationale.
+void registerServiceWorker();
