@@ -22,6 +22,8 @@ import { OccasionTag } from '../components/OccasionTag';
 import { LangToggle } from '../components/LangToggle';
 import { ReportDialog } from '../components/ReportDialog';
 import { SittingRat } from '../components/rats';
+import { groupByPriority } from '../items/groupByPriority';
+import { PrioritySectionHeader } from '../components/PrioritySectionHeader';
 import type { Occasion } from '../lib/db';
 
 interface PublicOwner {
@@ -33,6 +35,7 @@ interface PublicOwner {
 interface PublicItem {
   id: string;
   title: string;
+  priority: number;
   maker: string | null;
   url: string | null;
   price_text: string | null;
@@ -81,7 +84,10 @@ export function PublicListScreen() {
           return;
         }
         const owner = (row as { owner?: PublicOwner }).owner ?? null;
-        const items = (row as { items?: PublicItem[] }).items ?? [];
+        // Cast via unknown: the RPC returns `priority` at runtime but the
+        // auto-generated DB type predates the column — `unknown` is the
+        // honest cast for untyped RPC response data.
+        const items = ((row as unknown) as { items?: PublicItem[] }).items ?? [];
         if (!owner) {
           setState({ kind: 'invalid' });
           return;
@@ -175,9 +181,21 @@ function Body({ owner, items }: { owner: PublicOwner; items: PublicItem[] }) {
         <EmptyOwner />
       ) : (
         <div>
-          {items.map((item, i) => (
-            <Row key={item.id} item={item} index={i} last={i === items.length - 1} />
-          ))}
+          {groupByPriority(items).map((section) =>
+            section.items.length === 0 ? null : (
+              <section key={section.level}>
+                <PrioritySectionHeader level={section.level} count={section.items.length} />
+                {section.items.map((item, i) => (
+                  <Row
+                    key={item.id}
+                    item={item}
+                    index={i}
+                    last={i === section.items.length - 1}
+                  />
+                ))}
+              </section>
+            ),
+          )}
         </div>
       )}
     </>
