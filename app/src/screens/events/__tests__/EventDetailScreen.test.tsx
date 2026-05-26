@@ -203,6 +203,96 @@ describe('EventDetailScreen — post-create share card (?share=1)', () => {
   });
 });
 
+describe('<EventDetailScreen> sectioning', () => {
+  function curated(id: string, priority: 1 | 2 | 3, title: string) {
+    return {
+      item_id: id,
+      added_at: '2026-05-26T00:00:00Z',
+      claims: [],
+      item: {
+        id,
+        priority,
+        title,
+        owner_id: 'honoree',
+        occasion: 'anytime',
+        maker: null,
+        url: null,
+        price_text: null,
+        note: null,
+        cover_url: null,
+        status: 'open',
+        created_at: '',
+        updated_at: '',
+      },
+    };
+  }
+
+  function stubWithItems(
+    items: ReturnType<typeof curated>[],
+    isHonoree: boolean,
+  ) {
+    mocks.useEvent.mockReturnValue({
+      query: {
+        status: 'ready',
+        data: {
+          event: honoreeEvent,
+          audience: [],
+          items,
+          isHonoree,
+        },
+        error: null,
+      },
+      refresh: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+      attachCircle: vi.fn(),
+      detachCircle: vi.fn(),
+      attachItem: vi.fn(),
+      detachItem: vi.fn(),
+      claim: vi.fn(),
+      release: vi.fn(),
+    });
+  }
+
+  it('honoree view: sections curated items by priority with no drag handles', () => {
+    stubWithItems(
+      [curated('a', 1, 'Книга'), curated('b', 2, 'Кружка')],
+      true,
+    );
+
+    renderAt('/events/e1');
+
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('Хочу')).toBeTruthy();
+    expect(screen.queryByText('Если найдётся')).toBeNull(); // empty bucket → hidden
+    expect(screen.getByText('Книга')).toBeTruthy();
+    expect(screen.getByText('Кружка')).toBeTruthy();
+    expect(screen.queryAllByTestId('drag-handle')).toHaveLength(0);
+  });
+
+  it('guest view: sections curated items read-only', () => {
+    stubWithItems(
+      [curated('a', 1, 'Книга'), curated('c', 3, 'Носки')],
+      false,
+    );
+    mocks.useAuth.mockReturnValue({
+      status: 'authenticated',
+      user: { id: 'u-guest' },
+      session: null,
+      signInWithMagicLink: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signOut: vi.fn(),
+    });
+
+    renderAt('/events/e1');
+
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('Если найдётся')).toBeTruthy();
+    expect(screen.queryByText('Хочу')).toBeNull(); // empty, hidden
+    expect(screen.queryAllByTestId('drag-handle')).toHaveLength(0);
+  });
+});
+
 describe('EventDetailScreen — coordinator panel (Phase D)', () => {
   it('always-on share URL + copy button visible for honoree without ?share=1', () => {
     stubHonoree();
