@@ -18,6 +18,7 @@ interface TileCuratedItemEntry {
     id: string;
     title: string;
     price_text: string | null;
+    note: string | null;
     cover_url: string | null;
     priority: number;
   };
@@ -77,6 +78,26 @@ export function TileCuratedItem({
             }}
           >
             {item.price_text}
+          </div>
+        )}
+        {/* Owner's note on the tile — 1-line clamp so it stays compact
+            but the «прикольный коммент» isn't hidden behind a click-through.
+            Hero renders the full untruncated note; tile shows just the
+            first line as a teaser. */}
+        {item.note && (
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 11,
+              color: 'var(--ink-2)',
+              lineHeight: 1.4,
+              display: '-webkit-box',
+              WebkitLineClamp: 1,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {item.note}
           </div>
         )}
       </Link>
