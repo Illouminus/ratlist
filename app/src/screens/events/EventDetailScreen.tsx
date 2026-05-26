@@ -31,6 +31,8 @@ import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { InviteFromPeopleModal } from './InviteFromPeopleModal';
+import { groupByPriority } from '../../items/groupByPriority';
+import { PrioritySectionHeader } from '../../components/PrioritySectionHeader';
 
 export function EventDetailScreen() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -549,7 +551,7 @@ function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSe
 // ─────────────────────────── items ───────────────────────────
 
 interface ItemsSectionProps {
-  items: Array<{ item_id: string; item: MyItem | { id: string; cover_url: string | null; title: string; maker: string | null; price_text: string | null; owner_id: string }; claims: EventClaim[] }>;
+  items: Array<{ item_id: string; item: MyItem | { id: string; cover_url: string | null; title: string; maker: string | null; price_text: string | null; owner_id: string; priority: number }; claims: EventClaim[] }>;
   isHonoree: boolean;
   myUserId: string | null;
   onAttach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
@@ -612,28 +614,39 @@ function ItemsSection({
           {isHonoree ? t('events.noItemsHonoree') : t('events.noItemsGuest')}
         </p>
       ) : (
-        <ul
-          style={{
-            listStyle: 'none',
-            padding: 0,
-            margin: 0,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-            gap: 'var(--s-5)',
-          }}
-        >
-          {items.map((it) => (
-            <CuratedItemCard
-              key={it.item_id}
-              entry={it}
-              isHonoree={isHonoree}
-              myUserId={myUserId}
-              onDetach={() => void onDetach(it.item_id)}
-              onClaim={() => void onClaim(it.item_id)}
-              onRelease={() => void onRelease(it.item_id)}
-            />
-          ))}
-        </ul>
+        <>
+          {groupByPriority(
+            items.map((it) => ({ ...it, priority: it.item.priority })),
+          ).map((section) =>
+            section.items.length === 0 ? null : (
+              <section key={section.level}>
+                <PrioritySectionHeader level={section.level} count={section.items.length} />
+                <ul
+                  style={{
+                    listStyle: 'none',
+                    padding: 0,
+                    margin: 0,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                    gap: 'var(--s-5)',
+                  }}
+                >
+                  {section.items.map((it) => (
+                    <CuratedItemCard
+                      key={it.item_id}
+                      entry={it}
+                      isHonoree={isHonoree}
+                      myUserId={myUserId}
+                      onDetach={() => void onDetach(it.item_id)}
+                      onClaim={() => void onClaim(it.item_id)}
+                      onRelease={() => void onRelease(it.item_id)}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ),
+          )}
+        </>
       )}
 
       {picking && isHonoree && (

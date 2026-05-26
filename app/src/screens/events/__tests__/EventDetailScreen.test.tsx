@@ -255,6 +255,7 @@ describe('<EventDetailScreen> sectioning', () => {
   }
 
   it('honoree view: sections curated items by priority with no drag handles', () => {
+    localStorage.setItem('kryska.lang', 'ru');
     stubWithItems(
       [curated('a', 1, 'Книга'), curated('b', 2, 'Кружка')],
       true,
@@ -271,6 +272,7 @@ describe('<EventDetailScreen> sectioning', () => {
   });
 
   it('guest view: sections curated items read-only', () => {
+    localStorage.setItem('kryska.lang', 'ru');
     stubWithItems(
       [curated('a', 1, 'Книга'), curated('c', 3, 'Носки')],
       false,
