@@ -1,14 +1,22 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
+import { I18nProvider } from '../../../i18n';
 import { SortableItemRow } from '../SortableItemRow';
+
+beforeEach(() => {
+  localStorage.clear();
+  localStorage.setItem('kryska.lang', 'ru');
+});
 
 function renderInDnd(ui: React.ReactNode, ids: string[]) {
   return render(
-    <DndContext>
-      <SortableContext items={ids}>{ui}</SortableContext>
-    </DndContext>,
+    <I18nProvider>
+      <DndContext>
+        <SortableContext items={ids}>{ui}</SortableContext>
+      </DndContext>
+    </I18nProvider>,
   );
 }
 
