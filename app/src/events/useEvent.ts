@@ -19,12 +19,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
-import type { Event, Group, Item, Profile } from '../lib/db';
-
-export interface EventAudienceCircle {
-  group_id: string;
-  group: Pick<Group, 'id' | 'name' | 'emoji'>;
-}
+import type { Event, Item, Profile } from '../lib/db';
 
 export interface EventClaim {
   id: string;
@@ -51,7 +46,6 @@ export type EventDetailQuery =
       status: 'ready';
       data: {
         event: Event;
-        audience: EventAudienceCircle[];
         items: EventCuratedItem[];
         isHonoree: boolean;
       };
@@ -70,8 +64,6 @@ export interface UseEventResult {
   refresh: () => Promise<void>;
   update: (input: UpdateEventDetailInput) => Promise<{ ok: true } | { error: string }>;
   remove: () => Promise<{ ok: true } | { error: string }>;
-  attachCircle: (groupId: string) => Promise<{ ok: true } | { error: string }>;
-  detachCircle: (groupId: string) => Promise<{ ok: true } | { error: string }>;
   attachItem: (itemId: string) => Promise<{ ok: true } | { error: string }>;
   detachItem: (itemId: string) => Promise<{ ok: true } | { error: string }>;
   /** Guest action: claim a curated item. RLS rejects if the caller owns
@@ -98,7 +90,6 @@ interface RawClaimRow {
 
 interface LoadedData {
   event: Event;
-  audience: EventAudienceCircle[];
   items: EventCuratedItem[];
   isHonoree: boolean;
 }
@@ -127,8 +118,6 @@ async function loadEvent(
     .returns<RawCuratedItemRow[]>();
 
   if (itemsRes.error) return { kind: 'error', error: itemsRes.error.message };
-
-  const audience: EventAudienceCircle[] = [];
 
   const curatedRows = (itemsRes.data ?? []).filter(
     (it): it is RawCuratedItemRow & { item: NonNullable<RawCuratedItemRow['item']> } =>
@@ -172,7 +161,6 @@ async function loadEvent(
     kind: 'ok',
     data: {
       event: eventRow,
-      audience,
       items,
       isHonoree: eventRow.honoree_id === userId,
     },
@@ -259,24 +247,6 @@ export function useEvent(eventId: string | null): UseEventResult {
     return { ok: true };
   }, [eventId]);
 
-  // Circles attach/detach retired in the link-first model. The coordinator
-  // pre-invite flow comes in Phase D (InviteFromPeopleModal + RPC
-  // invite_to_event). These no-ops keep the existing interface intact
-  // while Phase C/D rewires consumers.
-  const attachCircle = useCallback(
-    async (): Promise<{ ok: true } | { error: string }> => {
-      return { error: 'not_supported' };
-    },
-    [],
-  );
-
-  const detachCircle = useCallback(
-    async (): Promise<{ ok: true } | { error: string }> => {
-      return { error: 'not_supported' };
-    },
-    [],
-  );
-
   const attachItem = useCallback(
     async (itemId: string): Promise<{ ok: true } | { error: string }> => {
       if (!eventId) return { error: 'no event' };
@@ -338,8 +308,6 @@ export function useEvent(eventId: string | null): UseEventResult {
     refresh: reload,
     update,
     remove,
-    attachCircle,
-    detachCircle,
     attachItem,
     detachItem,
     claim,
