@@ -1,8 +1,11 @@
 /**
  * `<ItemPhoto>` — renders an uploaded cover image, or falls back to the
- * watercolour `<PhotoPlaceholder>` when none is set. Single component
- * used by card / list / friend view so swapping placeholder ↔ real photo
- * stays consistent.
+ * watercolour `<PhotoPlaceholder>` when none is set.
+ *
+ * The optional `withRat` + `signText` props are pass-through to
+ * `PhotoPlaceholder` for the no-cover branch. Call sites that render
+ * large placeholder areas (event hero cards, item detail page) opt in
+ * via `withRat={true}`. Tiny thumbnails (list-view rows) leave it off.
  */
 import type { CSSProperties } from 'react';
 import { PhotoPlaceholder } from './PhotoPlaceholder';
@@ -15,11 +18,31 @@ interface ItemPhotoProps {
   aspectRatio?: string;
   alt?: string;
   style?: CSSProperties;
+  /** Pass-through to PhotoPlaceholder. Ignored when coverUrl is set. */
+  withRat?: boolean;
+  /** Pass-through to PhotoPlaceholder. Ignored when coverUrl is set. */
+  signText?: string;
 }
 
-export function ItemPhoto({ coverUrl, height, aspectRatio, alt = '', style }: ItemPhotoProps) {
+export function ItemPhoto({
+  coverUrl,
+  height,
+  aspectRatio,
+  alt = '',
+  style,
+  withRat,
+  signText,
+}: ItemPhotoProps) {
   if (!coverUrl) {
-    return <PhotoPlaceholder height={height} aspectRatio={aspectRatio} style={style} />;
+    return (
+      <PhotoPlaceholder
+        height={height}
+        aspectRatio={aspectRatio}
+        style={style}
+        withRat={withRat}
+        signText={signText}
+      />
+    );
   }
 
   return (
