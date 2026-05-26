@@ -14,6 +14,9 @@
     "test:integration": "cd ../supabase/tests/integration && npm test"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@sentry/react": "^10.53.1",
     "@supabase/supabase-js": "^2.105.4",
     "react": "^19.2.6",
