@@ -18,16 +18,35 @@
  *   Read-only; no drag handles.
  * - `'sectioned-dnd'`: same grouping but all 3 headers are always
  *   visible (empty sections show a drop-zone placeholder). Each row is
- *   wrapped in `<SortableItemRow>`. A `<DndContext>` with
- *   PointerSensor / TouchSensor / KeyboardSensor is mounted at this
- *   level; dropping fires `onPriorityChange(itemId, newLevel)`.
+ *   wrapped in `<SortableItemRow>`. A `<DndContext>` with three sensors
+ *   is mounted at this level; dropping fires `onPriorityChange(itemId,
+ *   newLevel)`.
+ *
+ * Sensor stack (per dnd-kit v6 canon — separate sensors per input type):
+ *
+ *   - `MouseSensor` with `distance: 5` — desktop click-drag. Mouse only;
+ *     does not pick up touch events.
+ *   - `TouchSensor` with `delay: 250, tolerance: 5` — long-press on
+ *     mobile. Touch only. The delay is critical: it lets the browser
+ *     handle scroll natively when the finger starts moving immediately,
+ *     and only commits to a drag when the user holds still for 250ms.
+ *     **Do not replace this with PointerSensor + distance** — that would
+ *     activate drag on ANY 5px finger movement, hijacking scroll.
+ *   - `KeyboardSensor` — Tab → Space → arrows → Space.
+ *
+ * The PointerSensor (unified mouse + touch) would simplify the imports
+ * but cannot satisfy both "scroll-friendly touch" AND "fast desktop
+ * drag" with a single activation constraint. v8 of dnd-kit ships a
+ * pointerType-aware `activationConstraints` function for PointerSensor —
+ * not available in our v6 install. So we stay on the per-input-type
+ * sensor stack.
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   KeyboardSensor,
   useSensor,
@@ -125,8 +144,13 @@ function SectionedListEditable({ items, onPriorityChange }: SectionedEditablePro
   const { t } = useI18n();
 
   // useSensors always called at top of this component — no conditional hook issue.
+  // Per dnd-kit v6 canon: separate sensors per input type. Critically, do NOT
+  // use PointerSensor with `distance` — it catches touch events too and would
+  // activate drag on the first 5px of a scroll gesture, hijacking the page
+  // scroll. MouseSensor handles mouse only; TouchSensor handles touch with a
+  // hold-delay that lets short flicks scroll the list naturally.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
