@@ -26,9 +26,16 @@ import { I18nProvider } from '../../../i18n';
 import type { Item } from '../../../lib/db';
 
 // ─── stable mock references ──────────────────────────────────────────────────
-const updateItemPriority = vi.fn(async (_id: string, _level: 1 | 2 | 3) => ({
-  ok: true as const,
-}));
+// The mock body ignores its args (each test supplies the response via
+// mockResolvedValueOnce); use `unknown[]` so eslint doesn't flag unused
+// parameter names while still letting TypeScript infer the call signature
+// from the actual callers' usage.
+const updateItemPriority = vi.fn(
+  async (...args: unknown[]): Promise<{ ok: true } | { error: string }> => {
+    void args;
+    return { ok: true as const };
+  },
+);
 
 const mockItems = [
   {
