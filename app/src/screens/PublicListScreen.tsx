@@ -84,10 +84,7 @@ export function PublicListScreen() {
           return;
         }
         const owner = (row as { owner?: PublicOwner }).owner ?? null;
-        // Cast via unknown: the RPC returns `priority` at runtime but the
-        // auto-generated DB type predates the column — `unknown` is the
-        // honest cast for untyped RPC response data.
-        const items = ((row as unknown) as { items?: PublicItem[] }).items ?? [];
+        const items = (row as { items?: PublicItem[] }).items ?? [];
         if (!owner) {
           setState({ kind: 'invalid' });
           return;
