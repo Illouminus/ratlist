@@ -217,7 +217,7 @@ describe('useMyItems', () => {
     it('updates priority and returns ok on success', async () => {
       stubAuthUser('user-1');
       stubItemsResponse([]);
-      chain.update.mockReturnValue({
+      chain.update!.mockReturnValue({
         eq: vi.fn().mockResolvedValue({ data: null, error: null }),
       });
 
@@ -237,7 +237,7 @@ describe('useMyItems', () => {
     it('returns an error string when the UPDATE fails', async () => {
       stubAuthUser('user-1');
       stubItemsResponse([]);
-      chain.update.mockReturnValue({
+      chain.update!.mockReturnValue({
         eq: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'permission denied', code: '42501' },
@@ -262,7 +262,7 @@ describe('useMyItems', () => {
         { id: 'item-1', owner_id: 'user-1', title: 'X', priority: 2,
           item_groups: [], event_items: [] },
       ]);
-      chain.update.mockReturnValue({
+      chain.update!.mockReturnValue({
         eq: vi.fn().mockResolvedValue({ data: null, error: null }),
       });
 
@@ -284,7 +284,7 @@ describe('useMyItems', () => {
         { id: 'item-1', owner_id: 'user-1', title: 'X', priority: 2,
           item_groups: [], event_items: [] },
       ]);
-      chain.update.mockReturnValue({
+      chain.update!.mockReturnValue({
         eq: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'boom', code: 'XXXXX' },

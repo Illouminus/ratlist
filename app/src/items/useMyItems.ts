@@ -9,7 +9,7 @@
  * Same async-only setState pattern as the other hooks in this codebase:
  * pure free fetcher + `.then()` callback in the effect.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
 import { track } from '../lib/plausible';
@@ -57,6 +57,11 @@ export interface UseMyItemsResult {
   updateItem: (id: string, input: CreateItemInput) => Promise<{ item: MyItem } | { error: string }>;
   deleteItem: (itemId: string) => Promise<{ ok: true } | { error: string }>;
   updateStatus: (itemId: string, status: ItemStatus) => Promise<{ ok: true } | { error: string }>;
+  /**
+   * Change an item's priority level. Optimistically updates the local
+   * cache, then issues the UPDATE. Reverts the cache on server error.
+   */
+  updateItemPriority: (itemId: string, priority: 1 | 2 | 3) => Promise<{ ok: true } | { error: string }>;
 }
 
 type FetchState =
@@ -92,6 +97,11 @@ async function loadItems(userId: string): Promise<FetchState> {
 export function useMyItems(): UseMyItemsResult {
   const { user, status: authStatus } = useAuth();
   const [fetched, setFetched] = useState<FetchState>({ kind: 'idle' });
+  // Live ref so updateItemPriority can read the current state without
+  // needing `fetched` in its useCallback deps (which would recreate it on
+  // every render and invalidate downstream memoisation).
+  const fetchedRef = useRef<FetchState>(fetched);
+  fetchedRef.current = fetched;
 
   useEffect(() => {
     if (authStatus !== 'authenticated' || !user) return undefined;
@@ -321,5 +331,51 @@ export function useMyItems(): UseMyItemsResult {
     [user],
   );
 
-  return { query, refresh, createItem, updateItem, deleteItem, updateStatus };
+  const updateItemPriority = useCallback(
+    async (itemId: string, priority: 1 | 2 | 3): Promise<{ ok: true } | { error: string }> => {
+      // Capture the prior priority from the live ref before the optimistic
+      // update — the ref is always current without needing it in deps.
+      const current = fetchedRef.current;
+      const priorItem =
+        current.kind === 'loaded' ? current.items.find((i) => i.id === itemId) : undefined;
+      const priorPriority = priorItem?.priority ?? null;
+
+      // Optimistic update: flip the local state immediately.
+      setFetched((prev) => {
+        if (prev.kind !== 'loaded') return prev;
+        const items = prev.items.map((i) =>
+          i.id === itemId ? { ...i, priority } : i,
+        );
+        return { ...prev, items };
+      });
+
+      const { error } = await supabase
+        .from('items')
+        .update({ priority })
+        .eq('id', itemId);
+
+      if (error) {
+        // Revert the optimistic change.
+        if (priorPriority !== null) {
+          const snapshot = priorPriority;
+          setFetched((prev) => {
+            if (prev.kind !== 'loaded') return prev;
+            const items = prev.items.map((i) =>
+              i.id === itemId ? { ...i, priority: snapshot } : i,
+            );
+            return { ...prev, items };
+          });
+        }
+        return { error: error.message };
+      }
+
+      track('ItemPriorityChanged', { from: priorPriority ?? 'unknown', to: priority });
+      return { ok: true };
+    },
+    // fetchedRef is a stable ref object — safe to omit from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  return { query, refresh, createItem, updateItem, deleteItem, updateStatus, updateItemPriority };
 }
