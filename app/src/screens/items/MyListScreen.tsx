@@ -19,6 +19,7 @@ import { useProfile } from '../../auth/useProfile';
 import { useMyItems } from '../../items/useMyItems';
 import { useIsMobile } from '../../lib/useMediaQuery';
 import { useToast } from '../../components/useToast';
+import { errorMessage } from '../../lib/errors';
 import type { Occasion } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
@@ -35,7 +36,7 @@ export function MyListScreen() {
   const navigate = useNavigate();
   const { query: profileQ } = useProfile();
   const { query: itemsQ, updateItemPriority } = useMyItems();
-  const { show: toast } = useToast();
+  const toast = useToast();
 
   const isMobile = useIsMobile();
   const [view, setView] = useState<ViewMode>('grid');
@@ -97,7 +98,7 @@ export function MyListScreen() {
               onPriorityChange={async (itemId, level) => {
                 const result = await updateItemPriority(itemId, level);
                 if ('error' in result) {
-                  toast(result.error);
+                  toast.show(errorMessage(t, result.error));
                 }
               }}
             />

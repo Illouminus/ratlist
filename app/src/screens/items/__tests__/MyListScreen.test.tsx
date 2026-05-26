@@ -172,17 +172,6 @@ describe('<MyListScreen> priority DnD wiring', () => {
     expect(handles).toHaveLength(1);
   });
 
-  it('renders drag handles proving sectioned-dnd mode is active (exact count)', () => {
-    /**
-     * Drag handles only appear in sectioned-dnd mode — their presence proves
-     * MyListScreen passed mode="sectioned-dnd" and the DnD tree is mounted.
-     * One item in mockItems means exactly one handle.
-     */
-    renderScreen();
-    const handles = screen.queryAllByTestId('drag-handle');
-    expect(handles).toHaveLength(1);
-  });
-
   it('forwards onPriorityChange from ItemList to updateItemPriority', async () => {
     renderScreen();
 
@@ -206,6 +195,9 @@ describe('<MyListScreen> priority DnD wiring', () => {
       await capturedOnPriorityChange!('a', 1);
     });
 
-    expect(mockToastShow).toHaveBeenCalledWith('permission denied');
+    // 'permission denied' has no matching SQLSTATE/fragment so errorMessage
+    // falls back to t('errors.generic').  The test locale is 'ru' (set in
+    // beforeEach via localStorage), so we expect the Russian fallback string.
+    expect(mockToastShow).toHaveBeenCalledWith('что-то пошло не так. попробуй ещё раз?');
   });
 });
