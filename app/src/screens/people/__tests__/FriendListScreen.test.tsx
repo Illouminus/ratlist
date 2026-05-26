@@ -32,7 +32,7 @@ vi.mock('../../../people/useFriendList', () => ({
           maker: null,
           url: null,
           price_text: null,
-          note: null,
+          note: 'обязательно в твёрдой обложке',
           status: 'active',
           created_at: '',
           updated_at: '',
@@ -88,6 +88,22 @@ describe('<FriendListScreen> sectioning', () => {
 
     // Priority-2 bucket is empty → header hidden.
     expect(screen.queryByText('Хочу')).toBeNull();
+  });
+
+  it('renders item.note inline under the row title', () => {
+    render(
+      <MemoryRouter initialEntries={['/p/friend']}>
+        <I18nProvider>
+          <Routes>
+            <Route path="/p/:userId" element={<FriendListScreen />} />
+          </Routes>
+        </I18nProvider>
+      </MemoryRouter>,
+    );
+
+    // Note from the mock data — friend's «прикольный коммент» should be
+    // visible in the row preview without needing to click into the detail.
+    expect(screen.getByText('обязательно в твёрдой обложке')).toBeTruthy();
   });
 
   it('renders no drag handles (read-only view)', () => {

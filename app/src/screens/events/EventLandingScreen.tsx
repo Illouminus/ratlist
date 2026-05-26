@@ -285,6 +285,26 @@ function ItemRow({ item }: { item: EventViewItem }) {
           {[item.maker, item.price_text].filter(Boolean).join(' · ')}
         </div>
       )}
+      {/* Owner's personal note — same 2-line clamp + ink-2 styling as the
+          other list views. Grid mosaic stays visually consistent because
+          the clamp prevents long notes from making one card much taller
+          than its neighbours. */}
+      {item.note && (
+        <div
+          style={{
+            marginTop: 'var(--s-1)',
+            fontSize: 12,
+            color: 'var(--ink-2)',
+            lineHeight: 1.4,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {item.note}
+        </div>
+      )}
       {/* Same pattern as MyList grid `ItemCard`: render the priority dots
           only for non-default levels (1 = «очень хочу», 3 = «если найдётся»)
           so default-priority cards stay visually quiet. Sections aren't a

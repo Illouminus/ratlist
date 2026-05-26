@@ -157,10 +157,11 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
       setPriceText(data.price_text);
       filled.push('price');
     }
-    if (data.description && note.trim().length === 0) {
-      setNote(data.description);
-      filled.push('note');
-    }
+    // Deliberately NOT auto-filling `note` from `data.description`. Friend
+    // feedback 2026-05-26: people want to write their own personal note
+    // ("прикольный комментарий"), and a generic site description squatting
+    // in the field discourages that. The fetched description is usually a
+    // page meta-blurb, not something a gift-giver wants to see anyway.
 
     setMetaStatus(filled.length > 0 ? { kind: 'ok', filled } : { kind: 'empty' });
   }

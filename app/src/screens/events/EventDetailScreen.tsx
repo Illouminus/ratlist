@@ -551,7 +551,7 @@ function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSe
 // ─────────────────────────── items ───────────────────────────
 
 interface ItemsSectionProps {
-  items: Array<{ item_id: string; item: MyItem | { id: string; cover_url: string | null; title: string; maker: string | null; price_text: string | null; owner_id: string; priority: number }; claims: EventClaim[] }>;
+  items: Array<{ item_id: string; item: MyItem | { id: string; cover_url: string | null; title: string; maker: string | null; price_text: string | null; note: string | null; owner_id: string; priority: number }; claims: EventClaim[] }>;
   isHonoree: boolean;
   myUserId: string | null;
   onAttach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
@@ -801,6 +801,24 @@ function CuratedItemCard({
             }}
           >
             {item.price_text}
+          </div>
+        )}
+        {/* Owner's personal note — same 2-line clamp + ink-2 treatment used
+            on MyList / friend list / public share. */}
+        {item.note && (
+          <div
+            style={{
+              marginTop: 'var(--s-2)',
+              fontSize: 12,
+              color: 'var(--ink-2)',
+              lineHeight: 1.4,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {item.note}
           </div>
         )}
         {!isHonoree && (

@@ -29,6 +29,10 @@ export interface EventViewItem {
   url: string | null;
   price_text: string | null;
   maker: string | null;
+  /** Owner's personal note on the item — fun comments, sizing hints, etc.
+   *  Shown to viewers under the item title. Added to the RPC payload in
+   *  migration 20260526200000_event_view_note.sql. */
+  note: string | null;
   priority: number | null;
   is_claimed: boolean | null;
 }

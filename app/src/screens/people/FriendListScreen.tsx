@@ -425,6 +425,23 @@ function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemR
             </div>
           )}
 
+          {/* Owner's personal note — fun comments, sizing, where they saw
+              it, etc. Same 2-line clamp + ink-2 styling as MyList row so
+              the visual language stays consistent across views. */}
+          {item.note && (
+            <div
+              style={{
+                marginTop: 'var(--s-1)',
+                fontSize: 12,
+                color: 'var(--ink-2)',
+                lineHeight: 1.4,
+                ...CLAMP_2_LINES,
+              }}
+            >
+              {item.note}
+            </div>
+          )}
+
           <div
             style={{
               marginTop: 'auto',
