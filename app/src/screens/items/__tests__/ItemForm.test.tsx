@@ -145,6 +145,40 @@ describe('ItemForm — fetchUrlMeta integration', () => {
     expect((makerInput as HTMLInputElement).value).toBe('Pottery Co.');
   });
 
+  it('does NOT auto-fill the note field even when fetch returns a description', async () => {
+    // Friend feedback 2026-05-26: the auto-filled meta description squats in
+    // the note field, discouraging people from writing their own personal
+    // comments. Verify the form ignores `data.description` from now on.
+    mocks.fetchUrlMeta.mockResolvedValue({
+      kind: 'ok',
+      data: {
+        title: 'A Mug',
+        site_name: 'Pottery Co.',
+        image_url: null,
+        description: 'A hand-thrown ceramic mug with a satin glaze finish.',
+      },
+    });
+
+    renderForm();
+    await typeUrlAndFetch('https://example.com/mug');
+
+    // The textarea uses t('add.notePh') = 'color, size, where you saw it…'.
+    // Wait for fetch to complete (title gets filled) before asserting the
+    // note stayed empty.
+    await waitFor(() => {
+      const titleInput = screen.getByPlaceholderText('e.g. falcon enamel mug');
+      expect((titleInput as HTMLInputElement).value).toBe('A Mug');
+    });
+    const noteTa = screen.getByPlaceholderText('color, size, where you saw it…');
+    expect((noteTa as HTMLTextAreaElement).value).toBe('');
+
+    // The meta-fetch feedback should NOT list "note" among filled fields.
+    // (Title and maker are still auto-filled — the feedback line reads
+    // "filled: title, maker" or similar.)
+    const feedback = await screen.findByText(/filled:/i);
+    expect(feedback.textContent).not.toMatch(/note/i);
+  });
+
   it('does not overwrite user-typed title when meta fetch returns a different title', async () => {
     mocks.fetchUrlMeta.mockResolvedValue({
       kind: 'ok',
