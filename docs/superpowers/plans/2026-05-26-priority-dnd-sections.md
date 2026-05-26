@@ -315,7 +315,7 @@ import { PrioritySectionHeader } from '../PrioritySectionHeader';
 import { I18nProvider } from '../../i18n/I18nProvider';
 
 function renderWithI18n(ui: React.ReactNode) {
-  return render(<I18nProvider initialLang="ru">{ui}</I18nProvider>);
+  return render(<I18nProvider>{ui}</I18nProvider>);
 }
 
 describe('<PrioritySectionHeader>', () => {
@@ -338,7 +338,19 @@ describe('<PrioritySectionHeader>', () => {
 });
 ```
 
-If `I18nProvider` doesn't accept `initialLang`, check `app/src/i18n/I18nProvider.tsx` for the actual prop name and adjust. (It exists per the codebase; the test wrapper is the standard pattern used in other component tests.)
+**i18n test setup pattern (project convention):** `<I18nProvider>` reads the current language from `localStorage` (`'kryska.lang'` key) — it doesn't accept an `initialLang` prop. Set the language in a `beforeEach`:
+
+```ts
+beforeEach(() => {
+  localStorage.setItem('kryska.lang', 'ru');
+});
+
+function renderWithI18n(ui: React.ReactNode) {
+  return render(<I18nProvider>{ui}</I18nProvider>);
+}
+```
+
+This mirrors `PrioritySectionHeader.test.tsx` and `SortableItemRow.test.tsx`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1019,7 +1031,7 @@ function mkItem(overrides: Partial<MyItem> & { id: string }): MyItem {
 function renderList(node: React.ReactNode) {
   return render(
     <MemoryRouter>
-      <I18nProvider initialLang="ru">{node}</I18nProvider>
+      <I18nProvider>{node}</I18nProvider>
     </MemoryRouter>,
   );
 }
@@ -1360,7 +1372,7 @@ describe('<MyListScreen> priority DnD wiring', () => {
 
     render(
       <MemoryRouter>
-        <I18nProvider initialLang="ru">
+        <I18nProvider>
           <MyListScreen />
         </I18nProvider>
       </MemoryRouter>,
@@ -1378,7 +1390,7 @@ describe('<MyListScreen> priority DnD wiring', () => {
 
     render(
       <MemoryRouter>
-        <I18nProvider initialLang="ru">
+        <I18nProvider>
           <MyListScreen />
         </I18nProvider>
       </MemoryRouter>,
@@ -1540,7 +1552,7 @@ describe('<PublicListScreen> sectioning', () => {
   it('renders section headers grouping items by priority', () => {
     render(
       <MemoryRouter initialEntries={['/share/abcd']}>
-        <I18nProvider initialLang="ru">
+        <I18nProvider>
           <Routes><Route path="/share/:token" element={<PublicListScreen />} /></Routes>
         </I18nProvider>
       </MemoryRouter>,
@@ -1555,7 +1567,7 @@ describe('<PublicListScreen> sectioning', () => {
   it('renders zero drag handles (read-only view)', () => {
     render(
       <MemoryRouter initialEntries={['/share/abcd']}>
-        <I18nProvider initialLang="ru">
+        <I18nProvider>
           <Routes><Route path="/share/:token" element={<PublicListScreen />} /></Routes>
         </I18nProvider>
       </MemoryRouter>,
@@ -1667,7 +1679,7 @@ describe('<FriendListScreen> sectioning', () => {
   it('groups items by priority with section headers', () => {
     render(
       <MemoryRouter initialEntries={['/p/friend']}>
-        <I18nProvider initialLang="ru">
+        <I18nProvider>
           <Routes><Route path="/p/:userId" element={<FriendListScreen />} /></Routes>
         </I18nProvider>
       </MemoryRouter>,
@@ -1680,7 +1692,7 @@ describe('<FriendListScreen> sectioning', () => {
   it('renders no drag handles', () => {
     render(
       <MemoryRouter initialEntries={['/p/friend']}>
-        <I18nProvider initialLang="ru">
+        <I18nProvider>
           <Routes><Route path="/p/:userId" element={<FriendListScreen />} /></Routes>
         </I18nProvider>
       </MemoryRouter>,
