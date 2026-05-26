@@ -321,19 +321,19 @@ function renderWithI18n(ui: React.ReactNode) {
 describe('<PrioritySectionHeader>', () => {
   it('renders the «Очень хочу» label and count for level 1', () => {
     renderWithI18n(<PrioritySectionHeader level={1} count={3} />);
-    expect(screen.getByText('Очень хочу')).toBeInTheDocument();
-    expect(screen.getByText('— 3')).toBeInTheDocument();
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('— 3')).toBeTruthy();
   });
 
   it('renders the «Хочу» label for level 2', () => {
     renderWithI18n(<PrioritySectionHeader level={2} count={0} />);
-    expect(screen.getByText('Хочу')).toBeInTheDocument();
-    expect(screen.getByText('— 0')).toBeInTheDocument();
+    expect(screen.getByText('Хочу')).toBeTruthy();
+    expect(screen.getByText('— 0')).toBeTruthy();
   });
 
   it('renders the «Если найдётся» label for level 3', () => {
     renderWithI18n(<PrioritySectionHeader level={3} count={1} />);
-    expect(screen.getByText('Если найдётся')).toBeInTheDocument();
+    expect(screen.getByText('Если найдётся')).toBeTruthy();
   });
 });
 ```
@@ -800,7 +800,7 @@ describe('<SortableItemRow>', () => {
       </SortableItemRow>,
       ['item-1'],
     );
-    expect(screen.getByText('hello row')).toBeInTheDocument();
+    expect(screen.getByText('hello row')).toBeTruthy();
   });
 
   it('exposes a drag handle as a data attribute', () => {
@@ -810,7 +810,7 @@ describe('<SortableItemRow>', () => {
       </SortableItemRow>,
       ['item-1'],
     );
-    expect(screen.getByTestId('drag-handle')).toBeInTheDocument();
+    expect(screen.getByTestId('drag-handle')).toBeTruthy();
   });
 
   it('marks the row with role and aria attributes for keyboard a11y', () => {
@@ -1033,18 +1033,18 @@ describe('<ItemList mode>', () => {
 
   it('mode="flat" renders items without section headers (current default behavior)', () => {
     renderList(<ItemList items={items} mode="flat" />);
-    expect(screen.queryByText('Очень хочу')).not.toBeInTheDocument();
-    expect(screen.getByText('Книга')).toBeInTheDocument();
-    expect(screen.getByText('Кружка')).toBeInTheDocument();
-    expect(screen.getByText('Носки')).toBeInTheDocument();
+    expect(screen.queryByText('Очень хочу')).toBeNull();
+    expect(screen.getByText('Книга')).toBeTruthy();
+    expect(screen.getByText('Кружка')).toBeTruthy();
+    expect(screen.getByText('Носки')).toBeTruthy();
   });
 
   it('mode="sectioned" renders three section headers with the items grouped', () => {
     renderList(<ItemList items={items} mode="sectioned" />);
-    expect(screen.getByText('Очень хочу')).toBeInTheDocument();
-    expect(screen.getByText('Хочу')).toBeInTheDocument();
-    expect(screen.getByText('Если найдётся')).toBeInTheDocument();
-    expect(screen.getByText('Книга')).toBeInTheDocument();
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('Хочу')).toBeTruthy();
+    expect(screen.getByText('Если найдётся')).toBeTruthy();
+    expect(screen.getByText('Книга')).toBeTruthy();
   });
 
   it('mode="sectioned" with read-only data renders zero drag handles', () => {
@@ -1065,9 +1065,9 @@ describe('<ItemList mode>', () => {
       <ItemList items={onlyMid} mode="sectioned-dnd" onPriorityChange={vi.fn()} />,
     );
     // All three headers visible
-    expect(screen.getByText('Очень хочу')).toBeInTheDocument();
-    expect(screen.getByText('Хочу')).toBeInTheDocument();
-    expect(screen.getByText('Если найдётся')).toBeInTheDocument();
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('Хочу')).toBeTruthy();
+    expect(screen.getByText('Если найдётся')).toBeTruthy();
     // Empty-bucket placeholder shown for the two empty sections
     expect(screen.queryAllByText('здесь пусто — перетащи сюда что-то')).toHaveLength(2);
   });
@@ -1075,9 +1075,9 @@ describe('<ItemList mode>', () => {
   it('mode="sectioned" hides empty sections entirely (read-only)', () => {
     const onlyMid: MyItem[] = [mkItem({ id: 'b', priority: 2 })];
     renderList(<ItemList items={onlyMid} mode="sectioned" />);
-    expect(screen.queryByText('Очень хочу')).not.toBeInTheDocument();
-    expect(screen.getByText('Хочу')).toBeInTheDocument();
-    expect(screen.queryByText('Если найдётся')).not.toBeInTheDocument();
+    expect(screen.queryByText('Очень хочу')).toBeNull();
+    expect(screen.getByText('Хочу')).toBeTruthy();
+    expect(screen.queryByText('Если найдётся')).toBeNull();
   });
 });
 ```
@@ -1365,9 +1365,9 @@ describe('<MyListScreen> priority DnD wiring', () => {
         </I18nProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByText('Очень хочу')).toBeInTheDocument();
-    expect(screen.getByText('Хочу')).toBeInTheDocument();
-    expect(screen.getByText('Если найдётся')).toBeInTheDocument();
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('Хочу')).toBeTruthy();
+    expect(screen.getByText('Если найдётся')).toBeTruthy();
   });
 
   it('calls updateItemPriority when ItemList fires onPriorityChange', async () => {
@@ -1545,11 +1545,11 @@ describe('<PublicListScreen> sectioning', () => {
         </I18nProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByText('Очень хочу')).toBeInTheDocument();
-    expect(screen.getByText('Хочу')).toBeInTheDocument();
-    expect(screen.queryByText('Если найдётся')).not.toBeInTheDocument();
-    expect(screen.getByText('Книга')).toBeInTheDocument();
-    expect(screen.getByText('Кружка')).toBeInTheDocument();
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('Хочу')).toBeTruthy();
+    expect(screen.queryByText('Если найдётся')).toBeNull();
+    expect(screen.getByText('Книга')).toBeTruthy();
+    expect(screen.getByText('Кружка')).toBeTruthy();
   });
 
   it('renders zero drag handles (read-only view)', () => {
@@ -1672,9 +1672,9 @@ describe('<FriendListScreen> sectioning', () => {
         </I18nProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByText('Очень хочу')).toBeInTheDocument();
-    expect(screen.getByText('Если найдётся')).toBeInTheDocument();
-    expect(screen.queryByText('Хочу')).not.toBeInTheDocument(); // empty, hidden
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('Если найдётся')).toBeTruthy();
+    expect(screen.queryByText('Хочу')).toBeNull(); // empty, hidden
   });
 
   it('renders no drag handles', () => {
@@ -1807,12 +1807,12 @@ describe('<EventDetailScreen> sectioning', () => {
 
     renderEventDetail('/events/evt-1');
 
-    expect(screen.getByText('Очень хочу')).toBeInTheDocument();
-    expect(screen.getByText('Хочу')).toBeInTheDocument();
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('Хочу')).toBeTruthy();
     // Level 3 has no items → empty section hidden in read-only paths
-    expect(screen.queryByText('Если найдётся')).not.toBeInTheDocument();
-    expect(screen.getByText('Книга')).toBeInTheDocument();
-    expect(screen.getByText('Кружка')).toBeInTheDocument();
+    expect(screen.queryByText('Если найдётся')).toBeNull();
+    expect(screen.getByText('Книга')).toBeTruthy();
+    expect(screen.getByText('Кружка')).toBeTruthy();
     // EventDetail is never DnD — assert zero drag handles
     expect(screen.queryAllByTestId('drag-handle')).toHaveLength(0);
   });
@@ -1828,9 +1828,9 @@ describe('<EventDetailScreen> sectioning', () => {
 
     renderEventDetail('/events/evt-1');
 
-    expect(screen.getByText('Очень хочу')).toBeInTheDocument();
-    expect(screen.getByText('Если найдётся')).toBeInTheDocument();
-    expect(screen.queryByText('Хочу')).not.toBeInTheDocument(); // empty, hidden
+    expect(screen.getByText('Очень хочу')).toBeTruthy();
+    expect(screen.getByText('Если найдётся')).toBeTruthy();
+    expect(screen.queryByText('Хочу')).toBeNull(); // empty, hidden
     expect(screen.queryAllByTestId('drag-handle')).toHaveLength(0);
   });
 });
@@ -1935,7 +1935,7 @@ In the existing `ItemList.test.tsx`:
 it('mode="sectioned-dnd" mounts an aria-live announcement region', () => {
   renderList(<ItemList items={items} mode="sectioned-dnd" onPriorityChange={vi.fn()} />);
   const live = document.querySelector('[role="status"][aria-live]');
-  expect(live).toBeInTheDocument();
+  expect(live).toBeTruthy();
 });
 ```
 
