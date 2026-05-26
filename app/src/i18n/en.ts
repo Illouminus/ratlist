@@ -291,7 +291,6 @@ export const en: Translation = {
     itemCount: '{count} curated',
     open: 'open',
     backToList: 'back to events',
-    audienceLabel: 'audience',
     itemsLabel: 'curated',
     noItemsHonoree: 'nothing curated yet. open your list and tag what you want for this occasion.',
     noItemsGuest: 'the honoree has not curated anything for this occasion yet.',
@@ -323,13 +322,10 @@ export const en: Translation = {
       itemsLoading: 'loading list…',
       itemsEmpty: 'your list is empty. add at least one wish first, then come back.',
     },
-    audienceEmpty: 'open to no one yet',
     editDetails: 'edit',
     save: 'save',
     saving: 'saving…',
     savedToast: 'changes saved',
-    addCircle: '+ circle',
-    removeCircle: 'remove circle {name}',
     addItems: '+ add items',
     pickFromList: 'pick from your list:',
     removeItem: 'remove "{title}"',
@@ -356,7 +352,11 @@ export const en: Translation = {
       copied: 'link copied',
       dismiss: 'Done',
       coordinatorTitle: 'Share link',
+      linkLabel: 'share link',
+      copyShort: 'copy ↗',
+      inviteShort: 'invite friends →',
     },
+    emptySign: 'empty',
     invite: {
       openButton: 'Invite friends',
       modalTitle: 'Who to invite?',
@@ -648,5 +648,8 @@ export const en: Translation = {
   },
   a11y: {
     skipToMain: 'Skip to main content',
+  },
+  placeholder: {
+    noPhoto: 'no photo',
   },
 };

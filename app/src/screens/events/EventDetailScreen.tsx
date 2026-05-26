@@ -9,7 +9,7 @@
  *   any claim row (see `claims` RLS in 20260516120000_init.sql), so this
  *   page just renders what comes back.
  */
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useEvent, type EventClaim } from '../../events/useEvent';
@@ -17,7 +17,6 @@ import {
   useEventParticipants,
   type EventParticipant,
 } from '../../events/useEventParticipants';
-import { useGroups } from '../../groups/useGroups';
 import { useMyItems, type MyItem } from '../../items/useMyItems';
 import { useAuth } from '../../auth/useAuth';
 import { useToast } from '../../components/useToast';
@@ -33,6 +32,9 @@ import { Button } from '../../components/Button';
 import { InviteFromPeopleModal } from './InviteFromPeopleModal';
 import { groupByPriority } from '../../items/groupByPriority';
 import { PrioritySectionHeader } from '../../components/PrioritySectionHeader';
+import { HeroCuratedItem } from './HeroCuratedItem';
+import { TileCuratedItem } from './TileCuratedItem';
+import { SittingRat } from '../../components/rats/SittingRat';
 
 export function EventDetailScreen() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -42,12 +44,11 @@ export function EventDetailScreen() {
   const toast = useToast();
   const confirm = useConfirm();
   const { user } = useAuth();
+  const [inviteOpen, setInviteOpen] = useState(false);
   const {
     query,
     update,
     remove,
-    attachCircle,
-    detachCircle,
     attachItem,
     detachItem,
     claim,
@@ -73,7 +74,7 @@ export function EventDetailScreen() {
     );
   }
 
-  const { event, audience, items, isHonoree } = query.data;
+  const { event, items, isHonoree } = query.data;
   const showShareCard = isHonoree && searchParams.get('share') === '1';
 
   function dismissShareCard() {
@@ -122,31 +123,21 @@ export function EventDetailScreen() {
         />
       )}
 
-      {isHonoree && eventId && (
-        <CoordinatorPanel
-          eventId={eventId}
-          shareToken={event.share_token}
-          showToast={(msg) => toast.show(msg)}
-          // When the post-create celebration card is up it already
-          // shows the URL + Copy button; the coordinator panel hides
-          // its redundant share section and surfaces only the invite
-          // button + participants list.
-          hideShareBlock={showShareCard}
-        />
-      )}
-
       {isHonoree ? (
         <HonoreeHeader event={event} onSave={update} />
       ) : (
         <GuestHeader event={event} />
       )}
 
-      <AudienceSection
-        audience={audience}
-        isHonoree={isHonoree}
-        onAttach={attachCircle}
-        onDetach={detachCircle}
-      />
+      {isHonoree && event.share_token && !showShareCard && (
+        <InlineShareActions
+          shareToken={event.share_token}
+          onCopied={() => toast.show(t('events.share.copied'))}
+          onInvite={() => setInviteOpen(true)}
+        />
+      )}
+
+      {isHonoree && eventId && <ParticipantsSection eventId={eventId} />}
 
       <ItemsSection
         items={items}
@@ -183,6 +174,15 @@ export function EventDetailScreen() {
             {t('events.deleteCta')}
           </button>
         </footer>
+      )}
+
+      {isHonoree && eventId && (
+        <InviteFromPeopleModal
+          eventId={eventId}
+          open={inviteOpen}
+          onClose={() => setInviteOpen(false)}
+          showToast={(msg) => toast.show(msg)}
+        />
       )}
     </PaperLayout>
   );
@@ -427,123 +427,109 @@ const selectStyle = {
   outline: 'none',
 } as const;
 
-// ─────────────────────────── audience ───────────────────────────
+// ─────────────────────────── inline share + participants ───────────────────────────
 
-interface AudienceSectionProps {
-  audience: Array<{
-    group_id: string;
-    group: { id: string; name: string; emoji: string | null };
-  }>;
-  isHonoree: boolean;
-  onAttach: (groupId: string) => Promise<{ ok: true } | { error: string }>;
-  onDetach: (groupId: string) => Promise<{ ok: true } | { error: string }>;
+interface InlineShareActionsProps {
+  shareToken: string;
+  onCopied: () => void;
+  onInvite: () => void;
 }
 
-function AudienceSection({ audience, isHonoree, onAttach, onDetach }: AudienceSectionProps) {
+/**
+ * `<InlineShareActions>` — the new compact share-and-invite affordance
+ * for honoree mode. Replaces the heavy URL+buttons block that used to
+ * sit at the top of the page. Three mono-meta tokens, separated by
+ * middots: passive label, copy action, invite action.
+ */
+function InlineShareActions({ shareToken, onCopied, onInvite }: InlineShareActionsProps) {
   const { t } = useI18n();
-  const { query: groupsQ } = useGroups();
-  const [picking, setPicking] = useState(false);
-  const allGroups = groupsQ.status === 'ready' ? groupsQ.groups : [];
-  const attachedIds = new Set(audience.map((a) => a.group_id));
-  const availableGroups = allGroups.filter((g) => !attachedIds.has(g.id));
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin : 'https://ratlist.app';
+  const shareUrl = `${origin}/event/${shareToken}`;
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      onCopied();
+    } catch {
+      // Clipboard API can fail in non-secure contexts or strict iframes.
+      // Silently no-op — the user can still get the link from the email
+      // invite. (A retry via document.execCommand is deprecated.)
+    }
+  }
 
   return (
-    <section style={{ marginBottom: 'var(--s-6)' }}>
-      <div className="mono-meta" style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-3)' }}>
-        {t('events.audienceLabel')}
-      </div>
-      <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-        {audience.length === 0 && !isHonoree && (
-          <span style={{ color: 'var(--ink-3)', fontStyle: 'italic', fontSize: 14 }}>
-            {t('events.audienceEmpty')}
-          </span>
-        )}
-        {audience.map((a) => (
-          <span
-            key={a.group_id}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '2px 10px',
-              border: '1px solid var(--hair-strong)',
-              borderRadius: 999,
-              fontSize: 13,
-              color: 'var(--ink-2)',
-            }}
-          >
-            {a.group.emoji && <span aria-hidden>{a.group.emoji}</span>}
-            {a.group.name}
-            {isHonoree && (
-              <button
-                type="button"
-                onClick={() => void onDetach(a.group_id)}
-                aria-label={t('events.removeCircle', { name: a.group.name })}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  padding: 0,
-                  marginLeft: 2,
-                  color: 'var(--ink-3)',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  lineHeight: 1,
-                }}
-              >
-                ×
-              </button>
-            )}
-          </span>
-        ))}
-        {isHonoree && availableGroups.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setPicking((v) => !v)}
-            className="mono-meta"
-            style={{
-              background: 'transparent',
-              border: '1px dashed var(--hair-strong)',
-              padding: '2px 10px',
-              borderRadius: 999,
-              color: 'var(--accent)',
-              cursor: 'pointer',
-            }}
-          >
-            {picking ? t('events.collapse') : t('events.addCircle')}
-          </button>
-        )}
-      </div>
-      {picking && isHonoree && availableGroups.length > 0 && (
-        <div
-          style={{
-            marginTop: 'var(--s-3)',
-            display: 'flex',
-            gap: 'var(--s-2)',
-            flexWrap: 'wrap',
-          }}
-        >
-          {availableGroups.map((g) => (
-            <button
-              key={g.id}
-              type="button"
-              onClick={() => void onAttach(g.id)}
-              style={{
-                padding: '4px 12px',
-                borderRadius: 999,
-                border: '1px dashed var(--accent)',
-                background: 'var(--accent-soft)',
-                color: 'var(--ink)',
-                fontFamily: 'var(--font-body)',
-                fontSize: 13,
-                cursor: 'pointer',
-              }}
-            >
-              + {g.emoji ? `${g.emoji} ` : ''}
-              {g.name}
-            </button>
-          ))}
-        </div>
-      )}
+    <div
+      style={{
+        marginTop: 'calc(-1 * var(--s-3))',
+        marginBottom: 'var(--s-6)',
+        display: 'flex',
+        gap: 'var(--s-3)',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: 0.06,
+        textTransform: 'uppercase',
+      }}
+    >
+      <span style={{ color: 'var(--ink-3)' }}>{t('events.share.linkLabel')}</span>
+      <span style={{ color: 'var(--hair-strong)' }} aria-hidden>·</span>
+      <button
+        type="button"
+        onClick={() => void handleCopy()}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          color: 'var(--accent)',
+          cursor: 'pointer',
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          letterSpacing: 'inherit',
+          textTransform: 'inherit',
+        }}
+      >
+        {t('events.share.copyShort')}
+      </button>
+      <span style={{ color: 'var(--hair-strong)' }} aria-hidden>·</span>
+      <button
+        type="button"
+        onClick={onInvite}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          color: 'var(--accent)',
+          cursor: 'pointer',
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          letterSpacing: 'inherit',
+          textTransform: 'inherit',
+        }}
+      >
+        {t('events.share.inviteShort')}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * `<ParticipantsSection>` — honoree-only summary of who's in the event.
+ * Replaces the old `<CoordinatorPanel>` shell: share/invite affordances
+ * moved out to `<InlineShareActions>` above, leaving just the rendered
+ * participants list (collapsible <details>) when at least one
+ * participant exists. When the list is empty, this component renders
+ * nothing — no chrome wasted on a zero-state.
+ */
+function ParticipantsSection({ eventId }: { eventId: string }) {
+  const { query: participantsQ } = useEventParticipants(eventId);
+  if (participantsQ.status !== 'ready' || participantsQ.participants.length === 0) {
+    return null;
+  }
+  return (
+    <section style={{ marginBottom: 'var(--s-5)' }}>
+      <ParticipantList participants={participantsQ.participants} />
     </section>
   );
 }
@@ -610,42 +596,67 @@ function ItemsSection({
       </div>
 
       {items.length === 0 ? (
-        <p style={{ color: 'var(--ink-3)', fontStyle: 'italic' }}>
-          {isHonoree ? t('events.noItemsHonoree') : t('events.noItemsGuest')}
-        </p>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 'var(--s-4)',
+            padding: 'var(--s-6) 0',
+            color: 'var(--ink-3)',
+            fontStyle: 'italic',
+          }}
+        >
+          <SittingRat size={80} sign signText={t('events.emptySign')} />
+          <p style={{ margin: 0 }}>
+            {isHonoree ? t('events.noItemsHonoree') : t('events.noItemsGuest')}
+          </p>
+        </div>
       ) : (
         <>
           {groupByPriority(
             items.map((it) => ({ ...it, priority: it.item.priority })),
-          ).map((section) =>
-            section.items.length === 0 ? null : (
-              <section key={section.level}>
+          ).map((section) => {
+            if (section.items.length === 0) return null;
+            const [first, ...rest] = section.items;
+            if (!first) return null;
+            return (
+              <section key={section.level} style={{ marginBottom: 'var(--s-6)' }}>
                 <PrioritySectionHeader level={section.level} count={section.items.length} />
-                <ul
-                  style={{
-                    listStyle: 'none',
-                    padding: 0,
-                    margin: 0,
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                    gap: 'var(--s-5)',
-                  }}
-                >
-                  {section.items.map((it) => (
-                    <CuratedItemCard
-                      key={it.item_id}
-                      entry={it}
-                      isHonoree={isHonoree}
-                      myUserId={myUserId}
-                      onDetach={() => void onDetach(it.item_id)}
-                      onClaim={() => void onClaim(it.item_id)}
-                      onRelease={() => void onRelease(it.item_id)}
-                    />
-                  ))}
-                </ul>
+                <HeroCuratedItem
+                  entry={first}
+                  isHonoree={isHonoree}
+                  myUserId={myUserId}
+                  onDetach={() => void onDetach(first.item_id)}
+                  onClaim={() => void onClaim(first.item_id)}
+                  onRelease={() => void onRelease(first.item_id)}
+                />
+                {rest.length > 0 && (
+                  <ul
+                    style={{
+                      listStyle: 'none',
+                      padding: 0,
+                      margin: 0,
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                      gap: 'var(--s-4)',
+                    }}
+                  >
+                    {rest.map((entry) => (
+                      <li key={entry.item_id}>
+                        <TileCuratedItem
+                          entry={entry}
+                          isHonoree={isHonoree}
+                          myUserId={myUserId}
+                          onDetach={() => void onDetach(entry.item_id)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
-            ),
-          )}
+            );
+          })}
         </>
       )}
 
@@ -706,202 +717,6 @@ function ItemsSection({
         </div>
       )}
     </section>
-  );
-}
-
-interface CuratedItemCardProps {
-  entry: ItemsSectionProps['items'][number];
-  isHonoree: boolean;
-  myUserId: string | null;
-  onDetach: () => void;
-  onClaim: () => void;
-  onRelease: () => void;
-}
-
-function CuratedItemCard({
-  entry,
-  isHonoree,
-  myUserId,
-  onDetach,
-  onClaim,
-  onRelease,
-}: CuratedItemCardProps) {
-  const { t } = useI18n();
-  const { item, claims } = entry;
-  const myClaim = useMemo(
-    () => (myUserId ? claims.find((c) => c.user_id === myUserId) ?? null : null),
-    [claims, myUserId],
-  );
-  const othersClaim = useMemo(
-    () => claims.find((c) => c.user_id !== myUserId) ?? null,
-    [claims, myUserId],
-  );
-  const dimmed = !isHonoree && claims.length > 0 && !myClaim;
-
-  return (
-    <li>
-      <div style={{ opacity: dimmed ? 0.55 : 1, position: 'relative' }}>
-        <Link
-          to={`/i/${item.id}`}
-          style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-        >
-          <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
-        </Link>
-        {isHonoree && (
-          <button
-            type="button"
-            onClick={onDetach}
-            aria-label={t('events.removeItem', { title: item.title })}
-            style={{
-              position: 'absolute',
-              top: 6,
-              right: 6,
-              width: 26,
-              height: 26,
-              borderRadius: '50%',
-              background: 'var(--paper)',
-              color: 'var(--ink-2)',
-              border: '1px solid var(--hair-strong)',
-              cursor: 'pointer',
-              fontSize: 14,
-              lineHeight: 1,
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            ×
-          </button>
-        )}
-      </div>
-      <div style={{ paddingTop: 'var(--s-3)' }}>
-        <h3
-          style={{
-            margin: 0,
-            fontFamily: 'var(--font-body)',
-            fontWeight: 600,
-            fontSize: 15,
-            color: 'var(--ink)',
-            lineHeight: 1.3,
-            textDecoration: dimmed ? 'line-through' : 'none',
-          }}
-        >
-          {item.title}
-        </h3>
-        {item.maker && (
-          <div style={{ marginTop: 2, fontSize: 12, color: 'var(--ink-3)' }}>{item.maker}</div>
-        )}
-        {item.price_text && (
-          <div
-            style={{
-              marginTop: 4,
-              fontFamily: 'var(--font-display)',
-              fontStyle: 'italic',
-              fontSize: 14,
-              color: 'var(--accent)',
-            }}
-          >
-            {item.price_text}
-          </div>
-        )}
-        {/* Owner's personal note — same 2-line clamp + ink-2 treatment used
-            on MyList / friend list / public share. */}
-        {item.note && (
-          <div
-            style={{
-              marginTop: 'var(--s-2)',
-              fontSize: 12,
-              color: 'var(--ink-2)',
-              lineHeight: 1.4,
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {item.note}
-          </div>
-        )}
-        {!isHonoree && (
-          <div style={{ marginTop: 'var(--s-3)' }}>
-            <ClaimControl
-              myClaim={myClaim}
-              othersClaim={othersClaim}
-              onClaim={onClaim}
-              onRelease={onRelease}
-            />
-          </div>
-        )}
-      </div>
-    </li>
-  );
-}
-
-function ClaimControl({
-  myClaim,
-  othersClaim,
-  onClaim,
-  onRelease,
-}: {
-  myClaim: EventClaim | null;
-  othersClaim: EventClaim | null;
-  onClaim: () => void;
-  onRelease: () => void;
-}) {
-  const { t } = useI18n();
-
-  if (myClaim) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-2)' }}>
-        <span
-          className="marginalia"
-          style={{ fontSize: 13, color: 'var(--accent)', transform: 'rotate(-1deg)' }}
-        >
-          {t('friend.youClaim')} ✓
-        </span>
-        <button
-          type="button"
-          onClick={onRelease}
-          className="mono-meta"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            color: 'var(--ink-3)',
-            cursor: 'pointer',
-          }}
-        >
-          {t('friend.release')}
-        </button>
-      </div>
-    );
-  }
-  if (othersClaim) {
-    return (
-      <span className="marginalia" style={{ fontSize: 13, color: 'var(--ink-3)' }}>
-        {t('friend.claimedBy', { name: othersClaim.user.display_name })}
-      </span>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClaim}
-      style={{
-        background: 'transparent',
-        border: '1px solid var(--ink)',
-        padding: '4px 10px',
-        borderRadius: 'var(--r-1)',
-        cursor: 'pointer',
-        fontFamily: 'var(--font-body)',
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        color: 'var(--ink)',
-      }}
-    >
-      {t('friend.claim')}
-    </button>
   );
 }
 
@@ -1016,130 +831,6 @@ function ShareCard({
           {t('events.share.dismiss')}
         </button>
       </div>
-    </section>
-  );
-}
-
-// ─────────────────────────── coordinator panel ───────────────────────────
-
-/**
- * Always-on share + invite + participants section for the honoree.
- * Distinct from the post-create `<ShareCard>`: that one is a transient
- * celebration on `?share=1`; this one is the daily-driver coordinator
- * controls. Honoree-only — non-honoree code paths never reach here.
- */
-function CoordinatorPanel({
-  eventId,
-  shareToken,
-  showToast,
-  hideShareBlock = false,
-}: {
-  eventId: string;
-  shareToken: string;
-  showToast: (msg: string) => void;
-  /** When the post-create `<ShareCard>` is up it already surfaces the
-   *  URL + Copy button; this prop hides the redundant share block so
-   *  the panel only renders the invite button + participants list. */
-  hideShareBlock?: boolean;
-}) {
-  const { t } = useI18n();
-  const { query: participantsQ } = useEventParticipants(eventId);
-  const [inviteOpen, setInviteOpen] = useState(false);
-
-  const origin =
-    typeof window !== 'undefined' ? window.location.origin : 'https://ratlist.app';
-  const shareUrl = `${origin}/event/${shareToken}`;
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      showToast(t('events.share.copied'));
-    } catch {
-      /* clipboard can fail in non-secure contexts — URL is visible anyway */
-    }
-  }
-
-  return (
-    <section
-      style={{
-        border: '1px solid var(--hair)',
-        padding: 'var(--s-4)',
-        marginBottom: 'var(--s-5)',
-        background: 'var(--paper)',
-      }}
-    >
-      {!hideShareBlock && (
-        <>
-          <h3
-            className="mono-meta"
-            style={{ margin: '0 0 var(--s-3)', color: 'var(--ink-3)' }}
-          >
-            {t('events.share.coordinatorTitle')}
-          </h3>
-          <code
-            style={{
-              display: 'block',
-              padding: 'var(--s-2)',
-              background: 'var(--paper-2, #fffdf6)',
-              border: '1px solid var(--hair)',
-              margin: '0 0 var(--s-3)',
-              fontSize: 13,
-              fontFamily: 'var(--font-mono, monospace)',
-              color: 'var(--ink)',
-              overflowWrap: 'anywhere',
-            }}
-          >
-            {shareUrl}
-          </code>
-        </>
-      )}
-      <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
-        {!hideShareBlock && (
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            style={{
-              background: 'transparent',
-              color: 'var(--accent)',
-              border: '1px solid var(--accent)',
-              padding: '8px 16px',
-              fontFamily: 'var(--font-body)',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            {t('events.share.copy')}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setInviteOpen(true)}
-          style={{
-            background: 'var(--accent)',
-            color: 'var(--paper)',
-            border: 'none',
-            padding: '8px 16px',
-            fontFamily: 'var(--font-body)',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          {t('events.invite.openButton')}
-        </button>
-      </div>
-
-      {participantsQ.status === 'ready' && participantsQ.participants.length > 0 && (
-        <ParticipantList participants={participantsQ.participants} />
-      )}
-
-      <InviteFromPeopleModal
-        eventId={eventId}
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-        showToast={showToast}
-      />
     </section>
   );
 }

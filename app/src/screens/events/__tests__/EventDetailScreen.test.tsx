@@ -68,14 +68,12 @@ function stubHonoree() {
   mocks.useEvent.mockReturnValue({
     query: {
       status: 'ready',
-      data: { event: honoreeEvent, audience: [], items: [], isHonoree: true },
+      data: { event: honoreeEvent, items: [], isHonoree: true },
       error: null,
     },
     refresh: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
-    attachCircle: vi.fn(),
-    detachCircle: vi.fn(),
     attachItem: vi.fn(),
     detachItem: vi.fn(),
     claim: vi.fn(),
@@ -139,13 +137,14 @@ describe('EventDetailScreen — post-create share card (?share=1)', () => {
 
     // The transient celebration headline only appears with ?share=1
     screen.getByText(/ready|готово/i);
-    // De-dup: only the celebration card shows URL+Copy under ?share=1.
-    // The always-on coordinator panel suppresses its own share block so
-    // the user doesn't see the same URL twice.
+    // ShareCard surfaces the URL + its own Copy button. The new inline
+    // share-meta line is suppressed during ?share=1 so the user doesn't
+    // see the same affordance twice.
     expect(screen.getAllByText(/abc123def456/)).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: /copy|скопировать/i })).toHaveLength(1);
-    // Invite button stays visible (coordinator panel keeps that part)
-    screen.getByRole('button', { name: /invite friends|позвать друзей/i });
+    // Invite is reachable from the regular page (after dismissing the
+    // celebration card). The transient card itself doesn't carry an
+    // invite button.
   });
 
   it('does NOT render celebration headline without ?share=1', () => {
@@ -161,14 +160,12 @@ describe('EventDetailScreen — post-create share card (?share=1)', () => {
     mocks.useEvent.mockReturnValue({
       query: {
         status: 'ready',
-        data: { event: honoreeEvent, audience: [], items: [], isHonoree: false },
+        data: { event: honoreeEvent, items: [], isHonoree: false },
         error: null,
       },
       refresh: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
-      attachCircle: vi.fn(),
-      detachCircle: vi.fn(),
       attachItem: vi.fn(),
       detachItem: vi.fn(),
       claim: vi.fn(),
@@ -236,7 +233,6 @@ describe('<EventDetailScreen> sectioning', () => {
         status: 'ready',
         data: {
           event: honoreeEvent,
-          audience: [],
           items,
           isHonoree,
         },
@@ -245,8 +241,6 @@ describe('<EventDetailScreen> sectioning', () => {
       refresh: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
-      attachCircle: vi.fn(),
-      detachCircle: vi.fn(),
       attachItem: vi.fn(),
       detachItem: vi.fn(),
       claim: vi.fn(),
@@ -295,34 +289,36 @@ describe('<EventDetailScreen> sectioning', () => {
   });
 });
 
-describe('EventDetailScreen — coordinator panel (Phase D)', () => {
-  it('always-on share URL + copy button visible for honoree without ?share=1', () => {
+describe('EventDetailScreen — inline share-meta line (redesign)', () => {
+  it('inline share label + copy + invite affordances visible for honoree without ?share=1', () => {
     stubHonoree();
     renderAt('/events/e1');
 
-    expect(screen.getByText(/abc123def456/)).toBeTruthy();
-    screen.getByRole('button', { name: /copy|скопировать/i });
+    // New inline share-meta line replaces the old URL + buttons block.
+    // The URL itself is no longer rendered — copy writes it to clipboard.
+    expect(screen.queryByText(/abc123def456/)).toBeNull();
+    expect(screen.getByText(/ссылка для гостей|share link/i)).toBeTruthy();
+    screen.getByRole('button', { name: /copy ↗|скопировать ↗/i });
+    screen.getByRole('button', { name: /invite friends →|позвать друзей →/i });
   });
 
   it('invite button visible for honoree', () => {
     stubHonoree();
     renderAt('/events/e1');
 
-    screen.getByRole('button', { name: /invite friends|позвать друзей/i });
+    screen.getByRole('button', { name: /invite friends →|позвать друзей →/i });
   });
 
   it('invite button NOT visible for non-honoree (active participant)', () => {
     mocks.useEvent.mockReturnValue({
       query: {
         status: 'ready',
-        data: { event: honoreeEvent, audience: [], items: [], isHonoree: false },
+        data: { event: honoreeEvent, items: [], isHonoree: false },
         error: null,
       },
       refresh: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
-      attachCircle: vi.fn(),
-      detachCircle: vi.fn(),
       attachItem: vi.fn(),
       detachItem: vi.fn(),
       claim: vi.fn(),
