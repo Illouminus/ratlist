@@ -9,13 +9,21 @@ beforeEach(() => {
   localStorage.setItem('kryska.lang', 'ru');
 });
 
-function mkEntry(overrides: { id?: string; cover_url?: string | null; title?: string } = {}) {
+function mkEntry(
+  overrides: {
+    id?: string;
+    cover_url?: string | null;
+    title?: string;
+    note?: string | null;
+  } = {},
+) {
   return {
     item_id: overrides.id ?? 'item-1',
     item: {
       id: overrides.id ?? 'item-1',
       title: overrides.title ?? 'Кружка',
       price_text: '600₽',
+      note: overrides.note ?? null,
       cover_url: overrides.cover_url ?? null,
       priority: 2,
     },
@@ -42,6 +50,21 @@ describe('<TileCuratedItem>', () => {
     );
     expect(screen.getByText('Кружка')).toBeTruthy();
     expect(screen.getByText('600₽')).toBeTruthy();
+  });
+
+  it('renders item.note inline under the price (1-line teaser)', () => {
+    renderTile(
+      <TileCuratedItem
+        entry={mkEntry({ note: 'Прикольная штучка' })}
+        isHonoree
+        myUserId={null}
+        onDetach={vi.fn()}
+      />,
+    );
+    // The note is shown as a teaser on the tile, not hidden behind a
+    // click-through. Hero card carries the full untruncated note; tile
+    // clamps to 1 line via -webkit-line-clamp.
+    expect(screen.getByText('Прикольная штучка')).toBeTruthy();
   });
 
   it('renders rat placeholder when no cover_url', () => {
