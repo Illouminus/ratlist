@@ -21,6 +21,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PaperLayout } from '../../components/PaperLayout';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { LangToggle } from '../../components/LangToggle';
+import { PriorityDots } from '../../components/PriorityDots';
 import { useI18n } from '../../i18n/useI18n';
 import { useAuth } from '../../auth/useAuth';
 import {
@@ -282,6 +283,16 @@ function ItemRow({ item }: { item: EventViewItem }) {
           style={{ color: 'var(--ink-3)', marginTop: 'var(--s-1)', fontSize: 12 }}
         >
           {[item.maker, item.price_text].filter(Boolean).join(' · ')}
+        </div>
+      )}
+      {/* Same pattern as MyList grid `ItemCard`: render the priority dots
+          only for non-default levels (1 = «очень хочу», 3 = «если найдётся»)
+          so default-priority cards stay visually quiet. Sections aren't a
+          fit for the mosaic layout used here — the dot marker carries the
+          signal without breaking the grid. */}
+      {item.priority !== 2 && (
+        <div style={{ marginTop: 'var(--s-1)' }}>
+          <PriorityDots level={item.priority === 1 ? 1 : 3} />
         </div>
       )}
     </article>
