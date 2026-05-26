@@ -1,16 +1,32 @@
 /**
  * `<SortableItemRow>` — wraps a single list row in `useSortable` so it can
- * be picked up and dropped into a different priority section. The row's
- * visual is whatever the caller renders as children — we only attach the
- * sortable behavior and the keyboard-accessible drag handle.
+ * be picked up and dropped into a different priority section.
  *
- * The handle (⋮⋮) sits absolutely-positioned to the right of the row so
- * the row's existing layout doesn't need to know about it. It's
- * keyboard-focusable (tabIndex 0); pressing Space on it grabs the row.
+ * Activator surface: the entire outer row. Long-press anywhere on the card
+ * (touch) or click-drag (pointer) activates DnD via the spread `listeners`
+ * + `attributes`. A small ⋮⋮ glyph stays on the right edge as a decorative
+ * affordance — non-interactive, `aria-hidden`, just a visual hint that the
+ * row is draggable.
  *
- * While dragging, the row's children get a soft scale + opacity dim, and
- * link clicks inside are suppressed via `pointer-events: none` so the
- * underlying `<Link>` doesn't navigate when the user releases the drag.
+ * Why the whole row, not the handle: the children typically wrap a `<Link>`
+ * to the item detail page. On iOS Safari, long-press over a `<Link>`
+ * triggers the native link-preview / context-menu gesture before dnd-kit's
+ * TouchSensor (delay 250ms) can fire. We suppress that with
+ * `-webkit-touch-callout: none` and `user-select: none` on the outer
+ * wrapper. Short tap still navigates (Link's `pointerup` fires before the
+ * 250ms hold elapses); long-press triggers drag.
+ *
+ * While dragging:
+ *   - The outer wrapper has `touch-action: none` (prevents scroll-while-drag)
+ *   - The children wrapper has `pointer-events: none` (suppresses the
+ *     inner `<Link>` click on drop)
+ *   - The row gets a soft opacity dim — DragOverlay (mounted by ItemList)
+ *     renders a floating ghost following the pointer.
+ *
+ * Keyboard a11y: the spread `attributes` make the outer div a focusable
+ * `role="button"` with the right ARIA properties. Tab to focus, Space to
+ * grab, ↑/↓ to move between sections (per dnd-kit's KeyboardSensor +
+ * sortableKeyboardCoordinates), Space to drop, Esc to cancel.
  */
 import { type ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
@@ -38,51 +54,58 @@ export function SortableItemRow({ id, children }: SortableItemRowProps) {
   return (
     <div
       ref={setNodeRef}
+      aria-label={t('priority.a11yHandle')}
+      {...attributes}
+      {...listeners}
       style={{
         position: 'relative',
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.6 : 1,
-        // `touch-action: none` while dragging prevents the browser from
-        // hijacking the gesture for scroll. Idle, `manipulation` keeps tap
-        // working without the 300ms iOS Safari delay.
+        // While dragging, block browser scroll on the gesture. Idle, allow
+        // taps and scrolls (manipulation = no 300ms iOS tap delay).
         touchAction: isDragging ? 'none' : 'manipulation',
+        // Suppress iOS Safari's long-press link-preview / context menu so
+        // dnd-kit's TouchSensor (delay 250ms) wins the gesture against the
+        // inner <Link>. Without these, iOS opens a "preview Link" pop-up
+        // halfway through the hold and the drag never activates.
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        cursor: 'grab',
       }}
     >
       <div
         style={{
-          // Suppress link clicks inside the row while a drag is in progress
-          // so dropping on the same row doesn't navigate to item detail.
+          // Block clicks from reaching the inner <Link> while a drag is in
+          // progress so releasing on the same row doesn't navigate to item
+          // detail.
           pointerEvents: isDragging ? 'none' : 'auto',
         }}
       >
         {children}
       </div>
-      <button
-        type="button"
+      {/* Decorative drag affordance — kept as a visual cue that the row is
+          draggable. Non-interactive (`aria-hidden`, `pointer-events: none`,
+          no event handlers) so it doesn't intercept touches that should go
+          to the outer wrapper. */}
+      <span
+        aria-hidden
         data-testid="drag-handle"
-        aria-label={t('priority.a11yHandle')}
-        {...attributes}
-        {...listeners}
         style={{
           position: 'absolute',
           top: '50%',
           right: 'var(--s-2)',
           transform: 'translateY(-50%)',
-          width: 24,
-          height: 24,
-          border: 'none',
-          background: 'transparent',
           color: 'var(--ink-3)',
           fontSize: 14,
           lineHeight: 1,
-          cursor: 'grab',
           opacity: 0.6,
-          padding: 0,
+          pointerEvents: 'none',
         }}
       >
         ⋮⋮
-      </button>
+      </span>
     </div>
   );
 }

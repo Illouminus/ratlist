@@ -41,15 +41,25 @@ describe('<SortableItemRow>', () => {
     expect(screen.getByTestId('drag-handle')).toBeTruthy();
   });
 
-  it('marks the row with role and aria attributes for keyboard a11y', () => {
+  it('marks the row outer wrapper with role and aria attributes for keyboard a11y', () => {
     renderInDnd(
       <SortableItemRow id="item-1">
         <div>row</div>
       </SortableItemRow>,
       ['item-1'],
     );
+    // After the row-activator refactor, the OUTER wrapper holds the
+    // sortable listeners + aria-label, not the decorative ⋮⋮ span.
+    // The visual span is aria-hidden and pointer-events:none so it doesn't
+    // interfere with touches on the row body.
+    const row = screen.getByLabelText('Перетащи чтобы изменить приоритет');
+    expect(row.getAttribute('tabIndex')).not.toBeNull();
+    expect(row.getAttribute('role')).toBe('button');
+
+    // Decorative handle is still rendered but is now aria-hidden and
+    // non-interactive (no event handlers, no aria-label).
     const handle = screen.getByTestId('drag-handle');
-    expect(handle.getAttribute('aria-label')).toBeTruthy();
-    expect(handle.getAttribute('tabIndex')).not.toBeNull();
+    expect(handle.getAttribute('aria-hidden')).toBe('true');
+    expect(handle.getAttribute('aria-label')).toBeNull();
   });
 });
