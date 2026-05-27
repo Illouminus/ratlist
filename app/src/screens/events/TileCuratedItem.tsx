@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { PriorityDots } from '../../components/PriorityDots';
+import { formatPrice } from '../../lib/formatPrice';
 
 interface TileCuratedItemEntry {
   item_id: string;
@@ -39,7 +40,6 @@ interface TileCuratedItemProps {
 export function TileCuratedItem({ entry, isHonoree, onDetach }: TileCuratedItemProps) {
   const { t } = useI18n();
   const { item } = entry;
-  const showPriorityDot = item.priority === 1 || item.priority === 3;
 
   return (
     <article data-testid="item-tile" className="curated-tile">
@@ -80,7 +80,7 @@ export function TileCuratedItem({ entry, isHonoree, onDetach }: TileCuratedItemP
                 textOverflow: 'ellipsis',
               }}
             >
-              {[item.maker, item.price_text].filter(Boolean).join(' · ')}
+              {[item.maker, formatPrice(item.price_text)].filter(Boolean).join(' · ')}
             </div>
           )}
           {item.note && (
@@ -99,11 +99,9 @@ export function TileCuratedItem({ entry, isHonoree, onDetach }: TileCuratedItemP
               {item.note}
             </div>
           )}
-          {showPriorityDot && (
-            <div style={{ marginTop: 'var(--s-1)' }}>
-              <PriorityDots level={item.priority === 1 ? 1 : 3} />
-            </div>
-          )}
+          <div style={{ marginTop: 'var(--s-1)' }}>
+            <PriorityDots level={item.priority === 1 ? 1 : item.priority === 3 ? 3 : 2} />
+          </div>
         </div>
       </Link>
 

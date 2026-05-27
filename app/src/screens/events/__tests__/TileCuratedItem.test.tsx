@@ -112,7 +112,7 @@ describe('<TileCuratedItem>', () => {
     expect(screen.getByTestId('priority-dots')).toBeTruthy();
   });
 
-  it('hides priority dot for default priority 2 («хочу»)', () => {
+  it('renders priority dot for default priority 2 («хочу»)', () => {
     renderTile(
       <TileCuratedItem
         entry={mkEntry({ priority: 2 })}
@@ -120,6 +120,9 @@ describe('<TileCuratedItem>', () => {
         onDetach={vi.fn()}
       />,
     );
-    expect(screen.queryByTestId('priority-dots')).toBeNull();
+    // Friend feedback (2026-05-27): the «хочу» level used to be
+    // suppressed; now every item carries an explicit dot row so the
+    // signal isn't ambiguous.
+    expect(screen.getByTestId('priority-dots')).toBeTruthy();
   });
 });

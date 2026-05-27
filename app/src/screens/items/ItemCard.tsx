@@ -15,6 +15,7 @@ import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { PriorityDots } from '../../components/PriorityDots';
 import type { Occasion } from '../../lib/db';
+import { formatPrice } from '../../lib/formatPrice';
 
 interface ItemCardProps {
   item: MyItem;
@@ -87,7 +88,7 @@ export function ItemCard({ item, index }: ItemCardProps) {
                 whiteSpace: 'nowrap',
               }}
             >
-              {item.price_text}
+              {formatPrice(item.price_text)}
             </div>
           )}
         </div>
@@ -121,11 +122,7 @@ export function ItemCard({ item, index }: ItemCardProps) {
           }}
         >
           <OccasionTag kind={item.occasion as Occasion} />
-          {/* Skip the default level (2) — only ☆☆☆ / ☆ rows carry a
-              marker, so the eye picks them out at a glance. */}
-          {item.priority !== 2 && (
-            <PriorityDots level={item.priority === 1 ? 1 : 3} />
-          )}
+          <PriorityDots level={item.priority === 1 ? 1 : item.priority === 3 ? 3 : 2} />
           {item.group_ids.length === 0 && <PrivateBadge />}
         </div>
       </div>

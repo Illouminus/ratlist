@@ -50,7 +50,7 @@ export const ru: Translation = {
   empty: {
     headline: 'пусто\nпока.',
     annotation: 'тихое начало.',
-    title: 'что последнее ты заскринил и больше не открывал?',
+    title: 'что последнее ты заскринил(а) и больше не открывал(а)?',
     body: 'вот хорошее место чтобы начать. добавь что угодно — кружку, книгу, семена помидоров. детали можно поправить потом.',
     sign: 'эй?',
     orPasteLink: 'или вставь ссылку — так быстрее',
@@ -182,7 +182,7 @@ export const ru: Translation = {
     sending: 'отправляем…',
     invalidEmail: 'это не похоже на email',
     settings: 'настройки →',
-    signedInAs: 'ты вошёл как {name}',
+    signedInAs: 'ты вошёл/вошла как {name}',
     genericError: 'что-то пошло не так. попробуй ещё раз?',
   },
   onboarding: {
@@ -275,7 +275,7 @@ export const ru: Translation = {
     leaveConfirmTitle: 'покинуть «{name}»?',
     leaveConfirm: 'твои айтемы останутся в твоём списке, но перестанут быть видны крысятам из этого круга.',
     leaving: 'выходим…',
-    leftGroup: 'ты покинул «{name}»',
+    leftGroup: 'ты покинул(а) «{name}»',
     inviteFromPeopleTitle: 'позвать ещё крысят',
     inviteFromPeopleHint: 'из тех, с кем ты уже в каких-то кругах. совсем нового — ссылкой ниже.',
     inviteAdd: '+ добавить',

@@ -71,6 +71,7 @@ import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { PriorityDots } from '../../components/PriorityDots';
 import type { Occasion } from '../../lib/db';
+import { formatPrice } from '../../lib/formatPrice';
 
 // ─────────────────────────── public API ───────────────────────────
 
@@ -444,7 +445,7 @@ function ItemRow({ item, index, last }: ItemRowProps) {
                 whiteSpace: 'nowrap',
               }}
             >
-              {item.price_text}
+              {formatPrice(item.price_text)}
             </div>
           )}
         </div>
@@ -488,12 +489,7 @@ function ItemRow({ item, index, last }: ItemRowProps) {
           }}
         >
           <OccasionTag kind={item.occasion as Occasion} />
-          {/* Only render the priority dots for non-default levels —
-              otherwise every row would carry a "•• хочу" marker that
-              just adds visual noise without saying anything new. */}
-          {item.priority !== 2 && (
-            <PriorityDots level={item.priority === 1 ? 1 : 3} />
-          )}
+          <PriorityDots level={item.priority === 1 ? 1 : item.priority === 3 ? 3 : 2} />
           {item.group_ids.length === 0 && <PrivateBadge />}
         </div>
       </div>
