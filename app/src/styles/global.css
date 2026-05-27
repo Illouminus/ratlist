@@ -275,13 +275,15 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
    Used by `<EventDetailScreen>`. One uniform layout replaces the
    hero+tiles per-section pattern that landed in PR #27/28 and looked
    uneven with few items. Sort is by priority asc, no section headers —
-   the per-tile dot carries the signal. */
+   the per-tile dot carries the signal.
+   `minmax(180px, 240px)` (rather than `1fr`) caps each tile so a 1-item
+   event doesn't blow up into a full-width hero on wide screens. */
 .curated-tiles-grid {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 240px));
   gap: var(--s-4);
 }
 .curated-tile {
