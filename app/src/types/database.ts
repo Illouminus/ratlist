@@ -1119,6 +1119,7 @@ export type Database = {
         }[]
       }
       reveal_santa_event: { Args: { _event_id: string }; Returns: undefined }
+      revoke_friend_invite: { Args: { _token: string }; Returns: undefined }
       rotate_add_me_token: { Args: never; Returns: string }
       run_santa_draw: { Args: { _event_id: string }; Returns: undefined }
       set_share_token: { Args: { _enabled: boolean }; Returns: string }

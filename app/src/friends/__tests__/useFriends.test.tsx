@@ -4,8 +4,9 @@
 // `get_friends`, plus a `unfriend` action and a realtime channel that
 // re-fetches when `friendships` rows change anywhere (server-side RLS
 // scopes the events to the caller's own edges).
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import type { User } from '@supabase/supabase-js';
 
 const mockSupabase = vi.hoisted(() => {
   const channel = {
@@ -25,10 +26,23 @@ const mockSupabase = vi.hoisted(() => {
 });
 
 vi.mock('../../lib/supabase', () => ({ supabase: mockSupabase }));
+vi.mock('../../auth/useAuth', () => ({ useAuth: vi.fn() }));
 
 import { useFriends } from '../useFriends';
+import { useAuth } from '../../auth/useAuth';
 
 const channel = mockSupabase._channel;
+
+function stubAuthUser(userId: string): void {
+  vi.mocked(useAuth).mockReturnValue({
+    status: 'authenticated',
+    user: { id: userId } as User,
+    session: null,
+    signInWithMagicLink: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signOut: vi.fn(),
+  });
+}
 
 const FRIEND_ROW = {
   id: 'friend-1',
@@ -51,6 +65,11 @@ beforeEach(() => {
   channel.on.mockReturnValue(channel);
   channel.subscribe.mockReturnValue(channel);
   mockSupabase.channel.mockReturnValue(channel);
+  stubAuthUser('user-1');
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('useFriends', () => {
@@ -130,5 +149,34 @@ describe('useFriends', () => {
       if (result.current.state.kind !== 'loaded') return;
       expect(result.current.state.friends).toHaveLength(2);
     });
+  });
+
+  it('cancels the pending debounce on unmount', async () => {
+    // Initial load: one friend.
+    mockSupabase.rpc.mockResolvedValueOnce({ data: [FRIEND_ROW], error: null });
+
+    const { result, unmount } = renderHook(() => useFriends());
+    await waitFor(() => expect(result.current.state.kind).toBe('loaded'));
+    expect(mockSupabase.rpc).toHaveBeenCalledTimes(1);
+
+    // Grab the postgres_changes handler the hook registered, fire a
+    // change, then unmount before the 300 ms debounce window elapses.
+    const onCalls = channel.on.mock.calls as unknown[][];
+    const handler = onCalls.find((c) => c[0] === 'postgres_changes')?.[2] as
+      | ((payload: unknown) => void)
+      | undefined;
+    expect(handler).toBeDefined();
+
+    vi.useFakeTimers();
+    handler!({});
+    unmount();
+
+    // Advance past the debounce window: trigger.cancel() in the cleanup
+    // means no extra RPC fires.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(mockSupabase.rpc).toHaveBeenCalledTimes(1);
+    expect(mockSupabase.removeChannel).toHaveBeenCalledWith(channel);
   });
 });

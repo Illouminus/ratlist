@@ -22,6 +22,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../auth/useAuth';
 import { debounce } from '../lib/debounce';
 import type { Database } from '../types/database';
 
@@ -45,6 +46,7 @@ export interface UseFriendsResult {
 }
 
 export function useFriends(): UseFriendsResult {
+  const { user } = useAuth();
   const [state, setState] = useState<FriendsState>({ kind: 'loading' });
   const [tick, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
@@ -61,22 +63,24 @@ export function useFriends(): UseFriendsResult {
 
   // Realtime: re-fetch (debounced) when friendships change anywhere.
   // RLS filters server-side to only the caller's own edges, so we
-  // don't need a topic filter here.
+  // don't need a topic filter here. Channel name is scoped per user
+  // to match the rest of the codebase (`my-events:<id>`, etc.).
   useEffect(() => {
+    if (!user) return undefined;
     const trigger = debounce(refresh, 300);
     const channel = supabase
-      .channel('friendships-changes')
+      .channel(`friendships:${user.id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'friendships' },
-        () => trigger(),
+        trigger,
       )
       .subscribe();
     return () => {
       trigger.cancel();
       void supabase.removeChannel(channel);
     };
-  }, [refresh]);
+  }, [user, refresh]);
 
   const unfriend = useCallback(
     async (otherId: string): Promise<{ ok: true } | { ok: false; message: string }> => {

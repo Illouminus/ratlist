@@ -56,7 +56,12 @@ export function useFriendInvites(): UseFriendInvitesResult {
 
   const revoke = useCallback(
     async (token: string): Promise<{ ok: true } | { ok: false; message: string }> => {
-      const { error } = await supabase.from('friend_invites').delete().eq('token', token);
+      // PR-1 RLS on `friend_invites` blocks DELETE except via SECURITY
+      // DEFINER RPC — a direct PostgREST delete returns success with
+      // zero rows touched, so the button would silently no-op. Route
+      // through `revoke_friend_invite` (added in PR 2 review follow-up)
+      // which filters `from_user = caller` server-side.
+      const { error } = await supabase.rpc('revoke_friend_invite', { _token: token });
       if (error) return { ok: false, message: error.message };
       refresh();
       return { ok: true };
