@@ -180,6 +180,7 @@ function Hero() {
       >
         <ListMockup />
         <div
+          className="landing-mock-rat-bob"
           style={{
             position: 'absolute',
             top: -8,
@@ -237,10 +238,19 @@ function ListMockup() {
         {t('list.annotation')}
       </p>
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: 0 }} />
-      <MockRow index={1} title="Falcon enamel mug" price="£18" wash="#ecccb8" />
-      <MockRow index={2} title="Linen apron, oatmeal" price="£68" wash="#bdcdb3" />
-      <MockRow index={3} title="Muji 0.38 gel pens ×10" price="£12" wash="#d4b7c1" />
-      <div style={{ paddingTop: 'var(--s-4)', display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
+      <MockRow index={1} title="Falcon enamel mug"     price="€19,00" kind="mug"   delay={200} />
+      <MockRow index={2} title="Linen apron, oatmeal"  price="€78,00" kind="apron" delay={320} />
+      <MockRow index={3} title="Muji 0.38 gel pens ×10" price="€14,00" kind="pens"  delay={440} />
+      <div
+        className="fade-up landing-mock-tail-wrap"
+        style={{
+          paddingTop: 'var(--s-4)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--s-3)',
+          animationDelay: '560ms',
+        }}
+      >
         <span
           style={{
             fontFamily: 'var(--font-display)',
@@ -258,25 +268,31 @@ function ListMockup() {
   );
 }
 
+type ItemKind = 'mug' | 'apron' | 'pens';
+
 function MockRow({
   index,
   title,
   price,
-  wash,
+  kind,
+  delay,
 }: {
   index: number;
   title: string;
   price: string;
-  wash: string;
+  kind: ItemKind;
+  delay: number;
 }) {
   return (
     <div
+      className="fade-up"
       style={{
         display: 'flex',
         gap: 'var(--s-3)',
         padding: 'var(--s-3) 0',
         borderBottom: '1px solid var(--hair)',
         alignItems: 'center',
+        animationDelay: `${delay}ms`,
       }}
     >
       <div
@@ -289,15 +305,7 @@ function MockRow({
           boxShadow: 'inset 0 0 0 1px var(--hair)',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            inset: '14%',
-            background: `radial-gradient(ellipse at 35% 30%, ${wash} 0%, ${wash}cc 35%, transparent 75%)`,
-            opacity: 0.65,
-            filter: 'blur(3px)',
-          }}
-        />
+        <ItemSilhouette kind={kind} />
         <div
           style={{
             position: 'absolute',
@@ -343,6 +351,66 @@ function MockRow({
         {price}
       </div>
     </div>
+  );
+}
+
+/** Tiny iconographic silhouette — a watercolour wash bleeding inside a
+ *  hand-drawn outline of the product. Same painterly philosophy as the
+ *  earlier blob, but the shape now reads as the actual thing instead of
+ *  an abstract smudge. Uses the shared `#ratWobble` filter so the lines
+ *  look painted, not vector. */
+function ItemSilhouette({ kind }: { kind: ItemKind }) {
+  const wash =
+    kind === 'mug'   ? '#ecccb8' :
+    kind === 'apron' ? '#bdcdb3' :
+                       '#d4b7c1';
+
+  return (
+    <svg
+      viewBox="0 0 56 42"
+      width="100%"
+      height="100%"
+      style={{ display: 'block' }}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <ellipse cx="28" cy="22" rx="18" ry="13" fill={wash} opacity={0.55} />
+      <g
+        fill="none"
+        stroke="var(--ink)"
+        strokeWidth={1.1}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={0.5}
+        filter="url(#ratWobble)"
+      >
+        {kind === 'mug' && (
+          <>
+            <path d="M 16,12 L 16,30 Q 16,34 20,34 L 26,34 Q 30,34 30,30 L 30,12 Z" />
+            <path d="M 30,16 Q 38,17 38,22 Q 38,27 30,28" />
+            <line x1="17" y1="15" x2="29" y2="15" />
+          </>
+        )}
+        {kind === 'apron' && (
+          <>
+            <path d="M 20,12 L 36,12 L 38,16 L 38,34 L 18,34 L 18,16 Z" />
+            <path d="M 22,12 Q 23,6 17,5" />
+            <path d="M 34,12 Q 33,6 39,5" />
+            <line x1="22" y1="24" x2="34" y2="24" />
+          </>
+        )}
+        {kind === 'pens' && (
+          <>
+            <path d="M 17,10 L 21,10 L 21,30 L 19,34 L 17,30 Z" />
+            <path d="M 26,10 L 30,10 L 30,30 L 28,34 L 26,30 Z" />
+            <path d="M 35,10 L 39,10 L 39,30 L 37,34 L 35,30 Z" />
+            <line x1="17" y1="13" x2="21" y2="13" />
+            <line x1="26" y1="13" x2="30" y2="13" />
+            <line x1="35" y1="13" x2="39" y2="13" />
+          </>
+        )}
+      </g>
+    </svg>
   );
 }
 

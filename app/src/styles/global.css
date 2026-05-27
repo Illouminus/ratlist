@@ -91,6 +91,38 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
+/* ── Landing hero mock entrance ─────────────────────────── */
+/* Rows stagger in via fadeUp; the tail-doodle draws itself; the
+   sitting rat in the corner slowly bobs. All disabled under
+   prefers-reduced-motion. */
+@keyframes tailDraw {
+  from { stroke-dashoffset: 80; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes ratBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+.landing-mock-tail-wrap svg path {
+  stroke-dasharray: 80;
+  stroke-dashoffset: 80;
+  animation: tailDraw 720ms 640ms ease-out forwards;
+}
+.landing-mock-rat-bob {
+  animation: ratBob 4.2s ease-in-out 800ms infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-up,
+  .landing-mock-rat-bob {
+    animation: none;
+  }
+  .landing-mock-tail-wrap svg path {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+}
+
 /* ── Responsive visibility utilities ────────────────────── */
 /* Mirror the --bp-tablet breakpoint used elsewhere. Use sparingly —
    prefer responsive design tokens where possible. */
