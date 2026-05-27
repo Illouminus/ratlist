@@ -15,7 +15,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useMyItems } from '../../items/useMyItems';
-import { useGroups } from '../../groups/useGroups';
 import { useToast } from '../../components/useToast';
 import { PaperLayout } from '../../components/PaperLayout';
 import { ItemForm } from './ItemForm';
@@ -25,8 +24,6 @@ export function AddItemScreen() {
   const navigate = useNavigate();
   const toast = useToast();
   const { createItem } = useMyItems();
-  const { query: groupsQ } = useGroups();
-  const groups = groupsQ.status === 'ready' ? groupsQ.groups : [];
 
   return (
     <PaperLayout>
@@ -63,7 +60,6 @@ export function AddItemScreen() {
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-5)' }} />
 
       <ItemForm
-        groups={groups}
         onSubmit={async (input) => {
           const result = await createItem(input);
           if ('item' in result) {

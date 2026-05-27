@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
 import { track } from '../lib/plausible';
 import type { Item, Occasion, ItemStatus } from '../lib/db';
+import type { Visibility } from '../components/VisibilitySelector';
 
 /** An item plus the list of groups it's published to and events it's
  * curated into. Both arrays are full snapshots — the form treats them
@@ -39,7 +40,29 @@ export interface CreateItemInput {
   priority?: 1 | 2 | 3;
   /** Public URL of the uploaded cover image, or null for the placeholder. */
   cover_url?: string | null;
-  /** IDs of groups to publish the item to. Empty = private to owner. */
+  /**
+   * 3-state visibility: 'private' (owner only), 'friends' (mutual friends
+   * from the friend-graph), or 'public' (anyone with the share link).
+   * Defaults to 'friends' on the form side — the DB default is also
+   * 'friends' (PR 1 migration) so omitting this is safe but explicit
+   * wins.
+   */
+  visibility?: Visibility;
+  /**
+   * Freeform category string (e.g. "Кухня", "Books") or null for
+   * "uncategorised". Used by `<CategoryChips>` for client-side filter
+   * on the list screens.
+   */
+  category?: string | null;
+  /**
+   * IDs of groups to publish the item to. Empty = no group write.
+   *
+   * Kept on the type for backwards compatibility with the legacy
+   * circles UI, but the add/edit form no longer surfaces it — PR 2
+   * dropped the multi-select picker. PR 3 will sweep `item_groups`
+   * entirely; until then this field is ignored on the form path
+   * (passed as `[]`) and reads still use `visibility` exclusively.
+   */
   group_ids: string[];
   /** IDs of own events to curate this item into. Empty = no event. */
   event_ids?: string[];
@@ -191,6 +214,8 @@ export function useMyItems(): UseMyItemsResult {
           note: input.note ?? null,
           priority: input.priority ?? 2,
           cover_url: input.cover_url ?? null,
+          visibility: input.visibility ?? 'friends',
+          category: input.category ?? null,
         })
         .select('*')
         .single();
@@ -257,6 +282,8 @@ export function useMyItems(): UseMyItemsResult {
           note: input.note ?? null,
           priority: input.priority ?? 2,
           cover_url: input.cover_url ?? null,
+          visibility: input.visibility ?? 'friends',
+          category: input.category ?? null,
         })
         .eq('id', id);
 

@@ -96,6 +96,7 @@ export const ru: Translation = {
     priorityLabel: 'насколько хочешь',
     noteLabel: 'заметка (по желанию)',
     notePh: 'цвет, размер, где видел…',
+    visibilityLabel: 'кому видно',
     groupsLabel: 'видно в кругах',
     groupsHint: 'кому показать. если ничего не выбрано — только тебе.',
     eventsLabel: 'к каким событиям',

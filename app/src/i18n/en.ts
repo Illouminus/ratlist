@@ -91,6 +91,7 @@ export const en: Translation = {
     priorityLabel: 'how badly',
     noteLabel: 'a note (optional)',
     notePh: 'color, size, where you saw it…',
+    visibilityLabel: 'who sees this',
     groupsLabel: 'visible in circles',
     groupsHint: "who can see it. nothing selected = private to you.",
     eventsLabel: 'tag for events',
