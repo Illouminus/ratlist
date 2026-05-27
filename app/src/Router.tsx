@@ -46,6 +46,11 @@ import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
 import { PublicListScreen } from './screens/PublicListScreen';
 import { EventLandingScreen } from './screens/events/EventLandingScreen';
 import { LandingScreen } from './screens/LandingScreen';
+// Eager: friend-graph landing screens. Like /invite/:token they're
+// reached pre-auth from emails / shared links, so a Suspense flash on
+// cold-load is the wrong first impression.
+import { AddMeScreen } from './screens/AddMeScreen';
+import { AcceptFriendInviteScreen } from './screens/AcceptFriendInviteScreen';
 
 // Eager: the screens that live in Sidebar / BottomTabBar. Users flip
 // between them constantly so a Suspense flash hurts every tab.
@@ -250,6 +255,8 @@ export function AppRoutes() {
       <Route path="/invite/:token" element={<InviteAcceptScreen />} />
       <Route path="/share/:token" element={<PublicListScreen />} />
       <Route path="/event/:token" element={<EventLandingScreen />} />
+      <Route path="/add-me/:token" element={<AddMeScreen />} />
+      <Route path="/friend-invite/:token" element={<AcceptFriendInviteScreen />} />
       <Route path="/legal/privacy" element={<LegalScreen doc="privacy" />} />
       <Route path="/legal/terms" element={<LegalScreen doc="terms" />} />
 
