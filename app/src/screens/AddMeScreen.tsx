@@ -12,18 +12,19 @@
  * `t('addMe.<…>Err')`; for anything else we fall back to the central
  * `errorMessage` table.
  *
- * Owner-name preview is deferred: there's no anon-readable RPC that
- * turns a `add_me_token` into a profile name (that would invert the
- * point of the obscure-token model). PR 3+ may add `get_add_me_preview`
- * — until then we render the title with an empty name and trim the
- * leading space so it reads naturally («хочет дружить» / «wants to
- * be friends»).
+ * Owner preview: `get_add_me_preview(_token)` is an anon-friendly
+ * SECURITY DEFINER RPC that resolves the token to a minimal profile
+ * (display name, handle, avatar). We use it to humanise the title and
+ * surface the inviter's avatar when available — falling back to the
+ * nameless «хочет дружить» phrasing if the token is invalid or the
+ * profile is disabled. CTA is not gated on preview load: accept works
+ * regardless.
  *
  * On success we navigate to `/p/<ownerId>` — the friend's list,
  * which they now have permission to see thanks to the freshly-inserted
  * `friendships` row.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
@@ -33,6 +34,12 @@ import { PaperLayout } from '../components/PaperLayout';
 import { Button } from '../components/Button';
 import { LangToggle } from '../components/LangToggle';
 
+interface OwnerPreview {
+  display_name: string | null;
+  handle: string | null;
+  avatar_url: string | null;
+}
+
 export function AddMeScreen() {
   const { t } = useI18n();
   const { status } = useAuth();
@@ -40,6 +47,25 @@ export function AddMeScreen() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<OwnerPreview | null>(null);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    let cancelled = false;
+    void supabase.rpc('get_add_me_preview', { _token: token }).then(({ data }) => {
+      if (cancelled) return;
+      const row = data?.[0];
+      if (!row) return;
+      setPreview({
+        display_name: row.display_name,
+        handle: row.handle,
+        avatar_url: row.avatar_url,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   // Defensive: route is `/add-me/:token`, so React Router should always
   // populate it — but the param could in principle be undefined under
@@ -48,11 +74,11 @@ export function AddMeScreen() {
     return <Navigate to="/" replace />;
   }
 
-  // Title interpolation: no preview RPC exists yet (see header).
-  // `{name}` is rendered as empty string and we trim the leading
-  // whitespace. Once `get_add_me_preview` ships we can fetch + set
-  // ownerName here without any other screen change.
-  const title = t('addMe.title', { name: '' }).trimStart();
+  // When the preview has a name, the title reads «{name} хочет
+  // дружить» — when it's missing (token invalid or still loading),
+  // `{name}` interpolates to empty and we trim the leading space for
+  // the nameless fallback.
+  const title = t('addMe.title', { name: preview?.display_name ?? '' }).trimStart();
 
   async function handleAccept(): Promise<void> {
     if (busy) return;
@@ -84,12 +110,35 @@ export function AddMeScreen() {
       </div>
 
       <header style={{ marginBottom: 'var(--s-5)' }}>
+        {preview?.avatar_url && (
+          <img
+            src={preview.avatar_url}
+            alt=""
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '1px solid var(--hair-strong)',
+              marginBottom: 'var(--s-3)',
+              display: 'block',
+            }}
+          />
+        )}
         <h1
           className="display-italic"
           style={{ fontSize: 'var(--display-m)', margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
         >
           {title}
         </h1>
+        {preview?.handle && (
+          <p
+            className="mono-meta"
+            style={{ color: 'var(--ink-3)', marginTop: 'var(--s-2)', marginBottom: 0 }}
+          >
+            @{preview.handle}
+          </p>
+        )}
       </header>
 
       <p style={{ color: 'var(--ink-2)', lineHeight: 1.55, marginBottom: 'var(--s-5)' }}>

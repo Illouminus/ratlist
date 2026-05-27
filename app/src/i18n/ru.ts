@@ -200,6 +200,7 @@ export const ru: Translation = {
   },
   acceptFriendInvite: {
     title: '{name} зовёт тебя дружить',
+    inviteFor: 'приглашение для {email}',
     body: 'На Rat List вы будете видеть вишлисты друг друга — без рекламы и алгоритмов.',
     cta: 'Принять',
     acceptedToast: 'Готово, теперь вы крысы',

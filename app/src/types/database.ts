@@ -958,6 +958,15 @@ export type Database = {
       }
       delete_my_account: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
+      get_add_me_preview: {
+        Args: { _token: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          handle: string
+          id: string
+        }[]
+      }
       get_event_view: {
         Args: { _token: string }
         Returns: {
@@ -972,6 +981,16 @@ export type Database = {
           occurs_on: string
           participant_count: number
           title: string
+        }[]
+      }
+      get_friend_invite_preview: {
+        Args: { _token: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          from_user_id: string
+          handle: string
+          to_email: string
         }[]
       }
       get_friend_list: {

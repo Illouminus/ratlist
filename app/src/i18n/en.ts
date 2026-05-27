@@ -195,6 +195,7 @@ export const en: Translation = {
   },
   acceptFriendInvite: {
     title: '{name} wants to be friends',
+    inviteFor: 'invitation for {email}',
     body: "on Rat List you'll see each other's wishlists — no ads, no algorithms.",
     cta: 'accept',
     acceptedToast: "done — you're rats now",
