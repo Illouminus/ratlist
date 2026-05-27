@@ -15,6 +15,9 @@ function mkEntry(
     cover_url?: string | null;
     title?: string;
     note?: string | null;
+    maker?: string | null;
+    price_text?: string | null;
+    priority?: 1 | 2 | 3;
   } = {},
 ) {
   return {
@@ -22,10 +25,11 @@ function mkEntry(
     item: {
       id: overrides.id ?? 'item-1',
       title: overrides.title ?? 'Кружка',
-      price_text: '600₽',
+      maker: overrides.maker ?? null,
+      price_text: overrides.price_text === undefined ? '600₽' : overrides.price_text,
       note: overrides.note ?? null,
       cover_url: overrides.cover_url ?? null,
-      priority: 2,
+      priority: overrides.priority ?? 2,
     },
   };
 }
@@ -40,30 +44,19 @@ function renderTile(node: React.ReactNode) {
 
 describe('<TileCuratedItem>', () => {
   it('renders title and price', () => {
-    renderTile(
-      <TileCuratedItem
-        entry={mkEntry()}
-        isHonoree
-        myUserId={null}
-        onDetach={vi.fn()}
-      />,
-    );
+    renderTile(<TileCuratedItem entry={mkEntry()} isHonoree onDetach={vi.fn()} />);
     expect(screen.getByText('Кружка')).toBeTruthy();
     expect(screen.getByText('600₽')).toBeTruthy();
   });
 
-  it('renders item.note inline under the price (1-line teaser)', () => {
+  it('renders item.note inline under the price', () => {
     renderTile(
       <TileCuratedItem
         entry={mkEntry({ note: 'Прикольная штучка' })}
         isHonoree
-        myUserId={null}
         onDetach={vi.fn()}
       />,
     );
-    // The note is shown as a teaser on the tile, not hidden behind a
-    // click-through. Hero card carries the full untruncated note; tile
-    // clamps to 1 line via -webkit-line-clamp.
     expect(screen.getByText('Прикольная штучка')).toBeTruthy();
   });
 
@@ -72,7 +65,6 @@ describe('<TileCuratedItem>', () => {
       <TileCuratedItem
         entry={mkEntry({ cover_url: null })}
         isHonoree
-        myUserId={null}
         onDetach={vi.fn()}
       />,
     );
@@ -80,40 +72,54 @@ describe('<TileCuratedItem>', () => {
   });
 
   it('shows detach button only for honoree', () => {
-    renderTile(
-      <TileCuratedItem
-        entry={mkEntry()}
-        isHonoree
-        myUserId={null}
-        onDetach={vi.fn()}
-      />,
-    );
-    // aria-label includes the item title via events.removeItem template
+    renderTile(<TileCuratedItem entry={mkEntry()} isHonoree onDetach={vi.fn()} />);
     expect(screen.getByLabelText(/Кружка/)).toBeTruthy();
   });
 
   it('hides detach button for guest', () => {
     renderTile(
-      <TileCuratedItem
-        entry={mkEntry()}
-        isHonoree={false}
-        myUserId="guest-1"
-        onDetach={vi.fn()}
-      />,
+      <TileCuratedItem entry={mkEntry()} isHonoree={false} onDetach={vi.fn()} />,
     );
     expect(screen.queryByLabelText(/Кружка/)).toBeNull();
   });
 
-  it('does NOT render ClaimControl on the tile — even for guests', () => {
+  it('does NOT render an inline claim button — even for guests (click-through to /i/:id)', () => {
+    renderTile(
+      <TileCuratedItem entry={mkEntry()} isHonoree={false} onDetach={vi.fn()} />,
+    );
+    expect(screen.queryByRole('button', { name: /забрать|claim/i })).toBeNull();
+  });
+
+  it('renders priority dot for «очень хочу» (priority 1)', () => {
     renderTile(
       <TileCuratedItem
-        entry={mkEntry()}
-        isHonoree={false}
-        myUserId="guest-1"
+        entry={mkEntry({ priority: 1 })}
+        isHonoree
         onDetach={vi.fn()}
       />,
     );
-    // ClaimControl renders «забрать» (RU) when no claim exists.
-    expect(screen.queryByRole('button', { name: /забрать|claim/i })).toBeNull();
+    expect(screen.getByTestId('priority-dots')).toBeTruthy();
+  });
+
+  it('renders priority dot for «если найдётся» (priority 3)', () => {
+    renderTile(
+      <TileCuratedItem
+        entry={mkEntry({ priority: 3 })}
+        isHonoree
+        onDetach={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('priority-dots')).toBeTruthy();
+  });
+
+  it('hides priority dot for default priority 2 («хочу»)', () => {
+    renderTile(
+      <TileCuratedItem
+        entry={mkEntry({ priority: 2 })}
+        isHonoree
+        onDetach={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId('priority-dots')).toBeNull();
   });
 });

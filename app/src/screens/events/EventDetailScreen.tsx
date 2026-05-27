@@ -18,7 +18,6 @@ import {
   type EventParticipant,
 } from '../../events/useEventParticipants';
 import { useMyItems, type MyItem } from '../../items/useMyItems';
-import { useAuth } from '../../auth/useAuth';
 import { useToast } from '../../components/useToast';
 import { useConfirm } from '../../components/useConfirm';
 import { errorMessage } from '../../lib/errors';
@@ -30,9 +29,6 @@ import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { InviteFromPeopleModal } from './InviteFromPeopleModal';
-import { groupByPriority } from '../../items/groupByPriority';
-import { PrioritySectionHeader } from '../../components/PrioritySectionHeader';
-import { HeroCuratedItem } from './HeroCuratedItem';
 import { TileCuratedItem } from './TileCuratedItem';
 import { SittingRat } from '../../components/rats/SittingRat';
 
@@ -43,7 +39,6 @@ export function EventDetailScreen() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
-  const { user } = useAuth();
   const [inviteOpen, setInviteOpen] = useState(false);
   const {
     query,
@@ -51,8 +46,6 @@ export function EventDetailScreen() {
     remove,
     attachItem,
     detachItem,
-    claim,
-    release,
   } = useEvent(eventId ?? null);
 
   if (query.status === 'loading') {
@@ -142,11 +135,8 @@ export function EventDetailScreen() {
       <ItemsSection
         items={items}
         isHonoree={isHonoree}
-        myUserId={user?.id ?? null}
         onAttach={attachItem}
         onDetach={detachItem}
-        onClaim={claim}
-        onRelease={release}
       />
 
       {isHonoree && (
@@ -539,22 +529,11 @@ function ParticipantsSection({ eventId }: { eventId: string }) {
 interface ItemsSectionProps {
   items: Array<{ item_id: string; item: MyItem | { id: string; cover_url: string | null; title: string; maker: string | null; price_text: string | null; note: string | null; owner_id: string; priority: number }; claims: EventClaim[] }>;
   isHonoree: boolean;
-  myUserId: string | null;
   onAttach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
   onDetach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
-  onClaim: (itemId: string) => Promise<{ ok: true } | { error: string }>;
-  onRelease: (itemId: string) => Promise<{ ok: true } | { error: string }>;
 }
 
-function ItemsSection({
-  items,
-  isHonoree,
-  myUserId,
-  onAttach,
-  onDetach,
-  onClaim,
-  onRelease,
-}: ItemsSectionProps) {
+function ItemsSection({ items, isHonoree, onAttach, onDetach }: ItemsSectionProps) {
   const { t } = useI18n();
   const { query: myItemsQ } = useMyItems();
   const [picking, setPicking] = useState(false);
@@ -613,51 +592,19 @@ function ItemsSection({
           </p>
         </div>
       ) : (
-        <>
-          {groupByPriority(
-            items.map((it) => ({ ...it, priority: it.item.priority })),
-          ).map((section) => {
-            if (section.items.length === 0) return null;
-            const [first, ...rest] = section.items;
-            if (!first) return null;
-            return (
-              <section key={section.level} style={{ marginBottom: 'var(--s-6)' }}>
-                <PrioritySectionHeader level={section.level} count={section.items.length} />
-                <HeroCuratedItem
-                  entry={first}
+        <ul className="curated-tiles-grid">
+          {[...items]
+            .sort((a, b) => a.item.priority - b.item.priority)
+            .map((entry) => (
+              <li key={entry.item_id}>
+                <TileCuratedItem
+                  entry={entry}
                   isHonoree={isHonoree}
-                  myUserId={myUserId}
-                  onDetach={() => void onDetach(first.item_id)}
-                  onClaim={() => void onClaim(first.item_id)}
-                  onRelease={() => void onRelease(first.item_id)}
+                  onDetach={() => void onDetach(entry.item_id)}
                 />
-                {rest.length > 0 && (
-                  <ul
-                    style={{
-                      listStyle: 'none',
-                      padding: 0,
-                      margin: 0,
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                      gap: 'var(--s-4)',
-                    }}
-                  >
-                    {rest.map((entry) => (
-                      <li key={entry.item_id}>
-                        <TileCuratedItem
-                          entry={entry}
-                          isHonoree={isHonoree}
-                          myUserId={myUserId}
-                          onDetach={() => void onDetach(entry.item_id)}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            );
-          })}
-        </>
+              </li>
+            ))}
+        </ul>
       )}
 
       {picking && isHonoree && (
