@@ -47,6 +47,12 @@ export const ru: Translation = {
     noneForFilter: 'под этот фильтр ничего нет.',
     thatsTheLot: 'на сегодня всё, пожалуй.',
   },
+  sort: {
+    label: 'сортировка',
+    by_priority: 'приоритет',
+    by_price: 'цена',
+    by_category: 'категория',
+  },
   empty: {
     headline: 'пусто\nпока.',
     annotation: 'тихое начало.',

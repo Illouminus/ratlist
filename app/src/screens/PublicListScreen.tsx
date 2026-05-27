@@ -28,7 +28,10 @@ import { PriorityDots } from '../components/PriorityDots';
 import type { Occasion } from '../lib/db';
 import { formatPrice } from '../lib/formatPrice';
 import { useViewMode } from '../lib/useViewMode';
+import { useSortMode } from '../lib/useSortMode';
+import { sortItems } from '../lib/sortItems';
 import { ViewToggle } from '../components/ViewToggle';
+import { SortSelector } from '../components/SortSelector';
 
 interface PublicOwner {
   display_name: string | null;
@@ -189,22 +192,28 @@ function Body({ owner, items }: { owner: PublicOwner; items: PublicItem[] }) {
 
 function ItemsView({ items }: { items: PublicItem[] }) {
   const [view, setView] = useViewMode();
+  const [sort, setSort] = useSortMode();
+  const sorted = sortItems(items, sort);
   return (
     <>
       <div
         style={{
           display: 'flex',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 'var(--s-3)',
+          flexWrap: 'wrap',
           marginBottom: 'var(--s-3)',
         }}
       >
+        <SortSelector mode={sort} onMode={setSort} />
         <ViewToggle view={view} onView={setView} />
       </div>
       {view === 'grid' ? (
-        <ItemsGrid items={items} />
-      ) : (
+        <ItemsGrid items={sorted} />
+      ) : sort === 'priority' ? (
         <div>
-          {groupByPriority(items).map((section) =>
+          {groupByPriority(sorted).map((section) =>
             section.items.length === 0 ? null : (
               <section key={section.level}>
                 <PrioritySectionHeader level={section.level} count={section.items.length} />
@@ -220,22 +229,29 @@ function ItemsView({ items }: { items: PublicItem[] }) {
             ),
           )}
         </div>
+      ) : (
+        // Non-priority sort: flat list, no section headers — the sort
+        // already imposes the order the user picked.
+        <div>
+          {sorted.map((item, i) => (
+            <Row key={item.id} item={item} index={i} last={i === sorted.length - 1} />
+          ))}
+        </div>
       )}
     </>
   );
 }
 
 /**
- * Grid view of the public list — flat, sorted by priority asc, no
- * section headers (the per-tile priority dot carries the signal).
- * Mirrors the FriendList grid tile layout minus the claim affordance,
- * since this is the anonymous read-only surface.
+ * Grid view of the public list — flat, no section headers (the
+ * per-tile priority dot carries the signal). Items arrive pre-sorted
+ * by the parent according to the current `SortMode`. Mirrors the
+ * FriendList grid tile layout minus the claim affordance.
  */
 function ItemsGrid({ items }: { items: PublicItem[] }) {
-  const sorted = [...items].sort((a, b) => a.priority - b.priority);
   return (
     <div className="items-grid-responsive">
-      {sorted.map((item) => (
+      {items.map((item) => (
         <PublicItemTile key={item.id} item={item} />
       ))}
     </div>

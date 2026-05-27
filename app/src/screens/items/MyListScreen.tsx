@@ -21,6 +21,9 @@ import { useToast } from '../../components/useToast';
 import { errorMessage } from '../../lib/errors';
 import type { Occasion } from '../../lib/db';
 import { useViewMode, type ViewMode } from '../../lib/useViewMode';
+import { useSortMode, type SortMode } from '../../lib/useSortMode';
+import { sortItems } from '../../lib/sortItems';
+import { SortSelector } from '../../components/SortSelector';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
 import { EndOfList } from '../../components/EndOfList';
@@ -39,13 +42,15 @@ export function MyListScreen() {
   const toast = useToast();
 
   const [view, setView] = useViewMode();
+  const [sort, setSort] = useSortMode();
   const [occasion, setOccasion] = useState<Occasion | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
 
   const filteredItems = useMemo(() => {
     const items = itemsQ.status === 'ready' ? itemsQ.items : [];
-    return occasion ? items.filter((i) => i.occasion === occasion) : items;
-  }, [itemsQ, occasion]);
+    const filtered = occasion ? items.filter((i) => i.occasion === occasion) : items;
+    return sortItems(filtered, sort);
+  }, [itemsQ, occasion, sort]);
 
   const totalCount = itemsQ.status === 'ready' ? itemsQ.items.length : 0;
 
@@ -71,6 +76,8 @@ export function MyListScreen() {
             onOccasion={setOccasion}
             view={view}
             onView={setView}
+            sort={sort}
+            onSort={setSort}
           />
         </>
       )}
@@ -90,7 +97,11 @@ export function MyListScreen() {
           ) : (
             <ItemList
               items={filteredItems}
-              mode="sectioned-dnd"
+              // Sectioned-dnd only makes sense when the sort *is* by
+              // priority — otherwise the drag handles would shuffle into
+              // a buckets the eye isn't tracking. Fall back to a flat
+              // list for the other modes.
+              mode={sort === 'priority' ? 'sectioned-dnd' : 'flat'}
               onPriorityChange={async (itemId, level) => {
                 const result = await updateItemPriority(itemId, level);
                 if ('error' in result) {
@@ -237,12 +248,22 @@ interface ActionsRowProps {
   onOccasion: (next: Occasion | null) => void;
   view: ViewMode;
   onView: (next: ViewMode) => void;
+  sort: SortMode;
+  onSort: (next: SortMode) => void;
 }
 
-/** Filters + view toggle, sitting under the page-level hairline. The
- *  add button used to live here too but moved up into the Header so
- *  it sits above the rule, matching the design v2 mockup. */
-function ActionsRow({ countShown, countTotal, occasion, onOccasion, view, onView }: ActionsRowProps) {
+/** Filters + view toggle + sort selector, sitting under the page-level
+ *  hairline. */
+function ActionsRow({
+  countShown,
+  countTotal,
+  occasion,
+  onOccasion,
+  view,
+  onView,
+  sort,
+  onSort,
+}: ActionsRowProps) {
   return (
     <>
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: '0 0 var(--s-4)' }} />
@@ -252,7 +273,7 @@ function ActionsRow({ countShown, countTotal, occasion, onOccasion, view, onView
           display: 'flex',
           alignItems: 'center',
           gap: 'var(--s-4)',
-          marginBottom: 'var(--s-5)',
+          marginBottom: 'var(--s-3)',
         }}
       >
         <ItemFilters
@@ -263,6 +284,16 @@ function ActionsRow({ countShown, countTotal, occasion, onOccasion, view, onView
           view={view}
           onView={onView}
         />
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginBottom: 'var(--s-5)',
+        }}
+      >
+        <SortSelector mode={sort} onMode={onSort} />
       </div>
     </>
   );
