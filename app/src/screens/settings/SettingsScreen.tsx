@@ -17,7 +17,7 @@
  * circles.
  */
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useProfile } from '../../auth/useProfile';
 import { useGroups } from '../../groups/useGroups';
@@ -235,17 +235,13 @@ function CirclesPanel() {
           ))}
         </ul>
       )}
-      <Link
-        to="/groups"
-        className="mono-meta"
-        style={{
-          color: 'var(--accent)',
-          textDecoration: 'none',
-          marginTop: 'var(--s-3)',
-        }}
-      >
-        {t('settings.circlesManage')} →
-      </Link>
+      {/* `Manage circles →` link dropped in PR 2 (friend graph): /groups
+          now redirects to /people, so pointing at it would round-trip the
+          user. The remaining circles list itself is intentionally kept
+          here for PR 3 — once GroupsScreen is deleted, the whole
+          CirclesPanel section (and `settings.circlesSection` /
+          `settings.circlesSub` / `settings.circlesManage` i18n keys) goes
+          with it. */}
     </div>
   );
 }
