@@ -20,7 +20,7 @@
  * remain meaningful without importing the real DnD tree.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../../i18n';
 import type { Item } from '../../../lib/db';
@@ -37,8 +37,28 @@ const updateItemPriority = vi.fn(
   },
 );
 
-const mockItems = [
-  {
+interface MockItem {
+  id: string;
+  owner_id: string;
+  title: string;
+  priority: number;
+  occasion: string;
+  status: string;
+  maker: null;
+  url: null;
+  price_text: string | null;
+  note: null;
+  cover_url: null;
+  category: string | null;
+  visibility: string;
+  created_at: string;
+  updated_at: string;
+  group_ids: string[];
+  event_ids: string[];
+}
+
+function makeItem(overrides: Partial<MockItem> = {}): MockItem {
+  return {
     id: 'a',
     owner_id: 'u1',
     title: 'Книга',
@@ -50,12 +70,23 @@ const mockItems = [
     price_text: null,
     note: null,
     cover_url: null,
+    category: null,
+    visibility: 'friends',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     group_ids: [],
     event_ids: [],
-  },
-];
+    ...overrides,
+  };
+}
+
+// Mutable list — tests reassign `mockItems.current` via `setMockItems()`
+// before render to swap fixtures. The hook mock reads from this ref so
+// the screen sees the right data on first paint.
+const mockItems: { current: MockItem[] } = { current: [makeItem()] };
+function setMockItems(items: MockItem[]) {
+  mockItems.current = items;
+}
 
 // ─── module mocks ─────────────────────────────────────────────────────────────
 
@@ -82,7 +113,10 @@ vi.mock('../ItemList', () => ({
         <span>Если найдётся</span>
         {/* One drag handle per item — same testid the real SortableItemRow uses */}
         {items.map((item) => (
-          <button key={item.id} data-testid="drag-handle" aria-label="drag" />
+          <div key={item.id} data-testid="item-row">
+            <span data-testid="item-title">{item.title}</span>
+            <button data-testid="drag-handle" aria-label="drag" />
+          </div>
         ))}
       </div>
     );
@@ -97,7 +131,7 @@ vi.mock('../../../components/useToast', () => ({
 
 vi.mock('../../../items/useMyItems', () => ({
   useMyItems: () => ({
-    query: { status: 'ready', items: mockItems, error: null },
+    query: { status: 'ready', items: mockItems.current, error: null },
     refresh: vi.fn(),
     createItem: vi.fn(),
     updateItem: vi.fn(),
@@ -166,6 +200,10 @@ beforeEach(() => {
   updateItemPriority.mockClear();
   mockToastShow.mockClear();
   capturedOnPriorityChange = undefined;
+  // Reset the items fixture to the default 1-item case so each test
+  // starts from a known state. Tests that need a different shape
+  // call setMockItems() before render().
+  setMockItems([makeItem()]);
 });
 
 describe('<MyListScreen> priority DnD wiring', () => {
@@ -210,5 +248,104 @@ describe('<MyListScreen> priority DnD wiring', () => {
     // falls back to t('errors.generic').  The test locale is 'ru' (set in
     // beforeEach via localStorage), so we expect the Russian fallback string.
     expect(mockToastShow).toHaveBeenCalledWith('что-то пошло не так. попробуй ещё раз?');
+  });
+});
+
+describe('<MyListScreen> category filter', () => {
+  it('All chip shows the full item list', () => {
+    setMockItems([
+      makeItem({ id: 'a', title: 'Тарелка', category: 'Кухня' }),
+      makeItem({ id: 'b', title: 'Носки', category: 'Одежда' }),
+      makeItem({ id: 'c', title: 'Книга', category: null }),
+    ]);
+    renderScreen();
+
+    // "Все" chip (active by default) → all three items visible.
+    expect(screen.getAllByTestId('item-title').map((n) => n.textContent)).toEqual([
+      'Тарелка',
+      'Носки',
+      'Книга',
+    ]);
+    const allChip = screen.getByRole('button', { name: /^Все$/ });
+    expect(allChip.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('clicking a category chip narrows the list to that category', () => {
+    setMockItems([
+      makeItem({ id: 'a', title: 'Тарелка', category: 'Кухня' }),
+      makeItem({ id: 'b', title: 'Носки', category: 'Одежда' }),
+      makeItem({ id: 'c', title: 'Книга', category: null }),
+    ]);
+    renderScreen();
+
+    fireEvent.click(screen.getByRole('button', { name: /Кухня/i }));
+
+    const titles = screen.getAllByTestId('item-title').map((n) => n.textContent);
+    expect(titles).toEqual(['Тарелка']);
+  });
+
+  it('does not render the chip row when no items are categorised', () => {
+    setMockItems([
+      makeItem({ id: 'a', title: 'A', category: null }),
+      makeItem({ id: 'b', title: 'B', category: null }),
+    ]);
+    renderScreen();
+
+    // No chip row → no "Все" button.
+    expect(screen.queryByRole('button', { name: /^Все$/ })).toBeNull();
+  });
+
+  it('composes with sort=price: flat order, only filtered items', () => {
+    // Two kitchen items + one non-kitchen. Kitchen prices: 50€, 20€.
+    setMockItems([
+      makeItem({
+        id: 'a',
+        title: 'Дорогая тарелка',
+        category: 'Кухня',
+        price_text: '50',
+      }),
+      makeItem({
+        id: 'b',
+        title: 'Дешёвая чашка',
+        category: 'Кухня',
+        price_text: '20',
+      }),
+      makeItem({ id: 'c', title: 'Носки', category: 'Одежда', price_text: '5' }),
+    ]);
+    renderScreen();
+
+    // Switch to sort=price. The SortSelector renders three buttons
+    // (приоритет / цена / категория) — click the price one.
+    fireEvent.click(screen.getByRole('button', { name: /^цена$/i }));
+
+    // Filter to "Кухня".
+    fireEvent.click(screen.getByRole('button', { name: /Кухня/i }));
+
+    // Only kitchen items, in ascending price order (20€ before 50€).
+    const titles = screen.getAllByTestId('item-title').map((n) => n.textContent);
+    expect(titles).toEqual(['Дешёвая чашка', 'Дорогая тарелка']);
+  });
+
+  it('resets to All when the active category disappears from the list', () => {
+    // Start with one kitchen item; filter is initially 'all'.
+    setMockItems([
+      makeItem({ id: 'a', title: 'Тарелка', category: 'Кухня' }),
+      makeItem({ id: 'b', title: 'Носки', category: 'Одежда' }),
+    ]);
+    const { unmount } = renderScreen();
+
+    fireEvent.click(screen.getByRole('button', { name: /Кухня/i }));
+    expect(
+      screen.getAllByTestId('item-title').map((n) => n.textContent),
+    ).toEqual(['Тарелка']);
+
+    // Re-render with the kitchen item gone — the effect should fall
+    // back to 'all'. We rely on the SortSelector being present to find
+    // the "Все" chip on the second render.
+    unmount();
+    setMockItems([makeItem({ id: 'b', title: 'Носки', category: 'Одежда' })]);
+    renderScreen();
+    const allChipAfter = screen.getByRole('button', { name: /^Все$/ });
+    expect(allChipAfter.getAttribute('aria-pressed')).toBe('true');
   });
 });

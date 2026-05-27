@@ -37,6 +37,11 @@ import { useSortMode } from '../../lib/useSortMode';
 import { sortItems } from '../../lib/sortItems';
 import { ViewToggle } from '../../components/ViewToggle';
 import { SortSelector } from '../../components/SortSelector';
+import { CategoryChips } from '../../components/CategoryChips';
+
+/** Local filter state for the category chip row. `'all'` = no filter,
+ *  `null` = uncategorised-only, a string = match that exact category. */
+type CategoryFilter = string | null | 'all';
 
 export function FriendListScreen() {
   const { t } = useI18n();
@@ -47,6 +52,7 @@ export function FriendListScreen() {
   const [reportOpen, setReportOpen] = useState(false);
   const [view, setView] = useViewMode();
   const [sort, setSort] = useSortMode();
+  const [category, setCategory] = useState<CategoryFilter>('all');
 
   // Events of this friend that I (the viewer) can see. Only their events
   // where they're the honoree, not generic ones from get_my_events.
@@ -59,6 +65,39 @@ export function FriendListScreen() {
   // reachable via /p/<my-id>, and self-reports would just clutter the
   // moderation queue.
   const canReport = !!userId && userId !== me?.id;
+
+  // Distinct categories are computed from the already-loaded list.
+  // Client-side filtering keeps the round-trip count low (one initial
+  // load, no extra request per chip click) — server-side filtering
+  // via useFriendList(_friend_id, _category) is supported by the RPC
+  // but the typical friend's list size doesn't justify the latency.
+  const allItems = useMemo(
+    () => (query.status === 'ready' ? query.items : []),
+    [query],
+  );
+
+  // If the active category isn't present in the loaded items (e.g.
+  // realtime removed the last match), collapse to 'all' for this
+  // render. Same `set-state-in-effect` workaround as MyListScreen —
+  // we never write back into state, the next chip click overwrites.
+  const effectiveCategory = useMemo<CategoryFilter>(() => {
+    if (category === 'all') return 'all';
+    if (category === null) {
+      return allItems.some((i) => i.category === null || i.category === '')
+        ? null
+        : 'all';
+    }
+    return allItems.some((i) => i.category === category) ? category : 'all';
+  }, [allItems, category]);
+
+  const visibleItems = useMemo(() => {
+    if (effectiveCategory === 'all') return allItems;
+    if (effectiveCategory === null)
+      return allItems.filter(
+        (i) => i.category === null || i.category === '',
+      );
+    return allItems.filter((i) => i.category === effectiveCategory);
+  }, [allItems, effectiveCategory]);
 
   return (
     <PaperLayout>
@@ -112,19 +151,42 @@ export function FriendListScreen() {
                 <SortSelector mode={sort} onMode={setSort} />
                 <ViewToggle view={view} onView={setView} />
               </div>
+              {/* Category chips only render when at least one item is
+                  categorised — otherwise the row would be just "Все",
+                  which is pure noise. */}
+              {allItems.some((i) => i.category) && (
+                <div style={{ marginBottom: 'var(--s-4)' }}>
+                  <CategoryChips
+                    items={allItems}
+                    active={effectiveCategory}
+                    onChange={setCategory}
+                  />
+                </div>
+              )}
               {view === 'grid' ? (
                 <ItemsGrid
-                  items={sortItems(query.items, sort)}
+                  items={sortItems(visibleItems, sort)}
                   myUserId={me?.id ?? null}
                 />
               ) : (
                 <ItemsList
-                  items={sortItems(query.items, sort)}
+                  items={sortItems(visibleItems, sort)}
                   myUserId={me?.id ?? null}
                   onClaim={(id) => void claim(id)}
                   onRelease={(id) => void release(id)}
                   flat={sort !== 'priority'}
                 />
+              )}
+              {visibleItems.length === 0 && (
+                <p
+                  style={{
+                    color: 'var(--ink-3)',
+                    marginTop: 'var(--s-4)',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  {t('list.noneForFilter')}
+                </p>
               )}
             </>
           )}

@@ -24,6 +24,7 @@ import { useViewMode, type ViewMode } from '../../lib/useViewMode';
 import { useSortMode, type SortMode } from '../../lib/useSortMode';
 import { sortItems } from '../../lib/sortItems';
 import { SortSelector } from '../../components/SortSelector';
+import { CategoryChips } from '../../components/CategoryChips';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
 import { EndOfList } from '../../components/EndOfList';
@@ -33,6 +34,10 @@ import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
 import { ItemFilters } from './ItemFilters';
 import { SittingRat } from '../../components/rats';
+
+/** Local filter state for the category chip row. `'all'` = no filter,
+ *  `null` = uncategorised-only, a string = match that exact category. */
+type CategoryFilter = string | null | 'all';
 
 export function MyListScreen() {
   const { t } = useI18n();
@@ -44,13 +49,45 @@ export function MyListScreen() {
   const [view, setView] = useViewMode();
   const [sort, setSort] = useSortMode();
   const [occasion, setOccasion] = useState<Occasion | null>(null);
+  const [category, setCategory] = useState<CategoryFilter>('all');
   const [shareOpen, setShareOpen] = useState(false);
 
+  const allItems = useMemo(
+    () => (itemsQ.status === 'ready' ? itemsQ.items : []),
+    [itemsQ],
+  );
+
+  // If the active category isn't represented in the current items
+  // (e.g. realtime removed the last matching row), collapse to 'all'
+  // for the duration of this render. We don't write back into state
+  // here — `set-state-in-effect` is banned project-wide; the next user
+  // chip click will overwrite stale state anyway, and the rendered
+  // "active chip" stays consistent because we feed the same effective
+  // value to both <CategoryChips> and the item filter below.
+  const effectiveCategory = useMemo<CategoryFilter>(() => {
+    if (category === 'all') return 'all';
+    if (category === null) {
+      return allItems.some((i) => i.category === null || i.category === '')
+        ? null
+        : 'all';
+    }
+    return allItems.some((i) => i.category === category) ? category : 'all';
+  }, [allItems, category]);
+
   const filteredItems = useMemo(() => {
-    const items = itemsQ.status === 'ready' ? itemsQ.items : [];
-    const filtered = occasion ? items.filter((i) => i.occasion === occasion) : items;
-    return sortItems(filtered, sort);
-  }, [itemsQ, occasion, sort]);
+    // Category narrows the visible set first; sort + sections are applied
+    // on top of that. Occasion remains an orthogonal filter.
+    const byCategory = allItems.filter((i) => {
+      if (effectiveCategory === 'all') return true;
+      if (effectiveCategory === null)
+        return i.category === null || i.category === '';
+      return i.category === effectiveCategory;
+    });
+    const byOccasion = occasion
+      ? byCategory.filter((i) => i.occasion === occasion)
+      : byCategory;
+    return sortItems(byOccasion, sort);
+  }, [allItems, effectiveCategory, occasion, sort]);
 
   const totalCount = itemsQ.status === 'ready' ? itemsQ.items.length : 0;
 
@@ -78,6 +115,9 @@ export function MyListScreen() {
             onView={setView}
             sort={sort}
             onSort={setSort}
+            allItems={allItems}
+            category={effectiveCategory}
+            onCategory={setCategory}
           />
         </>
       )}
@@ -250,6 +290,10 @@ interface ActionsRowProps {
   onView: (next: ViewMode) => void;
   sort: SortMode;
   onSort: (next: SortMode) => void;
+  /** Full loaded list, used to derive distinct category chips + counts. */
+  allItems: Array<{ category: string | null }>;
+  category: CategoryFilter;
+  onCategory: (next: CategoryFilter) => void;
 }
 
 /** Filters + view toggle + sort selector, sitting under the page-level
@@ -263,6 +307,9 @@ function ActionsRow({
   onView,
   sort,
   onSort,
+  allItems,
+  category,
+  onCategory,
 }: ActionsRowProps) {
   return (
     <>
@@ -290,11 +337,25 @@ function ActionsRow({
         style={{
           display: 'flex',
           alignItems: 'center',
-          marginBottom: 'var(--s-5)',
+          marginBottom: 'var(--s-3)',
         }}
       >
         <SortSelector mode={sort} onMode={onSort} />
       </div>
+
+      {/* Category filter chips. Only render when the user has at least
+          one categorised item — for a brand-new account or a list with
+          only uncategorised items, the chip row would be just "Все" +
+          "Без категории (n)" which is pure noise. */}
+      {allItems.some((i) => i.category) && (
+        <div style={{ marginBottom: 'var(--s-5)' }}>
+          <CategoryChips
+            items={allItems}
+            active={category}
+            onChange={onCategory}
+          />
+        </div>
+      )}
     </>
   );
 }
