@@ -43,6 +43,19 @@ describe('errorCode', () => {
       ['not_organizer',        'santaNotOrganiser'],
       ['cannot_reveal',        'santaCannotReveal'],
       ['display_name_required','displayNameRequired'],
+      // Friend graph (PR-1 RPCs)
+      ['token_not_found',      'tokenNotFound'],
+      ['token_expired',        'tokenExpired'],
+      ['already_accepted',     'alreadyAccepted'],
+      ['email_mismatch',       'emailMismatch'],
+      ['self_invite',          'selfInvite'],
+      ['self_link',            'selfLink'],
+      ['self_unfriend',        'selfUnfriend'],
+      ['no_email',             'noEmail'],
+      ['invalid_email',        'invalidEmail'],
+      // Edge Function (send-friend-invite)
+      ['not_owner',            'notOwner'],
+      ['send_failed',          'sendFailed'],
     ] as const)('%s → %s', (msg, expected) => {
       expect(errorCode({ code: 'P0001', message: msg })).toBe(expected);
     });
