@@ -42,6 +42,12 @@ export const en: Translation = {
     noneForFilter: 'nothing matches this filter.',
     thatsTheLot: "that's the lot — for now.",
   },
+  sort: {
+    label: 'sort',
+    by_priority: 'priority',
+    by_price: 'price',
+    by_category: 'category',
+  },
   empty: {
     headline: 'nothing\nyet.',
     annotation: 'a quiet beginning.',

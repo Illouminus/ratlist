@@ -33,7 +33,10 @@ import { SittingRat, RunningRat } from '../../components/rats';
 import { groupByPriority } from '../../items/groupByPriority';
 import { formatPrice } from '../../lib/formatPrice';
 import { useViewMode } from '../../lib/useViewMode';
+import { useSortMode } from '../../lib/useSortMode';
+import { sortItems } from '../../lib/sortItems';
 import { ViewToggle } from '../../components/ViewToggle';
+import { SortSelector } from '../../components/SortSelector';
 
 export function FriendListScreen() {
   const { t } = useI18n();
@@ -43,6 +46,7 @@ export function FriendListScreen() {
   const { user: me } = useAuth();
   const [reportOpen, setReportOpen] = useState(false);
   const [view, setView] = useViewMode();
+  const [sort, setSort] = useSortMode();
 
   // Events of this friend that I (the viewer) can see. Only their events
   // where they're the honoree, not generic ones from get_my_events.
@@ -98,20 +102,28 @@ export function FriendListScreen() {
               <div
                 style={{
                   display: 'flex',
-                  justifyContent: 'flex-end',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 'var(--s-3)',
+                  flexWrap: 'wrap',
                   marginBottom: 'var(--s-3)',
                 }}
               >
+                <SortSelector mode={sort} onMode={setSort} />
                 <ViewToggle view={view} onView={setView} />
               </div>
               {view === 'grid' ? (
-                <ItemsGrid items={query.items} myUserId={me?.id ?? null} />
+                <ItemsGrid
+                  items={sortItems(query.items, sort)}
+                  myUserId={me?.id ?? null}
+                />
               ) : (
                 <ItemsList
-                  items={query.items}
+                  items={sortItems(query.items, sort)}
                   myUserId={me?.id ?? null}
                   onClaim={(id) => void claim(id)}
                   onRelease={(id) => void release(id)}
+                  flat={sort !== 'priority'}
                 />
               )}
             </>
@@ -288,28 +300,42 @@ interface ItemsListProps {
   myUserId: string | null;
   onClaim: (itemId: string) => void;
   onRelease: (itemId: string) => void;
+  /** When true the list is rendered without priority section headers —
+   *  e.g. when the user sorts by price or category. */
+  flat?: boolean;
 }
 
-function ItemsList({ items, myUserId, onClaim, onRelease }: ItemsListProps) {
+function ItemsList({ items, myUserId, onClaim, onRelease, flat = false }: ItemsListProps) {
   return (
     <div>
-      {groupByPriority(items).map((section) =>
-        section.items.length === 0 ? null : (
-          <section key={section.level}>
-            <PrioritySectionHeader level={section.level} count={section.items.length} />
-            {section.items.map((item, i) => (
-              <FriendItemRow
-                key={item.id}
-                item={item}
-                myUserId={myUserId}
-                onClaim={() => onClaim(item.id)}
-                onRelease={() => onRelease(item.id)}
-                last={i === section.items.length - 1}
-              />
-            ))}
-          </section>
-        ),
-      )}
+      {flat
+        ? items.map((item, i) => (
+            <FriendItemRow
+              key={item.id}
+              item={item}
+              myUserId={myUserId}
+              onClaim={() => onClaim(item.id)}
+              onRelease={() => onRelease(item.id)}
+              last={i === items.length - 1}
+            />
+          ))
+        : groupByPriority(items).map((section) =>
+            section.items.length === 0 ? null : (
+              <section key={section.level}>
+                <PrioritySectionHeader level={section.level} count={section.items.length} />
+                {section.items.map((item, i) => (
+                  <FriendItemRow
+                    key={item.id}
+                    item={item}
+                    myUserId={myUserId}
+                    onClaim={() => onClaim(item.id)}
+                    onRelease={() => onRelease(item.id)}
+                    last={i === section.items.length - 1}
+                  />
+                ))}
+              </section>
+            ),
+          )}
       {/* a small rat trailing the list */}
       {items.length > 0 && (
         <div
@@ -346,16 +372,15 @@ interface ItemsGridProps {
 
 /**
  * Grid view of friend's items — flat (no priority sections, the dot
- * inside each tile carries the signal). Sorted by priority asc so
- * «очень хочу» reads first. Clicking a tile opens `/i/:id` where
- * the inline claim affordance lives; tiles themselves stay browse-only
- * to keep the grid visually uniform.
+ * inside each tile carries the signal). Items arrive pre-sorted by
+ * the parent according to the current `SortMode`. Clicking a tile
+ * opens `/i/:id` where the inline claim affordance lives; tiles
+ * themselves stay browse-only to keep the grid visually uniform.
  */
 function ItemsGrid({ items, myUserId }: ItemsGridProps) {
-  const sorted = [...items].sort((a, b) => a.priority - b.priority);
   return (
     <div className="items-grid-responsive">
-      {sorted.map((item) => (
+      {items.map((item) => (
         <FriendItemTile key={item.id} item={item} myUserId={myUserId} />
       ))}
     </div>
