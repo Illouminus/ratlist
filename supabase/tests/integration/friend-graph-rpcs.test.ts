@@ -95,6 +95,48 @@ describe('friend RPCs', () => {
     expect(error?.message).toMatch(/already_accepted/);
   });
 
+  it('revoke_friend_invite removes sender\'s own pending invite', async () => {
+    const admin = adminClient();
+    const alice = await clientFor(TEST_USERS.alice);
+    const { data: token } = await alice.rpc('create_friend_invite', {
+      _email: 'someone@external.test',
+      _message: null,
+    });
+    expect(typeof token).toBe('string');
+
+    const { error } = await alice.rpc('revoke_friend_invite', { _token: token as string });
+    expect(error).toBeNull();
+
+    const { data: rows } = await admin
+      .from('friend_invites')
+      .select('token')
+      .eq('token', token as string);
+    expect(rows).toEqual([]);
+  });
+
+  it('revoke_friend_invite called by someone else leaves the row in place', async () => {
+    // Alice creates an invite; Bob calls revoke. The RPC's
+    // `from_user = caller` filter scopes the delete to Alice's own
+    // rows, so Bob's call no-ops without raising.
+    const admin = adminClient();
+    const alice = await clientFor(TEST_USERS.alice);
+    const { data: token } = await alice.rpc('create_friend_invite', {
+      _email: 'someone-else@external.test',
+      _message: null,
+    });
+    expect(typeof token).toBe('string');
+
+    const bob = await clientFor(TEST_USERS.bob);
+    const { error } = await bob.rpc('revoke_friend_invite', { _token: token as string });
+    expect(error).toBeNull();
+
+    const { data: rows } = await admin
+      .from('friend_invites')
+      .select('token')
+      .eq('token', token as string);
+    expect(rows).toHaveLength(1);
+  });
+
   it('rotate_add_me_token gives new token, old one stops working', async () => {
     const admin = adminClient();
     const alice = await clientFor(TEST_USERS.alice);

@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   useEventParticipants: vi.fn(),
   useGroups: vi.fn(),
   useMyItems: vi.fn(),
-  usePeople: vi.fn(),
+  useFriends: vi.fn(),
   useAuth: vi.fn(),
   useToast: vi.fn(),
   useConfirm: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('../../../events/useEventParticipants', () => ({
 }));
 vi.mock('../../../groups/useGroups', () => ({ useGroups: mocks.useGroups }));
 vi.mock('../../../items/useMyItems', () => ({ useMyItems: mocks.useMyItems }));
-vi.mock('../../../people/usePeople', () => ({ usePeople: mocks.usePeople }));
+vi.mock('../../../friends/useFriends', () => ({ useFriends: mocks.useFriends }));
 vi.mock('../../../auth/useAuth', () => ({ useAuth: mocks.useAuth }));
 vi.mock('../../../components/useToast', () => ({ useToast: mocks.useToast }));
 vi.mock('../../../components/useConfirm', () => ({ useConfirm: mocks.useConfirm }));
@@ -106,9 +106,10 @@ beforeEach(() => {
   mocks.useMyItems.mockReturnValue({
     query: { status: 'ready', items: [] },
   });
-  mocks.usePeople.mockReturnValue({
-    query: { status: 'ready', people: [], error: null },
+  mocks.useFriends.mockReturnValue({
+    state: { kind: 'loaded', friends: [] },
     refresh: vi.fn(),
+    unfriend: vi.fn(),
   });
   mocks.useAuth.mockReturnValue({
     status: 'authenticated',

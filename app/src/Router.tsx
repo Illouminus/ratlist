@@ -46,12 +46,20 @@ import { InviteAcceptScreen } from './screens/groups/InviteAcceptScreen';
 import { PublicListScreen } from './screens/PublicListScreen';
 import { EventLandingScreen } from './screens/events/EventLandingScreen';
 import { LandingScreen } from './screens/LandingScreen';
+// Eager: friend-graph landing screens. Like /invite/:token they're
+// reached pre-auth from emails / shared links, so a Suspense flash on
+// cold-load is the wrong first impression.
+import { AddMeScreen } from './screens/AddMeScreen';
+import { AcceptFriendInviteScreen } from './screens/AcceptFriendInviteScreen';
 
 // Eager: the screens that live in Sidebar / BottomTabBar. Users flip
 // between them constantly so a Suspense flash hurts every tab.
 import { MyListScreen } from './screens/items/MyListScreen';
-import { GroupsScreen } from './screens/groups/GroupsScreen';
-import { PeopleScreen } from './screens/people/PeopleScreen';
+// GroupsScreen import deliberately omitted — PR 2 (friend graph) replaced
+// /groups with a redirect to /people. The file stays on disk for PR 3
+// cleanup, but routing no longer points at it so we drop the import to
+// keep the bundle lean.
+import { FriendsScreen } from './screens/people/FriendsScreen';
 import { SantaListScreen } from './screens/santa/SantaListScreen';
 import { EventsScreen } from './screens/events/EventsScreen';
 // Eager: the two legal pages. Lazy-loading them produced an empty
@@ -250,6 +258,8 @@ export function AppRoutes() {
       <Route path="/invite/:token" element={<InviteAcceptScreen />} />
       <Route path="/share/:token" element={<PublicListScreen />} />
       <Route path="/event/:token" element={<EventLandingScreen />} />
+      <Route path="/add-me/:token" element={<AddMeScreen />} />
+      <Route path="/friend-invite/:token" element={<AcceptFriendInviteScreen />} />
       <Route path="/legal/privacy" element={<LegalScreen doc="privacy" />} />
       <Route path="/legal/terms" element={<LegalScreen doc="terms" />} />
 
@@ -271,8 +281,12 @@ export function AppRoutes() {
         <Route path="/add" element={<AddItemScreen />} />
         <Route path="/i/:itemId" element={<ItemDetailScreen />} />
         <Route path="/i/:itemId/edit" element={<EditItemScreen />} />
-        <Route path="/groups" element={<GroupsScreen />} />
-        <Route path="/people" element={<PeopleScreen />} />
+        {/* /groups redirects to /people — friend graph (PR 2) replaced the
+            groups concept with a flat friend list. GroupsScreen file is
+            still on disk for PR 3 cleanup; the import is kept so the
+            bundler doesn't need to re-tree-shake until then. */}
+        <Route path="/groups" element={<Navigate to="/people" replace />} />
+        <Route path="/people" element={<FriendsScreen />} />
         <Route path="/p/:userId" element={<FriendListScreen />} />
         <Route path="/santa" element={<SantaListScreen />} />
         <Route path="/santa/:eventId" element={<SantaEventScreen />} />

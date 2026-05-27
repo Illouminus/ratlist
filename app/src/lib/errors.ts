@@ -55,7 +55,21 @@ export type AppErrorCode =
   // edge-function policy refusals (fetch-url-meta)
   | 'urlNotAllowed'
   // events link-first
-  | 'eventNotFound';
+  | 'eventNotFound'
+  // friend graph (PR-1 RPCs + send-friend-invite Edge Function).
+  // `inviteNotFound` / `inviteUsed` above are shared with the
+  // groups-invite path (same exception text — same mapped code).
+  | 'tokenNotFound'
+  | 'tokenExpired' // not used in PR-1 RPCs but reserved for future
+  | 'alreadyAccepted'
+  | 'emailMismatch'
+  | 'selfInvite'
+  | 'selfLink'
+  | 'selfUnfriend'
+  | 'noEmail'
+  | 'invalidEmail'
+  | 'notOwner' // edge-fn-side
+  | 'sendFailed'; // edge-fn-side
 
 /**
  * Minimal duck-typed shape we accept. Supabase's PostgrestError,
@@ -166,6 +180,21 @@ function matchMessage(message: string): AppErrorCode {
 
   // events link-first
   if (m.includes('event_not_found')) return 'eventNotFound';
+
+  // Friend graph (PR-1 RPCs + send-friend-invite Edge Function).
+  // `invite_not_found` / `invite_already_used` already map above
+  // (shared with the groups-invite codes — same exception text).
+  if (m.includes('token_not_found')) return 'tokenNotFound';
+  if (m.includes('token_expired')) return 'tokenExpired';
+  if (m.includes('already_accepted')) return 'alreadyAccepted';
+  if (m.includes('email_mismatch')) return 'emailMismatch';
+  if (m.includes('self_invite')) return 'selfInvite';
+  if (m.includes('self_link')) return 'selfLink';
+  if (m.includes('self_unfriend')) return 'selfUnfriend';
+  if (m.includes('no_email')) return 'noEmail';
+  if (m.includes('invalid_email')) return 'invalidEmail';
+  if (m.includes('not_owner')) return 'notOwner';
+  if (m.includes('send_failed')) return 'sendFailed';
 
   return 'generic';
 }

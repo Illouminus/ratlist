@@ -10,7 +10,6 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useMyItems } from '../../items/useMyItems';
-import { useGroups } from '../../groups/useGroups';
 import { useToast } from '../../components/useToast';
 import { PaperLayout } from '../../components/PaperLayout';
 import { ItemForm } from './ItemForm';
@@ -21,8 +20,6 @@ export function EditItemScreen() {
   const toast = useToast();
   const { itemId = '' } = useParams<{ itemId: string }>();
   const { query, updateItem } = useMyItems();
-  const { query: groupsQ } = useGroups();
-  const groups = groupsQ.status === 'ready' ? groupsQ.groups : [];
 
   if (query.status === 'loading') {
     return (
@@ -85,7 +82,6 @@ export function EditItemScreen() {
 
       <ItemForm
         initial={item}
-        groups={groups}
         onSubmit={async (input) => {
           const result = await updateItem(item.id, input);
           if ('item' in result) {

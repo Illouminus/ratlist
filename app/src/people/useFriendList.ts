@@ -86,7 +86,10 @@ async function loadFriendList(targetId: string): Promise<FetchState> {
     supabase
       .from('items')
       .select(
-        'id, owner_id, title, maker, url, price_text, occasion, priority, note, status, cover_url, created_at, updated_at, ' +
+        // `category` and `visibility` are required so the screen can
+        // render the CategoryChips filter row and so RLS-narrowed
+        // results carry their visibility tag for any UI affordance.
+        'id, owner_id, title, maker, url, price_text, occasion, priority, note, status, cover_url, created_at, updated_at, category, visibility, ' +
           'claims(id, item_id, user_id, share, note, created_at, user:profiles!claims_user_id_fkey(id, display_name, handle, avatar_url))',
       )
       .eq('owner_id', targetId)

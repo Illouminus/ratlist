@@ -31,17 +31,28 @@ vi.mock('../../../events/useEvents', () => ({
   useEvents: mocks.useEvents,
 }));
 
-// supabase isn't exercised in these paths, but PhotoField (rendered inside
-// ItemForm) resolves the import at module load time.
-vi.mock('../../../lib/supabase', () => ({
-  supabase: {
-    storage: {
-      from: vi.fn().mockReturnValue({ upload: vi.fn(), getPublicUrl: vi.fn() }),
+// supabase isn't exercised in these paths, but PhotoField + CategoryInput
+// (rendered inside ItemForm) resolve the import at module load time.
+// CategoryInput issues a `from('items').select(...).eq(...).not(...).then(...)`
+// chain on mount; the stub returns an empty list so the popover never opens.
+vi.mock('../../../lib/supabase', () => {
+  const itemsQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    not: vi.fn().mockReturnThis(),
+    then: (resolve: (v: { data: never[] }) => void) => Promise.resolve({ data: [] }).then(resolve),
+  };
+  return {
+    supabase: {
+      from: vi.fn().mockReturnValue(itemsQuery),
+      storage: {
+        from: vi.fn().mockReturnValue({ upload: vi.fn(), getPublicUrl: vi.fn() }),
+      },
+      functions: { invoke: vi.fn().mockResolvedValue({ data: null, error: null }) },
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
     },
-    functions: { invoke: vi.fn().mockResolvedValue({ data: null, error: null }) },
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
-  },
-}));
+  };
+});
 
 vi.mock('../../../lib/plausible', () => ({ track: vi.fn() }));
 
@@ -50,7 +61,6 @@ vi.mock('../../../lib/plausible', () => ({ track: vi.fn() }));
 import { I18nProvider } from '../../../i18n';
 import { ItemForm } from '../ItemForm';
 import type { MyItem } from '../../../items/useMyItems';
-import type { MyGroup } from '../../../groups/useGroups';
 import type { User } from '@supabase/supabase-js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -76,17 +86,12 @@ function stubEvents(): void {
   });
 }
 
-const NO_GROUPS: MyGroup[] = [];
 const DEFAULT_SUBMIT = vi.fn().mockResolvedValue({ item: {} as MyItem });
 
 function renderForm(props: Partial<Parameters<typeof ItemForm>[0]> = {}): ReturnType<typeof render> {
   return render(
     <I18nProvider>
-      <ItemForm
-        groups={NO_GROUPS}
-        onSubmit={DEFAULT_SUBMIT}
-        {...props}
-      />
+      <ItemForm onSubmit={DEFAULT_SUBMIT} {...props} />
     </I18nProvider>,
   );
 }
@@ -254,6 +259,110 @@ describe('ItemForm — fetchUrlMeta integration', () => {
       expect(
         screen.getByText(/couldn't fetch from that link/i),
       ).toBeTruthy();
+    });
+  });
+});
+
+// ── visibility + category (friend-graph PR 2) ─────────────────────────────────
+
+describe('ItemForm — visibility and category', () => {
+  it('defaults visibility to "friends" on a fresh add form', async () => {
+    renderForm();
+
+    // VisibilitySelector renders three radio segments. The active one
+    // is the only one with aria-checked="true". On create mode the
+    // default must be "friends" — PR 1 set this as the DB default and
+    // the form mirrors it explicitly.
+    const friendsRadio = await screen.findByRole('radio', { name: /friends/i });
+    expect(friendsRadio.getAttribute('aria-checked')).toBe('true');
+
+    const privateRadio = screen.getByRole('radio', { name: /just me/i });
+    expect(privateRadio.getAttribute('aria-checked')).toBe('false');
+
+    const publicRadio = screen.getByRole('radio', { name: /anyone with the link/i });
+    expect(publicRadio.getAttribute('aria-checked')).toBe('false');
+
+    // CategoryInput fires a background fetch on mount that calls
+    // setState after the test body returns — give it a tick to settle
+    // so React's act-warning doesn't fire post-test.
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('kitchen, books, home stuff…')).toBeTruthy();
+    });
+  });
+
+  it('submits visibility and category in the payload', async () => {
+    const onSubmit = vi.fn().mockResolvedValue({ item: {} as MyItem });
+    renderForm({ onSubmit });
+
+    // Required title — without it submit short-circuits at the
+    // titleRequired guard.
+    const titleInput = screen.getByPlaceholderText('e.g. falcon enamel mug');
+    fireEvent.change(titleInput, { target: { value: 'A Kitchen Thing' } });
+
+    // Type a category. The input commits on blur or Enter — we Enter.
+    // t('categories.inputPlaceholder') = 'kitchen, books, home stuff…'.
+    const categoryInput = screen.getByPlaceholderText('kitchen, books, home stuff…');
+    fireEvent.change(categoryInput, { target: { value: 'Кухня' } });
+    fireEvent.keyDown(categoryInput, { key: 'Enter' });
+
+    // Switch visibility to "public".
+    const publicRadio = screen.getByRole('radio', { name: /anyone with the link/i });
+    fireEvent.click(publicRadio);
+
+    // Submit.
+    const submitBtn = screen.getByRole('button', { name: /save to list/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'A Kitchen Thing',
+          visibility: 'public',
+          category: 'Кухня',
+        }),
+      );
+    });
+  });
+
+  it('preserves the existing visibility + category when editing', async () => {
+    const initial: MyItem = {
+      id: 'item-1',
+      owner_id: 'u1',
+      title: 'Old Mug',
+      maker: null,
+      url: null,
+      price_text: null,
+      occasion: 'anytime',
+      note: null,
+      priority: 2,
+      status: 'active',
+      cover_url: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+      visibility: 'private',
+      category: 'Books',
+      group_ids: [],
+      event_ids: [],
+    } as unknown as MyItem;
+
+    const onSubmit = vi.fn().mockResolvedValue({ item: {} as MyItem });
+    renderForm({ initial, onSubmit });
+
+    // The private radio should be the one checked in edit mode.
+    const privateRadio = screen.getByRole('radio', { name: /just me/i });
+    expect(privateRadio.getAttribute('aria-checked')).toBe('true');
+
+    // Submit without changes — the payload should mirror the loaded row.
+    const submitBtn = screen.getByRole('button', { name: /save/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          visibility: 'private',
+          category: 'Books',
+        }),
+      );
     });
   });
 });

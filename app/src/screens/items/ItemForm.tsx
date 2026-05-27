@@ -6,20 +6,28 @@
  * "what to call this action" labels differ. Mode is inferred from
  * `initial`: pass an existing item to edit it, omit to start fresh.
  *
- * URL meta auto-fill, photo upload, group multi-select, occasion chips —
- * all live here. The two screens are thin wrappers that just provide
- * the page chrome and decide where to navigate after submit.
+ * URL meta auto-fill, photo upload, visibility selector, category
+ * autocomplete, occasion chips — all live here. The two screens are
+ * thin wrappers that just provide the page chrome and decide where to
+ * navigate after submit.
+ *
+ * PR 2 of the friend-graph redesign replaced the legacy "publish to
+ * circle X" multi-select with a 3-state `<VisibilitySelector>` and a
+ * freeform `<CategoryInput>`. `group_ids` is still on
+ * `CreateItemInput` for backwards compatibility but the form no longer
+ * surfaces or writes it — PR 3 will sweep `item_groups` entirely.
  */
 import { useState, type FormEvent } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { OCCASIONS, type Occasion } from '../../lib/db';
-import type { MyGroup } from '../../groups/useGroups';
 import type { CreateItemInput, MyItem } from '../../items/useMyItems';
 import { useEvents } from '../../events/useEvents';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
 import { PriorityDots } from '../../components/PriorityDots';
+import { VisibilitySelector, type Visibility } from '../../components/VisibilitySelector';
+import { CategoryInput } from '../../components/CategoryInput';
 import { PhotoField } from './PhotoField';
 import { fetchUrlMeta } from '../../items/fetchUrlMeta';
 import { errorMessage } from '../../lib/errors';
@@ -39,8 +47,6 @@ function truncate(s: string, max: number): string {
 export interface ItemFormProps {
   /** Pre-fill the form from an existing item; omit for create mode. */
   initial?: MyItem | null;
-  /** All groups the caller is a member of — used for the publish chips. */
-  groups: MyGroup[];
   /** Persist handler. Receives the form input and decides create vs
    *  update on the caller's side. */
   onSubmit: (input: CreateItemInput) => Promise<{ item: MyItem } | { error: string }>;
@@ -51,7 +57,7 @@ export interface ItemFormProps {
   submitLabel?: string;
 }
 
-export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: ItemFormProps) {
+export function ItemForm({ initial, onSubmit, onCancel, submitLabel }: ItemFormProps) {
   const { t } = useI18n();
   const isEdit = !!initial;
 
@@ -70,10 +76,21 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
   const [note, setNote] = useState<string>(initial?.note ?? '');
   const [coverUrl, setCoverUrl] = useState<string | null>(initial?.cover_url ?? null);
   const [metaStatus, setMetaStatus] = useState<MetaFetchStatus>({ kind: 'idle' });
-  // In create mode: default-on for all groups. In edit mode: use the
-  // item's current publication set.
-  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(
-    () => new Set(initial ? initial.group_ids : groups.map((g) => g.id)),
+  // 3-state visibility (private / friends / public). The DB default is
+  // 'friends'; we mirror it in the form so create-mode shows "friends"
+  // selected up front. Edit mode reads the existing item's value, with
+  // a 'friends' fallback in case the row predates the column (PR 1
+  // migration backfilled all existing rows, so this should never fire).
+  const [visibility, setVisibility] = useState<Visibility>(() => {
+    const v = (initial as { visibility?: string } | null | undefined)?.visibility;
+    if (v === 'private' || v === 'friends' || v === 'public') return v;
+    return 'friends';
+  });
+  // Freeform category text or null. CategoryInput commits on
+  // blur/Enter/pick — never per-keystroke — so this is a stable
+  // committed value, not a draft.
+  const [category, setCategory] = useState<string | null>(
+    (initial as { category?: string | null } | null | undefined)?.category ?? null,
   );
   // Events the user is honoree of — they can attach this item to any of
   // them. In create mode start empty (intentional opt-in); in edit mode
@@ -86,15 +103,6 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function toggleGroup(id: string): void {
-    setSelectedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   function toggleEvent(id: string): void {
     setSelectedEvents((prev) => {
@@ -192,7 +200,14 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
       priority,
       note: note.trim() || null,
       cover_url: coverUrl,
-      group_ids: Array.from(selectedGroups),
+      visibility,
+      category,
+      // PR 2 of the friend-graph redesign dropped the circles picker —
+      // items now use `visibility` (private/friends/public) instead of
+      // the legacy `item_groups` junction. We still pass an empty
+      // group_ids array to keep the type happy until PR 3 sweeps the
+      // junction table writes out of useMyItems entirely.
+      group_ids: [],
       // Always pass event_ids (even if empty) in edit mode so the hook
       // knows to sync. In create mode `undefined` means "skip" — but
       // since we always have the Set, sending [] is also fine; the hook
@@ -321,21 +336,11 @@ export function ItemForm({ initial, groups, onSubmit, onCancel, submitLabel }: I
         />
       </Field>
 
-      {groups.length > 0 && (
-        <Field label={t('add.groupsLabel')} hint={t('add.groupsHint')}>
-          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-            {groups.map((g) => (
-              <GroupChip
-                key={g.id}
-                label={g.name}
-                emoji={g.emoji}
-                active={selectedGroups.has(g.id)}
-                onClick={() => toggleGroup(g.id)}
-              />
-            ))}
-          </div>
-        </Field>
-      )}
+      <CategoryInput value={category} onChange={setCategory} />
+
+      <Field label={t('add.visibilityLabel')}>
+        <VisibilitySelector value={visibility} onChange={setVisibility} />
+      </Field>
 
       {myEvents.length > 0 && (
         <Field label={t('add.eventsLabel')} hint={t('add.eventsHint')}>

@@ -958,6 +958,15 @@ export type Database = {
       }
       delete_my_account: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
+      get_add_me_preview: {
+        Args: { _token: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          handle: string
+          id: string
+        }[]
+      }
       get_event_view: {
         Args: { _token: string }
         Returns: {
@@ -972,6 +981,16 @@ export type Database = {
           occurs_on: string
           participant_count: number
           title: string
+        }[]
+      }
+      get_friend_invite_preview: {
+        Args: { _token: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          from_user_id: string
+          handle: string
+          to_email: string
         }[]
       }
       get_friend_list: {
@@ -1087,7 +1106,7 @@ export type Database = {
         }[]
       }
       get_public_list: {
-        Args: { _token: string }
+        Args: { _category?: string; _token: string }
         Returns: {
           items: Database["public"]["CompositeTypes"]["public_item"][]
           owner: Database["public"]["CompositeTypes"]["public_owner"]
@@ -1119,6 +1138,7 @@ export type Database = {
         }[]
       }
       reveal_santa_event: { Args: { _event_id: string }; Returns: undefined }
+      revoke_friend_invite: { Args: { _token: string }; Returns: undefined }
       rotate_add_me_token: { Args: never; Returns: string }
       run_santa_draw: { Args: { _event_id: string }; Returns: undefined }
       set_share_token: { Args: { _enabled: boolean }; Returns: string }
@@ -1141,6 +1161,7 @@ export type Database = {
         cover_url: string | null
         priority: number | null
         created_at: string | null
+        category: string | null
       }
       public_owner: {
         display_name: string | null

@@ -1,6 +1,11 @@
 /**
  * `InviteFromPeopleModal` — coordinator picks people to invite to an
- * event from their auto-populated People list.
+ * event from their explicit friend list.
+ *
+ * Source is `useFriends()` (the symmetric friendship graph from PR 1),
+ * not the legacy auto-populated `usePeople` heuristic. A coordinator can
+ * only invite explicit friends — strangers must accept a friend invite
+ * (or be added via /me) before they appear here.
  *
  * Submit fires two requests in sequence:
  *   1. `invite_to_event` RPC (SECURITY INVOKER, RLS-gated) — bulk
@@ -16,7 +21,7 @@
  */
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { usePeople } from '../../people/usePeople';
+import { useFriends } from '../../friends/useFriends';
 import { useI18n } from '../../i18n/useI18n';
 import { errorMessage } from '../../lib/errors';
 
@@ -32,13 +37,13 @@ interface Props {
 
 export function InviteFromPeopleModal({ eventId, open, onClose, showToast }: Props) {
   const { t } = useI18n();
-  const { query } = usePeople();
+  const { state } = useFriends();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
 
   if (!open) return null;
 
-  const people = query.status === 'ready' ? query.people : [];
+  const people = state.kind === 'loaded' ? state.friends : [];
   const selectedIds = [...selected];
   const submitLabel =
     selectedIds.length === 1

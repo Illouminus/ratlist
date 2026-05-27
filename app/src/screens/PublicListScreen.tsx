@@ -12,7 +12,7 @@
  * explicitly enabled sharing and chose what status='active' items to
  * keep on their list.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useI18n } from '../i18n/useI18n';
@@ -32,6 +32,11 @@ import { useSortMode } from '../lib/useSortMode';
 import { sortItems } from '../lib/sortItems';
 import { ViewToggle } from '../components/ViewToggle';
 import { SortSelector } from '../components/SortSelector';
+import { CategoryChips } from '../components/CategoryChips';
+
+/** Local filter state for the category chip row. `'all'` = no filter,
+ *  `null` = uncategorised-only, a string = match that exact category. */
+type CategoryFilter = string | null | 'all';
 
 interface PublicOwner {
   display_name: string | null;
@@ -50,6 +55,14 @@ interface PublicItem {
   note: string | null;
   cover_url: string | null;
   created_at: string;
+  /**
+   * Freeform category, null = "Uncategorised". As of the
+   * `20260527171213_get_public_list_visibility_and_category` migration
+   * the `public_item` composite carries this field, so the
+   * `<CategoryChips>` row activates as soon as the owner has at least
+   * one categorised public item (gated below by `items.some(i => i.category)`).
+   */
+  category: string | null;
 }
 
 type State =
@@ -191,9 +204,38 @@ function Body({ owner, items }: { owner: PublicOwner; items: PublicItem[] }) {
 }
 
 function ItemsView({ items }: { items: PublicItem[] }) {
+  const { t } = useI18n();
   const [view, setView] = useViewMode();
   const [sort, setSort] = useSortMode();
-  const sorted = sortItems(items, sort);
+  const [category, setCategory] = useState<CategoryFilter>('all');
+
+  // Collapse the active filter to 'all' when its category isn't present
+  // in the loaded items — purely a render-time fix-up so the chip row
+  // never shows a "ghost" active chip. Project convention bans
+  // setState-in-effect; we don't write back into state.
+  const effectiveCategory = useMemo<CategoryFilter>(() => {
+    if (category === 'all') return 'all';
+    if (category === null) {
+      return items.some((i) => !i.category) ? null : 'all';
+    }
+    return items.some((i) => i.category === category) ? category : 'all';
+  }, [items, category]);
+
+  // For chip derivation we only need the `category` field — keep this
+  // tight to the chip component's contract.
+  const itemsForChips = useMemo(
+    () => items.map((i) => ({ category: i.category })),
+    [items],
+  );
+
+  const visibleItems = useMemo(() => {
+    if (effectiveCategory === 'all') return items;
+    if (effectiveCategory === null) return items.filter((i) => !i.category);
+    return items.filter((i) => i.category === effectiveCategory);
+  }, [items, effectiveCategory]);
+
+  const sorted = sortItems(visibleItems, sort);
+
   return (
     <>
       <div
@@ -209,6 +251,19 @@ function ItemsView({ items }: { items: PublicItem[] }) {
         <SortSelector mode={sort} onMode={setSort} />
         <ViewToggle view={view} onView={setView} />
       </div>
+      {/* Category chips only render when at least one item carries a
+          non-null category. The `get_public_list` RPC carries the
+          column as of the visibility+category migration (2026-05-27);
+          the row is data-driven from there on. */}
+      {items.some((i) => i.category) && (
+        <div style={{ marginBottom: 'var(--s-4)' }}>
+          <CategoryChips
+            items={itemsForChips}
+            active={effectiveCategory}
+            onChange={setCategory}
+          />
+        </div>
+      )}
       {view === 'grid' ? (
         <ItemsGrid items={sorted} />
       ) : sort === 'priority' ? (
@@ -237,6 +292,17 @@ function ItemsView({ items }: { items: PublicItem[] }) {
             <Row key={item.id} item={item} index={i} last={i === sorted.length - 1} />
           ))}
         </div>
+      )}
+      {visibleItems.length === 0 && (
+        <p
+          style={{
+            color: 'var(--ink-3)',
+            marginTop: 'var(--s-4)',
+            fontStyle: 'italic',
+          }}
+        >
+          {t('list.noneForFilter')}
+        </p>
       )}
     </>
   );
