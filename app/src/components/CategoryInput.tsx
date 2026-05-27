@@ -36,24 +36,13 @@ export function CategoryInput({ value, onChange }: CategoryInputProps) {
   const [focused, setFocused] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const lastValueRef = useRef<string | null>(value);
 
-  // Mirror external `value` changes (e.g. form reset) into the local text
-  // state. Skip when the change came from our own commit() — otherwise
-  // we'd overwrite the user's in-progress input on every keystroke that
-  // happens to commit the same trimmed text. setState fires inside a
-  // microtask to satisfy the project's setState-in-effect convention.
-  useEffect(() => {
-    if (lastValueRef.current === value) return;
-    lastValueRef.current = value;
-    let cancelled = false;
-    void Promise.resolve().then(() => {
-      if (!cancelled) setText(value ?? '');
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [value]);
+  // Mirror external `value` changes (e.g. form reset) into the local
+  // text state. Parent commits only on blur/Enter/pick — never
+  // per-keystroke — so this can't fight in-progress input, and React's
+  // Object.is dep check skips re-runs when `value` is unchanged.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setText(value ?? ''), [value]);
 
   // Load the owner's distinct categories once. The fetch runs in the
   // background; the popover stays hidden until it resolves. All setState

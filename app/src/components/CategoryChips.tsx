@@ -25,6 +25,7 @@ export function CategoryChips({ items, active, onChange }: CategoryChipsProps) {
     const counts = new Map<string, number>();
     let nullCount = 0;
     for (const it of items) {
+      // '' collapsed to null: legacy/edge rows where category was empty string (CategoryInput trims-and-nulls, but DB has no CHECK).
       if (it.category === null || it.category === '') {
         nullCount += 1;
       } else {
