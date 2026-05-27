@@ -1,8 +1,8 @@
 // app/src/screens/events/__tests__/InviteFromPeopleModal.test.tsx
 //
-// The coordinator picks people from a checklist; submit fires
+// The coordinator picks friends from a checklist; submit fires
 // invite_to_event (RPC) + send-event-invite (Edge Function, fire-and-
-// forget) and shows a toast with the count. Empty state when usePeople
+// forget) and shows a toast with the count. Empty state when useFriends
 // returns no one.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -10,7 +10,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   invoke: vi.fn(),
-  usePeople: vi.fn(),
+  useFriends: vi.fn(),
 }));
 
 vi.mock('../../../lib/supabase', () => ({
@@ -20,24 +20,24 @@ vi.mock('../../../lib/supabase', () => ({
   },
 }));
 
-vi.mock('../../../people/usePeople', () => ({ usePeople: mocks.usePeople }));
+vi.mock('../../../friends/useFriends', () => ({ useFriends: mocks.useFriends }));
 
 import { I18nProvider } from '../../../i18n';
 import { InviteFromPeopleModal } from '../InviteFromPeopleModal';
 
-function stubPeople(
-  people: Array<{
+function stubFriends(
+  friends: Array<{
     id: string;
     display_name: string;
-    handle: string | null;
-    avatar_url: string | null;
-    has_public_list: boolean;
-    last_interaction_at: string | null;
+    handle: string;
+    avatar_url: string;
+    updated_at: string;
   }>,
 ): void {
-  mocks.usePeople.mockReturnValue({
-    query: { status: 'ready', people, error: null },
+  mocks.useFriends.mockReturnValue({
+    state: { kind: 'loaded', friends },
     refresh: vi.fn(),
+    unfriend: vi.fn(),
   });
 }
 
@@ -45,12 +45,12 @@ beforeEach(() => {
   localStorage.clear();
   mocks.rpc.mockReset();
   mocks.invoke.mockReset();
-  mocks.usePeople.mockReset();
+  mocks.useFriends.mockReset();
 });
 
 describe('InviteFromPeopleModal', () => {
   it('does not render when closed', () => {
-    stubPeople([]);
+    stubFriends([]);
     const onClose = vi.fn();
     const showToast = vi.fn();
     render(
@@ -62,22 +62,20 @@ describe('InviteFromPeopleModal', () => {
   });
 
   it('selects two friends → submit → rpc + edge function called + toast count', async () => {
-    stubPeople([
+    stubFriends([
       {
         id: 'p1',
         display_name: 'Таня',
         handle: 'tanya',
-        avatar_url: null,
-        has_public_list: true,
-        last_interaction_at: '2026-05-20T10:00:00Z',
+        avatar_url: '',
+        updated_at: '2026-05-20T10:00:00Z',
       },
       {
         id: 'p2',
         display_name: 'Миша',
         handle: 'misha',
-        avatar_url: null,
-        has_public_list: false,
-        last_interaction_at: '2026-05-10T10:00:00Z',
+        avatar_url: '',
+        updated_at: '2026-05-10T10:00:00Z',
       },
     ]);
     mocks.rpc.mockResolvedValueOnce({ data: 2, error: null });
@@ -116,8 +114,8 @@ describe('InviteFromPeopleModal', () => {
     expect(toastArg).toMatch(/2/);
   });
 
-  it('renders empty state when usePeople returns no one', () => {
-    stubPeople([]);
+  it('renders empty state when useFriends returns no one', () => {
+    stubFriends([]);
     render(
       <I18nProvider>
         <InviteFromPeopleModal eventId="e1" open={true} onClose={vi.fn()} showToast={vi.fn()} />
@@ -129,14 +127,13 @@ describe('InviteFromPeopleModal', () => {
   });
 
   it('does NOT call edge function when invite_to_event RPC errors', async () => {
-    stubPeople([
+    stubFriends([
       {
         id: 'p1',
         display_name: 'Таня',
         handle: 'tanya',
-        avatar_url: null,
-        has_public_list: true,
-        last_interaction_at: null,
+        avatar_url: '',
+        updated_at: '2026-05-20T10:00:00Z',
       },
     ]);
     mocks.rpc.mockResolvedValueOnce({
