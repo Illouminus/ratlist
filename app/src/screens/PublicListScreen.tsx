@@ -56,15 +56,13 @@ interface PublicItem {
   cover_url: string | null;
   created_at: string;
   /**
-   * Freeform category, null = "Uncategorised". Optional in the type
-   * because the current `public_item` composite returned by
-   * `get_public_list` doesn't include this column yet — a future
-   * migration will extend the composite and the chip filter will then
-   * surface real values. Until then every row reads as null and the
-   * `<CategoryChips>` row renders nothing (gated by the chip-presence
-   * check below).
+   * Freeform category, null = "Uncategorised". As of the
+   * `20260527171213_get_public_list_visibility_and_category` migration
+   * the `public_item` composite carries this field, so the
+   * `<CategoryChips>` row activates as soon as the owner has at least
+   * one categorised public item (gated below by `items.some(i => i.category)`).
    */
-  category?: string | null;
+  category: string | null;
 }
 
 type State =
@@ -223,11 +221,10 @@ function ItemsView({ items }: { items: PublicItem[] }) {
     return items.some((i) => i.category === category) ? category : 'all';
   }, [items, category]);
 
-  // For chip derivation, normalise undefined → null so the chip
-  // counter treats "field absent from RPC payload" the same as
-  // explicit nulls.
+  // For chip derivation we only need the `category` field — keep this
+  // tight to the chip component's contract.
   const itemsForChips = useMemo(
-    () => items.map((i) => ({ category: i.category ?? null })),
+    () => items.map((i) => ({ category: i.category })),
     [items],
   );
 
@@ -255,9 +252,9 @@ function ItemsView({ items }: { items: PublicItem[] }) {
         <ViewToggle view={view} onView={setView} />
       </div>
       {/* Category chips only render when at least one item carries a
-          non-null category. The current `get_public_list` RPC doesn't
-          return the column, so this row stays empty until a future
-          migration extends the `public_item` composite. */}
+          non-null category. The `get_public_list` RPC carries the
+          column as of the visibility+category migration (2026-05-27);
+          the row is data-driven from there on. */}
       {items.some((i) => i.category) && (
         <div style={{ marginBottom: 'var(--s-4)' }}>
           <CategoryChips

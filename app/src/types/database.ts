@@ -1087,7 +1087,7 @@ export type Database = {
         }[]
       }
       get_public_list: {
-        Args: { _token: string }
+        Args: { _category?: string; _token: string }
         Returns: {
           items: Database["public"]["CompositeTypes"]["public_item"][]
           owner: Database["public"]["CompositeTypes"]["public_owner"]
@@ -1142,6 +1142,7 @@ export type Database = {
         cover_url: string | null
         priority: number | null
         created_at: string | null
+        category: string | null
       }
       public_owner: {
         display_name: string | null
