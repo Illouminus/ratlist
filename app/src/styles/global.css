@@ -258,6 +258,19 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   color: var(--ink-2);
 }
 
+/* ── Shared responsive items grid (MyList / FriendList / PublicList) ─── */
+.items-grid-responsive {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-5) var(--s-4);
+}
+@media (min-width: 768px) {
+  .items-grid-responsive {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 40px 32px;
+  }
+}
+
 /* ── EventDetail curated items: tiles on desktop, list rows on mobile ───
    Used by `<EventDetailScreen>`. One uniform layout replaces the
    hero+tiles per-section pattern that landed in PR #27/28 and looked

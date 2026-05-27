@@ -159,6 +159,10 @@ function renderScreen() {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('kryska.lang', 'ru');
+  // These tests cover sectioned-dnd rendering, which lives in list view.
+  // Pin the persisted view mode so jsdom's default viewport doesn't trip
+  // us into grid mode.
+  localStorage.setItem('kryska.viewMode', 'list');
   updateItemPriority.mockClear();
   mockToastShow.mockClear();
   capturedOnPriorityChange = undefined;
