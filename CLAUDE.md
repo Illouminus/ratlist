@@ -508,12 +508,61 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 
 Use the heredoc form for git commit -m to preserve formatting.
 
-## Skills you'll want
+## Skill triggering — calibrated for this project
 
-If you're Claude Code: read the auto-loaded memory at the top of
-`MEMORY.md`, then this file, then `ARCHITECTURE.md`. Don't re-derive
-context already captured there.
+The superpowers skill set (`brainstorming`, `writing-plans`,
+`executing-plans`, `test-driven-development`, etc.) is powerful but
+expensive: each invocation burns context and produces artifacts
+(spec/plan files under `docs/superpowers/`) that nobody re-reads
+afterward. The default `using-superpowers` trigger ("if there's a 1%
+chance a skill might apply, invoke it") over-fires for the kind of
+small polish PRs that dominate steady-state work on this project.
 
-When in doubt about a design choice, look at the original Claude
-Design handoff bundles (gitignored at `wish-list-app/` if still
-present locally). They were what we built from.
+**Skip heavy skills unless the threshold below is met.** When unsure,
+propose the diff first and ask "should I have done a plan instead?"
+— corrections are cheap, ceremony is not.
+
+### Skip by default — invoke only when the listed condition is met
+
+- **brainstorming** — only when (a) the goal can't be described in
+  2 sentences AND there's real ambiguity about approach, OR (b) you
+  can name >1 plausible design with concrete tradeoffs to discuss.
+  "Make X look like Y", "add Z field", "fix the bug where …" → just
+  propose a diff.
+- **writing-plans + executing-plans + subagent-driven-development**
+  — only for work that touches >4 files OR will span >1 day OR
+  needs review checkpoints between pieces. The paper trail under
+  `docs/superpowers/{specs,plans}/` was worth it for multi-PR
+  refactors (buckets 1–3, link-first events). Single-PR polish is
+  *not* "non-trivial enough".
+- **test-driven-development** — skip for CSS / layout / copy. Tests
+  can't meaningfully cover visual changes. Use for new RPCs, hooks
+  with behavior, RLS rules, Edge Function logic.
+- **dispatching-parallel-agents** — only when there are genuinely
+  independent tasks. Don't dispatch a single agent for a single
+  thing — call the tools directly.
+
+### Always on (cheap and have caught real prod bugs)
+
+- **verification-before-completion** — yes, every time. Same idea
+  as the "smoke before claiming shipped" rule in the testing
+  discipline section above.
+- **systematic-debugging** — yes, whenever a bug isn't immediately
+  obvious. Cheaper than blind trial-and-error.
+- **receiving-code-review** — yes, when ingesting review feedback.
+  Prevents performative agreement.
+
+### Calibration from recent PRs
+
+| PR | Verdict | Why |
+|----|---------|-----|
+| #23/24/25 (priority DnD) | non-trivial — plan justified | new dnd-kit wiring + migration + sensor iteration, 3 PRs |
+| #26 (notes everywhere) | borderline — spec ok, plan overkill | 4 surfaces but the design was settled |
+| #27/28 (event detail redesign) | trivial — the ceremony was a mistake | clear direction, 1 PR; full ritual burned a 1M session on a result the user disliked |
+| #29 (manual SW reg) | clearly trivial | one file, ~20 LOC, no design discussion needed |
+
+### Reading order for context
+
+When you start a session: auto-loaded memory in `MEMORY.md`, then
+this file, then `ARCHITECTURE.md`. Don't re-derive context already
+captured there.
