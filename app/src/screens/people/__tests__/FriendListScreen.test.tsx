@@ -69,6 +69,8 @@ import { FriendListScreen } from '../FriendListScreen';
 describe('<FriendListScreen> sectioning', () => {
   beforeEach(() => {
     localStorage.setItem('kryska.lang', 'ru');
+    // Section headers only render in list view; grid is the jsdom default.
+    localStorage.setItem('kryska.viewMode', 'list');
   });
 
   it('groups items by priority with section headers, hiding empty sections', () => {

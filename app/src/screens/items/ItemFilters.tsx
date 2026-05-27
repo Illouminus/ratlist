@@ -4,8 +4,10 @@
  */
 import { useI18n } from '../../i18n/useI18n';
 import { OCCASIONS, type Occasion } from '../../lib/db';
+import { ViewToggle } from '../../components/ViewToggle';
+import type { ViewMode } from '../../lib/useViewMode';
 
-export type ViewMode = 'grid' | 'list';
+export type { ViewMode };
 
 interface ItemFiltersProps {
   countShown: number;
@@ -80,32 +82,7 @@ export function ItemFilters({
         </div>
       </div>
 
-      {/* right: view toggle — desktop only. On mobile we always render
-          the compact list (the grid cards don't fit), so the choice is
-          meaningless and we hide it to reduce noise. */}
-      <div className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <ViewToggleButton
-          active={view === 'grid'}
-          onClick={() => onView('grid')}
-          aria-label="grid view"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14">
-            <rect x="1" y="1" width="5" height="5" stroke="currentColor" fill="none" />
-            <rect x="8" y="1" width="5" height="5" stroke="currentColor" fill="none" />
-            <rect x="1" y="8" width="5" height="5" stroke="currentColor" fill="none" />
-            <rect x="8" y="8" width="5" height="5" stroke="currentColor" fill="none" />
-          </svg>
-        </ViewToggleButton>
-        <ViewToggleButton
-          active={view === 'list'}
-          onClick={() => onView('list')}
-          aria-label="list view"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14">
-            <path d="M1 3h12M1 7h12M1 11h12" stroke="currentColor" fill="none" />
-          </svg>
-        </ViewToggleButton>
-      </div>
+      <ViewToggle view={view} onView={onView} />
     </div>
   );
 }
@@ -141,30 +118,3 @@ function FilterChip({ label, active, onClick }: FilterChipProps) {
   );
 }
 
-interface ViewToggleButtonProps {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  'aria-label': string;
-}
-
-function ViewToggleButton({ active, onClick, children, ...rest }: ViewToggleButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={rest['aria-label']}
-      style={{
-        background: active ? 'var(--paper-edge)' : 'transparent',
-        border: `1px solid ${active ? 'var(--hair-strong)' : 'transparent'}`,
-        cursor: 'pointer',
-        padding: '5px 7px',
-        borderRadius: 'var(--r-1)',
-        color: active ? 'var(--ink)' : 'var(--ink-3)',
-        lineHeight: 0,
-      }}
-    >
-      {children}
-    </button>
-  );
-}

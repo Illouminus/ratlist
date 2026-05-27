@@ -13,14 +13,7 @@ interface ItemGridProps {
 
 export function ItemGrid({ items }: ItemGridProps) {
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: '40px 32px',
-        position: 'relative',
-      }}
-    >
+    <div className="items-grid-responsive" style={{ position: 'relative' }}>
       {items.map((item, i) => (
         <ItemCard key={item.id} item={item} index={i} />
       ))}

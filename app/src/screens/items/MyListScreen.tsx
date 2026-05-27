@@ -17,10 +17,10 @@ import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useProfile } from '../../auth/useProfile';
 import { useMyItems } from '../../items/useMyItems';
-import { useIsMobile } from '../../lib/useMediaQuery';
 import { useToast } from '../../components/useToast';
 import { errorMessage } from '../../lib/errors';
 import type { Occasion } from '../../lib/db';
+import { useViewMode, type ViewMode } from '../../lib/useViewMode';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
 import { EndOfList } from '../../components/EndOfList';
@@ -28,7 +28,7 @@ import { ShareDialog } from '../../components/ShareDialog';
 import { ListSkeleton } from '../../components/Skeleton';
 import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
-import { ItemFilters, type ViewMode } from './ItemFilters';
+import { ItemFilters } from './ItemFilters';
 import { SittingRat } from '../../components/rats';
 
 export function MyListScreen() {
@@ -38,11 +38,7 @@ export function MyListScreen() {
   const { query: itemsQ, updateItemPriority } = useMyItems();
   const toast = useToast();
 
-  const isMobile = useIsMobile();
-  const [view, setView] = useState<ViewMode>('grid');
-  // On mobile the toggle is hidden and we always render the compact
-  // list — the wide grid cards don't fit. Desktop users can still pick.
-  const effectiveView: ViewMode = isMobile ? 'list' : view;
+  const [view, setView] = useViewMode();
   const [occasion, setOccasion] = useState<Occasion | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -89,7 +85,7 @@ export function MyListScreen() {
 
       {showList && (
         <>
-          {effectiveView === 'grid' ? (
+          {view === 'grid' ? (
             <ItemGrid items={filteredItems} />
           ) : (
             <ItemList

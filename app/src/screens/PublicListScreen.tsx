@@ -24,8 +24,11 @@ import { ReportDialog } from '../components/ReportDialog';
 import { SittingRat } from '../components/rats';
 import { groupByPriority } from '../items/groupByPriority';
 import { PrioritySectionHeader } from '../components/PrioritySectionHeader';
+import { PriorityDots } from '../components/PriorityDots';
 import type { Occasion } from '../lib/db';
 import { formatPrice } from '../lib/formatPrice';
+import { useViewMode } from '../lib/useViewMode';
+import { ViewToggle } from '../components/ViewToggle';
 
 interface PublicOwner {
   display_name: string | null;
@@ -178,6 +181,28 @@ function Body({ owner, items }: { owner: PublicOwner; items: PublicItem[] }) {
       {items.length === 0 ? (
         <EmptyOwner />
       ) : (
+        <ItemsView items={items} />
+      )}
+    </>
+  );
+}
+
+function ItemsView({ items }: { items: PublicItem[] }) {
+  const [view, setView] = useViewMode();
+  return (
+    <>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          marginBottom: 'var(--s-3)',
+        }}
+      >
+        <ViewToggle view={view} onView={setView} />
+      </div>
+      {view === 'grid' ? (
+        <ItemsGrid items={items} />
+      ) : (
         <div>
           {groupByPriority(items).map((section) =>
             section.items.length === 0 ? null : (
@@ -197,6 +222,78 @@ function Body({ owner, items }: { owner: PublicOwner; items: PublicItem[] }) {
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Grid view of the public list — flat, sorted by priority asc, no
+ * section headers (the per-tile priority dot carries the signal).
+ * Mirrors the FriendList grid tile layout minus the claim affordance,
+ * since this is the anonymous read-only surface.
+ */
+function ItemsGrid({ items }: { items: PublicItem[] }) {
+  const sorted = [...items].sort((a, b) => a.priority - b.priority);
+  return (
+    <div className="items-grid-responsive">
+      {sorted.map((item) => (
+        <PublicItemTile key={item.id} item={item} />
+      ))}
+    </div>
+  );
+}
+
+function PublicItemTile({ item }: { item: PublicItem }) {
+  return (
+    <article style={{ color: 'inherit' }}>
+      <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
+      <div style={{ paddingTop: 'var(--s-2)' }}>
+        <h3
+          style={{
+            margin: 0,
+            fontFamily: 'var(--font-body)',
+            fontWeight: 600,
+            fontSize: 14,
+            color: 'var(--ink)',
+            lineHeight: 1.3,
+            ...CLAMP_2_LINES,
+          }}
+        >
+          {item.title}
+        </h3>
+        {(item.maker || item.price_text) && (
+          <div
+            className="mono-meta"
+            style={{ marginTop: 2, fontSize: 11, color: 'var(--ink-3)' }}
+          >
+            {[item.maker, formatPrice(item.price_text)].filter(Boolean).join(' · ')}
+          </div>
+        )}
+        {item.note && (
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 12,
+              color: 'var(--ink-2)',
+              lineHeight: 1.4,
+              ...CLAMP_2_LINES,
+            }}
+          >
+            {item.note}
+          </div>
+        )}
+        <div
+          style={{
+            marginTop: 'var(--s-2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--s-3)',
+          }}
+        >
+          <OccasionTag kind={item.occasion as Occasion} />
+          <PriorityDots level={item.priority === 1 ? 1 : item.priority === 3 ? 3 : 2} />
+        </div>
+      </div>
+    </article>
   );
 }
 

@@ -47,6 +47,8 @@ const items = [
 describe('<PublicListScreen> sectioning', () => {
   beforeEach(() => {
     localStorage.setItem('kryska.lang', 'ru');
+    // Section headers only render in list view; grid is the jsdom default.
+    localStorage.setItem('kryska.viewMode', 'list');
     mocks.rpc.mockReturnValue(
       Promise.resolve({
         data: [{ owner, items }],

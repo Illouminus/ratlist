@@ -32,6 +32,8 @@ import { ReportDialog } from '../../components/ReportDialog';
 import { SittingRat, RunningRat } from '../../components/rats';
 import { groupByPriority } from '../../items/groupByPriority';
 import { formatPrice } from '../../lib/formatPrice';
+import { useViewMode } from '../../lib/useViewMode';
+import { ViewToggle } from '../../components/ViewToggle';
 
 export function FriendListScreen() {
   const { t } = useI18n();
@@ -40,6 +42,7 @@ export function FriendListScreen() {
   const { query: eventsQ } = useEvents();
   const { user: me } = useAuth();
   const [reportOpen, setReportOpen] = useState(false);
+  const [view, setView] = useViewMode();
 
   // Events of this friend that I (the viewer) can see. Only their events
   // where they're the honoree, not generic ones from get_my_events.
@@ -91,12 +94,27 @@ export function FriendListScreen() {
           {query.items.length === 0 ? (
             <EmptyState />
           ) : (
-            <ItemsList
-              items={query.items}
-              myUserId={me?.id ?? null}
-              onClaim={(id) => void claim(id)}
-              onRelease={(id) => void release(id)}
-            />
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  marginBottom: 'var(--s-3)',
+                }}
+              >
+                <ViewToggle view={view} onView={setView} />
+              </div>
+              {view === 'grid' ? (
+                <ItemsGrid items={query.items} myUserId={me?.id ?? null} />
+              ) : (
+                <ItemsList
+                  items={query.items}
+                  myUserId={me?.id ?? null}
+                  onClaim={(id) => void claim(id)}
+                  onRelease={(id) => void release(id)}
+                />
+              )}
+            </>
           )}
 
           {canReport && (
@@ -317,6 +335,117 @@ interface FriendItemRowProps {
   onClaim: () => void;
   onRelease: () => void;
   last: boolean;
+}
+
+// ─────────────────────────── grid ───────────────────────────
+
+interface ItemsGridProps {
+  items: FriendItem[];
+  myUserId: string | null;
+}
+
+/**
+ * Grid view of friend's items — flat (no priority sections, the dot
+ * inside each tile carries the signal). Sorted by priority asc so
+ * «очень хочу» reads first. Clicking a tile opens `/i/:id` where
+ * the inline claim affordance lives; tiles themselves stay browse-only
+ * to keep the grid visually uniform.
+ */
+function ItemsGrid({ items, myUserId }: ItemsGridProps) {
+  const sorted = [...items].sort((a, b) => a.priority - b.priority);
+  return (
+    <div className="items-grid-responsive">
+      {sorted.map((item) => (
+        <FriendItemTile key={item.id} item={item} myUserId={myUserId} />
+      ))}
+    </div>
+  );
+}
+
+function FriendItemTile({ item, myUserId }: { item: FriendItem; myUserId: string | null }) {
+  const { t } = useI18n();
+  const myClaim = myUserId ? item.claims.find((c) => c.user_id === myUserId) : undefined;
+  const othersClaim = item.claims.find((c) => c.user_id !== myUserId);
+  const isClaimed = item.claims.length > 0;
+  const dimmed = isClaimed && !myClaim;
+
+  return (
+    <Link
+      to={`/i/${item.id}`}
+      style={{
+        textDecoration: 'none',
+        color: 'inherit',
+        display: 'block',
+        opacity: dimmed ? 0.55 : 1,
+      }}
+    >
+      <ItemPhoto coverUrl={item.cover_url} aspectRatio="4 / 3" alt={item.title} />
+      <div style={{ paddingTop: 'var(--s-2)' }}>
+        <h3
+          style={{
+            margin: 0,
+            fontFamily: 'var(--font-body)',
+            fontWeight: 600,
+            fontSize: 14,
+            color: 'var(--ink)',
+            lineHeight: 1.3,
+            textDecoration: dimmed ? 'line-through' : 'none',
+            ...CLAMP_2_LINES,
+          }}
+        >
+          {item.title}
+        </h3>
+        {(item.maker || item.price_text) && (
+          <div
+            className="mono-meta"
+            style={{ marginTop: 2, fontSize: 11, color: 'var(--ink-3)' }}
+          >
+            {[item.maker, formatPrice(item.price_text)].filter(Boolean).join(' · ')}
+          </div>
+        )}
+        {item.note && (
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 12,
+              color: 'var(--ink-2)',
+              lineHeight: 1.4,
+              ...CLAMP_2_LINES,
+            }}
+          >
+            {item.note}
+          </div>
+        )}
+        <div
+          style={{
+            marginTop: 'var(--s-2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--s-3)',
+          }}
+        >
+          <OccasionTag kind={item.occasion as Occasion} />
+          <PriorityDots level={item.priority === 1 ? 1 : item.priority === 3 ? 3 : 2} />
+        </div>
+        {myClaim && (
+          <div
+            className="mono-meta"
+            style={{ marginTop: 'var(--s-2)', fontSize: 11, color: 'var(--accent)' }}
+          >
+            ✓ {t('friend.youClaim')}
+          </div>
+        )}
+        {othersClaim && !myClaim && (
+          <div
+            className="mono-meta"
+            style={{ marginTop: 'var(--s-2)', fontSize: 11, color: 'var(--ink-3)' }}
+          >
+            {t('friend.claimedBy', { name: othersClaim.user.display_name })}
+          </div>
+        )}
+      </div>
+    </Link>
+  );
 }
 
 /** Same line-clamp helper as in ItemList — keep rows visually even. */
