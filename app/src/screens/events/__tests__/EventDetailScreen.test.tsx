@@ -200,7 +200,7 @@ describe('EventDetailScreen — post-create share card (?share=1)', () => {
   });
 });
 
-describe('<EventDetailScreen> sectioning', () => {
+describe('<EventDetailScreen> items rendering', () => {
   function curated(id: string, priority: 1 | 2 | 3, title: string) {
     return {
       item_id: id,
@@ -248,24 +248,50 @@ describe('<EventDetailScreen> sectioning', () => {
     });
   }
 
-  it('honoree view: sections curated items by priority with no drag handles', () => {
+  it('renders all items as flat tiles, no section headers', () => {
     localStorage.setItem('kryska.lang', 'ru');
     stubWithItems(
-      [curated('a', 1, 'Книга'), curated('b', 2, 'Кружка')],
+      [curated('a', 1, 'Книга'), curated('b', 2, 'Кружка'), curated('c', 3, 'Носки')],
       true,
     );
 
     renderAt('/events/e1');
 
-    expect(screen.getByText('Очень хочу')).toBeTruthy();
-    expect(screen.getByText('Хочу')).toBeTruthy();
-    expect(screen.queryByText('Если найдётся')).toBeNull(); // empty bucket → hidden
+    // Items themselves are rendered…
     expect(screen.getByText('Книга')).toBeTruthy();
     expect(screen.getByText('Кружка')).toBeTruthy();
+    expect(screen.getByText('Носки')).toBeTruthy();
+    expect(screen.getAllByTestId('item-tile')).toHaveLength(3);
+
+    // …but the priority-section headers are gone in the redesigned layout.
+    expect(screen.queryByText('Очень хочу')).toBeNull();
+    expect(screen.queryByText('Хочу')).toBeNull();
+    expect(screen.queryByText('Если найдётся')).toBeNull();
+
+    // Drag handles still absent (no DnD on event items).
     expect(screen.queryAllByTestId('drag-handle')).toHaveLength(0);
   });
 
-  it('guest view: sections curated items read-only', () => {
+  it('sorts items by priority ascending (1 → 2 → 3)', () => {
+    localStorage.setItem('kryska.lang', 'ru');
+    // Intentional non-monotonic input to verify the sort.
+    stubWithItems(
+      [curated('b', 2, 'Кружка'), curated('c', 3, 'Носки'), curated('a', 1, 'Книга')],
+      true,
+    );
+
+    renderAt('/events/e1');
+
+    const tiles = screen.getAllByTestId('item-tile');
+    expect(tiles).toHaveLength(3);
+    // Read the title inside each tile and assert order: 1 → 2 → 3.
+    const titles = tiles.map((t) => t.textContent ?? '');
+    expect(titles[0]).toContain('Книга');
+    expect(titles[1]).toContain('Кружка');
+    expect(titles[2]).toContain('Носки');
+  });
+
+  it('guest view also renders flat tiles without section headers', () => {
     localStorage.setItem('kryska.lang', 'ru');
     stubWithItems(
       [curated('a', 1, 'Книга'), curated('c', 3, 'Носки')],
@@ -282,10 +308,9 @@ describe('<EventDetailScreen> sectioning', () => {
 
     renderAt('/events/e1');
 
-    expect(screen.getByText('Очень хочу')).toBeTruthy();
-    expect(screen.getByText('Если найдётся')).toBeTruthy();
-    expect(screen.queryByText('Хочу')).toBeNull(); // empty, hidden
-    expect(screen.queryAllByTestId('drag-handle')).toHaveLength(0);
+    expect(screen.getAllByTestId('item-tile')).toHaveLength(2);
+    expect(screen.queryByText('Очень хочу')).toBeNull();
+    expect(screen.queryByText('Если найдётся')).toBeNull();
   });
 });
 

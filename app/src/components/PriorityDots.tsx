@@ -30,6 +30,7 @@ export function PriorityDots({ level, muted, size = 4 }: PriorityDotsProps) {
   return (
     <span
       aria-hidden
+      data-testid="priority-dots"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
