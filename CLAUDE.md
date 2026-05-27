@@ -344,6 +344,10 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Events link-first redesign** (M3 — replaces M2 audience model) | ✅ shipped 2026-05-25 — PRs #9–#12 (data + email + public UI + coordinator UI), #13–#18 (polish + auth round-trip fixes). `event_participants` table + `events.share_token` + 5 RPCs, public `/event/<token>` landing, auto-join after sign-in, coordinator panel with InviteFromPeopleModal, sectioned EventsScreen, magic-link + Google OAuth both confirmed working end-to-end on prod. See `~/.claude/projects/.../memory/project_events_link_first.md` for the full narrative. |
 | **Realtime debounce** (`useEvents` postgres_changes burst → 1 RPC) | ✅ Bucket 3 done — `app/src/lib/debounce.ts` (300 ms trailing) wired into the realtime effect |
 | **Skip-link to `#main` (a11y)**                          | ✅ Bucket 3 done — `<SkipLink>` mounted in `App.tsx`, `id="main" tabIndex={-1}` on `<main>` in `AppLayout` + conditional in `PaperLayout` |
+| **Priority drag-and-drop between sections**              | ✅ shipped 2026-05-26 — PRs #23 (initial) + #24 (mobile row-as-activator) + #25 (MouseSensor swap to fix scroll-hijack on touch). MyList / friend / share / event detail lists are sectioned by priority (•••/••/•); MyList rows are draggable between sections via `@dnd-kit/core + sortable`; spec + plan in `docs/superpowers/{specs,plans}/2026-05-26-priority-dnd-sections*.md`. **Canon for the sensor stack: MouseSensor + TouchSensor + KeyboardSensor — never PointerSensor with `distance` on a sortable list, it hijacks scroll on touch.** Migration `20260526000000_public_item_priority.sql` added priority to `public_item` composite + `get_public_list` RPC. |
+| **Notes visible in row preview + no more auto-fill**     | ✅ shipped 2026-05-26 — PR #26. Owner's note now renders inline (2-line clamp) on friend list / event detail / event landing in addition to the already-existing MyList + public-share rendering. The form auto-fill from URL meta description was dropped (friends want personal comments, not page blurbs). Migration `20260526200000_event_view_note.sql` adds `note` to the `get_event_view` RPC payload. |
+| **Event detail redesign** (`/events/:id`)                | ✅ shipped 2026-05-26 — PR #27 + #28. Killed dead `AudienceSection` (M2 leftover after link-first events retired circles). Replaced heavy share-link block with inline mono-meta line under title («ссылка для гостей · скопировать ↗ · позвать друзей →»). Items adopt hero+tiles layout: first item per priority section = 200px editorial hero with untruncated note; rest = 1:1 tiles with 1-line note teaser. New `PhotoPlaceholder` `withRat`+`signText` props render a SittingRat with i18n'd «без фото» / «no photo» sign on opt-in surfaces. `useEvent` lost the dead `attachCircle`/`detachCircle`/`audience` surface; `useGroups` import + dead `events.audience*` / `addCircle` / `removeCircle` i18n keys all dropped. Spec + plan at `docs/superpowers/{specs,plans}/2026-05-26-event-detail-redesign*.md`. |
+| **Manual SW registration with error handling**           | ✅ shipped 2026-05-26 — PR #29. Replaces `vite-plugin-pwa`'s `injectRegister: 'inline'` (which emitted a bare `register()` call without `.catch()`) with `src/registerSW.ts` — manual register wrapped in try/catch that routes rejections to Sentry as `level: 'warning'` instead of unhandled-rejection email alerts. Triggered by a single prod hit from Chrome Mobile / Android 10 where `register()` rejected; we get visibility for trends without panic alerts on transient mobile failures. |
 | Moderation: rate limits (per-user sliding window)        | ⬜ ~1 h — design sketch in [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
 | Notification preferences UI                              | ⬜ ~1.5 h — `email_prefs` JSONB on profiles |
 | **Supabase Pro upgrade**                                 | ⬜ optional — $25/mo, unlocks image transforms + backups |
@@ -504,12 +508,61 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 
 Use the heredoc form for git commit -m to preserve formatting.
 
-## Skills you'll want
+## Skill triggering — calibrated for this project
 
-If you're Claude Code: read the auto-loaded memory at the top of
-`MEMORY.md`, then this file, then `ARCHITECTURE.md`. Don't re-derive
-context already captured there.
+The superpowers skill set (`brainstorming`, `writing-plans`,
+`executing-plans`, `test-driven-development`, etc.) is powerful but
+expensive: each invocation burns context and produces artifacts
+(spec/plan files under `docs/superpowers/`) that nobody re-reads
+afterward. The default `using-superpowers` trigger ("if there's a 1%
+chance a skill might apply, invoke it") over-fires for the kind of
+small polish PRs that dominate steady-state work on this project.
 
-When in doubt about a design choice, look at the original Claude
-Design handoff bundles (gitignored at `wish-list-app/` if still
-present locally). They were what we built from.
+**Skip heavy skills unless the threshold below is met.** When unsure,
+propose the diff first and ask "should I have done a plan instead?"
+— corrections are cheap, ceremony is not.
+
+### Skip by default — invoke only when the listed condition is met
+
+- **brainstorming** — only when (a) the goal can't be described in
+  2 sentences AND there's real ambiguity about approach, OR (b) you
+  can name >1 plausible design with concrete tradeoffs to discuss.
+  "Make X look like Y", "add Z field", "fix the bug where …" → just
+  propose a diff.
+- **writing-plans + executing-plans + subagent-driven-development**
+  — only for work that touches >4 files OR will span >1 day OR
+  needs review checkpoints between pieces. The paper trail under
+  `docs/superpowers/{specs,plans}/` was worth it for multi-PR
+  refactors (buckets 1–3, link-first events). Single-PR polish is
+  *not* "non-trivial enough".
+- **test-driven-development** — skip for CSS / layout / copy. Tests
+  can't meaningfully cover visual changes. Use for new RPCs, hooks
+  with behavior, RLS rules, Edge Function logic.
+- **dispatching-parallel-agents** — only when there are genuinely
+  independent tasks. Don't dispatch a single agent for a single
+  thing — call the tools directly.
+
+### Always on (cheap and have caught real prod bugs)
+
+- **verification-before-completion** — yes, every time. Same idea
+  as the "smoke before claiming shipped" rule in the testing
+  discipline section above.
+- **systematic-debugging** — yes, whenever a bug isn't immediately
+  obvious. Cheaper than blind trial-and-error.
+- **receiving-code-review** — yes, when ingesting review feedback.
+  Prevents performative agreement.
+
+### Calibration from recent PRs
+
+| PR | Verdict | Why |
+|----|---------|-----|
+| #23/24/25 (priority DnD) | non-trivial — plan justified | new dnd-kit wiring + migration + sensor iteration, 3 PRs |
+| #26 (notes everywhere) | borderline — spec ok, plan overkill | 4 surfaces but the design was settled |
+| #27/28 (event detail redesign) | trivial — the ceremony was a mistake | clear direction, 1 PR; full ritual burned a 1M session on a result the user disliked |
+| #29 (manual SW reg) | clearly trivial | one file, ~20 LOC, no design discussion needed |
+
+### Reading order for context
+
+When you start a session: auto-loaded memory in `MEMORY.md`, then
+this file, then `ARCHITECTURE.md`. Don't re-derive context already
+captured there.
