@@ -36,7 +36,7 @@ declare
   normalized_email text := lower(trim(_email));
 begin
   if caller is null then
-    raise exception 'unauthenticated';
+    raise exception 'not_authenticated';
   end if;
   if normalized_email = '' or normalized_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
     raise exception 'invalid_email';
@@ -73,9 +73,12 @@ declare
   hi uuid;
 begin
   if caller is null then
-    raise exception 'unauthenticated';
+    raise exception 'not_authenticated';
   end if;
   select email into caller_email from auth.users where id = caller;
+  if caller_email is null then
+    raise exception 'no_email';
+  end if;
   caller_email := lower(caller_email);
 
   select token, from_user, to_email, accepted_at into inv
@@ -122,7 +125,7 @@ declare
   new_token text;
 begin
   if caller is null then
-    raise exception 'unauthenticated';
+    raise exception 'not_authenticated';
   end if;
   new_token := encode(gen_random_bytes(16), 'hex');
   update public.profiles set add_me_token = new_token where id = caller;
@@ -148,7 +151,7 @@ declare
   hi uuid;
 begin
   if caller is null then
-    raise exception 'unauthenticated';
+    raise exception 'not_authenticated';
   end if;
   select id into owner_id from public.profiles where add_me_token = _token;
   if not found then
@@ -180,7 +183,7 @@ declare
   caller uuid := auth.uid();
 begin
   if caller is null then
-    raise exception 'unauthenticated';
+    raise exception 'not_authenticated';
   end if;
   if _other = caller then
     raise exception 'self_unfriend';
@@ -214,7 +217,7 @@ as $$
   select p.id, p.display_name, p.handle, p.avatar_url, p.updated_at
   from my_edges
   join public.profiles p on p.id = my_edges.friend_id
-  order by p.display_name nulls last;
+  order by p.display_name nulls last, p.id;
 $$;
 
 grant execute on function public.get_friends() to authenticated;

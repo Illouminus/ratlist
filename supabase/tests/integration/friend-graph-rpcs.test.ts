@@ -138,7 +138,7 @@ describe('friend RPCs', () => {
     const alice = await clientFor(TEST_USERS.alice);
     const { error } = await alice.rpc('accept_add_me', { _token: 'alice_link' });
     expect(error).toBeTruthy();
-    expect(error?.message).toMatch(/self/);
+    expect(error?.message).toMatch(/self_link/);
   });
 
   it('accept_add_me rejects unknown token', async () => {
