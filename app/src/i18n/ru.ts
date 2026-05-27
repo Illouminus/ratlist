@@ -53,6 +53,13 @@ export const ru: Translation = {
     by_price: 'цена',
     by_category: 'категория',
   },
+  cropDialog: {
+    title: 'обрежь фотку',
+    cancel: 'отмена',
+    save: 'сохранить',
+    saving: 'сохраняем…',
+    zoom: 'зум',
+  },
   empty: {
     headline: 'пусто\nпока.',
     annotation: 'тихое начало.',

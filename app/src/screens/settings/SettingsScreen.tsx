@@ -16,7 +16,7 @@
  * sole_admin_of_groups and we have to surface the list of blocked
  * circles.
  */
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useProfile } from '../../auth/useProfile';
@@ -36,6 +36,7 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { Field } from '../../components/Field';
 import { SketchInput } from '../../components/SketchInput';
 import { Button } from '../../components/Button';
+import { ImageCropDialog } from '../../components/ImageCropDialog';
 import { LangToggle } from '../../components/LangToggle';
 import { useToast } from '../../components/useToast';
 
@@ -365,14 +366,25 @@ function AvatarPanel({ profile, onChanged }: AvatarPanelProps) {
   const { t } = useI18n();
   const toast = useToast();
   const [uploading, setUploading] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
-  async function handleFile(e: ChangeEvent<HTMLInputElement>): Promise<void> {
+  useEffect(() => {
+    return () => {
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+    };
+  }, [cropSrc]);
+
+  function handlePick(e: ChangeEvent<HTMLInputElement>): void {
     const file = e.target.files?.[0];
-    // Reset the input value immediately so picking the same file twice
-    // (e.g. after a failed upload) still triggers onChange.
+    // Reset so picking the same file twice (e.g. after cancelling crop)
+    // still fires onChange.
     e.target.value = '';
     if (!file) return;
+    setCropSrc(URL.createObjectURL(file));
+  }
 
+  async function handleCropSave(file: File): Promise<void> {
+    setCropSrc(null);
     setUploading(true);
     const result = await uploadAvatar(file, profile.id);
     if ('error' in result) {
@@ -433,7 +445,7 @@ function AvatarPanel({ profile, onChanged }: AvatarPanelProps) {
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => void handleFile(e)}
+            onChange={handlePick}
             disabled={uploading}
             style={{ display: 'none' }}
           />
@@ -457,6 +469,19 @@ function AvatarPanel({ profile, onChanged }: AvatarPanelProps) {
           </button>
         )}
       </div>
+
+      {cropSrc && (
+        <ImageCropDialog
+          open
+          imageSrc={cropSrc}
+          aspect={1}
+          cropShape="round"
+          outputMaxDim={512}
+          filename="avatar.jpg"
+          onCancel={() => setCropSrc(null)}
+          onSave={(file) => void handleCropSave(file)}
+        />
+      )}
     </div>
   );
 }

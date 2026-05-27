@@ -1,21 +1,23 @@
 /**
  * `<PhotoField>` — file picker + live preview used inside `<ItemForm>`.
  *
+ * On pick, the file is handed to `<ImageCropDialog>` (4:3, free crop)
+ * so users can frame the photo before upload. The resulting JPEG is
+ * then sent through the existing `uploadItemImage` path.
+ *
  * The component is dumb about the surrounding form: it just exposes
  * `value` (current cover URL or null) and an `onChange` callback. The
  * parent decides what to do with the URL — usually pass it through to
  * the item insert/update.
- *
- * Hidden `<input type="file">` paired with a labelled button keeps the
- * editorial aesthetic (no native file-chooser styling leaks through).
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../auth/useAuth';
 import { useI18n } from '../../i18n/useI18n';
 import { uploadItemImage } from '../../items/uploadItemImage';
 import { errorMessage } from '../../lib/errors';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { Button } from '../../components/Button';
+import { ImageCropDialog } from '../../components/ImageCropDialog';
 
 interface PhotoFieldProps {
   value: string | null;
@@ -28,11 +30,28 @@ export function PhotoField({ value, onChange }: PhotoFieldProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
-  async function handleFile(file: File): Promise<void> {
-    if (!user) return;
-    setUploading(true);
+  // Release the object URL once the dialog closes so we don't leak memory.
+  useEffect(() => {
+    return () => {
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+    };
+  }, [cropSrc]);
+
+  function openPicker(): void {
+    inputRef.current?.click();
+  }
+
+  function handlePicked(file: File): void {
     setError(null);
+    setCropSrc(URL.createObjectURL(file));
+  }
+
+  async function handleCropSave(file: File): Promise<void> {
+    if (!user) return;
+    setCropSrc(null);
+    setUploading(true);
     const result = await uploadItemImage(file, user.id);
     setUploading(false);
     if ('error' in result) {
@@ -40,10 +59,6 @@ export function PhotoField({ value, onChange }: PhotoFieldProps) {
       return;
     }
     onChange(result.url);
-  }
-
-  function openPicker(): void {
-    inputRef.current?.click();
   }
 
   return (
@@ -94,9 +109,22 @@ export function PhotoField({ value, onChange }: PhotoFieldProps) {
           const f = e.target.files?.[0];
           // Allow re-selecting the same file by clearing the value after read.
           e.target.value = '';
-          if (f) void handleFile(f);
+          if (f) handlePicked(f);
         }}
       />
+
+      {cropSrc && (
+        <ImageCropDialog
+          open
+          imageSrc={cropSrc}
+          aspect={4 / 3}
+          cropShape="rect"
+          outputMaxDim={1200}
+          filename="cover.jpg"
+          onCancel={() => setCropSrc(null)}
+          onSave={(file) => void handleCropSave(file)}
+        />
+      )}
     </div>
   );
 }
