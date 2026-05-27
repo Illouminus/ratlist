@@ -99,12 +99,15 @@ async function loadFriendList(targetId: string): Promise<FetchState> {
   ]);
 
   if (profileRes.error) {
+    console.error('[useFriendList] profile load failed', { targetId, error: profileRes.error });
     return { kind: 'failed', targetId, error: profileRes.error.message };
   }
   if (!profileRes.data) {
+    console.error('[useFriendList] profile not found', { targetId });
     return { kind: 'failed', targetId, error: 'profile not found' };
   }
   if (itemsRes.error) {
+    console.error('[useFriendList] items load failed', { targetId, error: itemsRes.error });
     return { kind: 'failed', targetId, error: itemsRes.error.message };
   }
 

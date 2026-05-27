@@ -326,6 +326,21 @@ function Header({
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
+        {profile.avatar_url && (
+          <img
+            src={profile.avatar_url}
+            alt=""
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '1px solid var(--hair-strong)',
+              marginBottom: 6,
+              flexShrink: 0,
+            }}
+          />
+        )}
         <h2
           className="display-italic"
           style={{
