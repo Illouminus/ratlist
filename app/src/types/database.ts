@@ -9,6 +9,105 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      archive_group_invites: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          group_id: string | null
+          note: string | null
+          token: string | null
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          group_id?: string | null
+          note?: string | null
+          token?: string | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          group_id?: string | null
+          note?: string | null
+          token?: string | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
+      archive_group_members: {
+        Row: {
+          group_id: string | null
+          joined_at: string | null
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          group_id?: string | null
+          joined_at?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          group_id?: string | null
+          joined_at?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      archive_groups: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          emoji: string | null
+          id: string | null
+          name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          emoji?: string | null
+          id?: string | null
+          name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          emoji?: string | null
+          id?: string | null
+          name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      archive_item_groups: {
+        Row: {
+          group_id: string | null
+          item_id: string | null
+        }
+        Insert: {
+          group_id?: string | null
+          item_id?: string | null
+        }
+        Update: {
+          group_id?: string | null
+          item_id?: string | null
+        }
+        Relationships: []
+      }
       claims: {
         Row: {
           created_at: string
@@ -210,6 +309,74 @@ export type Database = {
           },
         ]
       }
+      friend_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          from_user: string
+          message: string | null
+          to_email: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          from_user: string
+          message?: string | null
+          to_email: string
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          from_user?: string
+          message?: string | null
+          to_email?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_invites_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      friendships: {
+        Row: {
+          created_at: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_user_b_fkey"
+            columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           group_id: string
@@ -403,6 +570,7 @@ export type Database = {
       }
       items: {
         Row: {
+          category: string | null
           cover_url: string | null
           created_at: string
           id: string
@@ -416,8 +584,10 @@ export type Database = {
           title: string
           updated_at: string
           url: string | null
+          visibility: string
         }
         Insert: {
+          category?: string | null
           cover_url?: string | null
           created_at?: string
           id?: string
@@ -431,8 +601,10 @@ export type Database = {
           title: string
           updated_at?: string
           url?: string | null
+          visibility?: string
         }
         Update: {
+          category?: string | null
           cover_url?: string | null
           created_at?: string
           id?: string
@@ -446,6 +618,7 @@ export type Database = {
           title?: string
           updated_at?: string
           url?: string | null
+          visibility?: string
         }
         Relationships: [
           {
@@ -459,6 +632,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          add_me_token: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -471,6 +645,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          add_me_token?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -483,6 +658,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          add_me_token?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -731,11 +907,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_add_me: { Args: { _token: string }; Returns: string }
+      accept_friend_invite: { Args: { _token: string }; Returns: string }
+      are_friends: { Args: { _a: string; _b: string }; Returns: boolean }
       can_see_event: { Args: { _event_id: string }; Returns: boolean }
       can_see_item: { Args: { _item_id: string }; Returns: boolean }
       complete_onboarding: {
         Args: { _display_name: string; _handle?: string }
         Returns: {
+          add_me_token: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -753,6 +933,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_friend_invite: {
+        Args: { _email: string; _message?: string }
+        Returns: string
       }
       create_group: {
         Args: { _description?: string; _emoji?: string; _name: string }
@@ -788,6 +972,42 @@ export type Database = {
           occurs_on: string
           participant_count: number
           title: string
+        }[]
+      }
+      get_friend_list: {
+        Args: { _category?: string; _friend_id: string }
+        Returns: {
+          category: string | null
+          cover_url: string | null
+          created_at: string
+          id: string
+          maker: string | null
+          note: string | null
+          occasion: string
+          owner_id: string
+          price_text: string | null
+          priority: number
+          status: string
+          title: string
+          updated_at: string
+          url: string | null
+          visibility: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_friends: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          handle: string
+          id: string
+          updated_at: string
         }[]
       }
       get_my_events: {
@@ -889,6 +1109,7 @@ export type Database = {
       join_event_via_token: { Args: { _token: string }; Returns: string }
       owns_event: { Args: { _event_id: string }; Returns: boolean }
       owns_item: { Args: { _item_id: string }; Returns: boolean }
+      reapply_friend_backfill: { Args: never; Returns: undefined }
       redeem_invite: {
         Args: { _token: string }
         Returns: {
@@ -898,10 +1119,12 @@ export type Database = {
         }[]
       }
       reveal_santa_event: { Args: { _event_id: string }; Returns: undefined }
+      rotate_add_me_token: { Args: never; Returns: string }
       run_santa_draw: { Args: { _event_id: string }; Returns: undefined }
       set_share_token: { Args: { _enabled: boolean }; Returns: string }
       shares_group_with: { Args: { _other_user: string }; Returns: boolean }
       truncate_test_state: { Args: never; Returns: undefined }
+      unfriend: { Args: { _other: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
