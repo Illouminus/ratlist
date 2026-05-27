@@ -166,7 +166,7 @@ export const ru: Translation = {
     empty: 'Ещё нет крыс. Добавь первую →',
     addCta: 'Добавить',
     unfriend: 'Убрать из крыс',
-    unfriendConfirm: 'Аня больше не увидит твой список, и ты — её. Точно?',
+    unfriendConfirm: '{name} больше не увидит твой список, и ты — их. Точно?',
     unfriendDone: 'Убрали из крыс.',
     pendingTitle: 'Отправленные приглашения',
     pendingEmpty: 'Нет ожидающих ответа.',
