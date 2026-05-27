@@ -48,6 +48,13 @@ export const en: Translation = {
     by_price: 'price',
     by_category: 'category',
   },
+  cropDialog: {
+    title: 'crop the photo',
+    cancel: 'cancel',
+    save: 'save',
+    saving: 'saving…',
+    zoom: 'zoom',
+  },
   empty: {
     headline: 'nothing\nyet.',
     annotation: 'a quiet beginning.',
