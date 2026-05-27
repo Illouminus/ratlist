@@ -51,7 +51,7 @@ import { LandingScreen } from './screens/LandingScreen';
 // between them constantly so a Suspense flash hurts every tab.
 import { MyListScreen } from './screens/items/MyListScreen';
 import { GroupsScreen } from './screens/groups/GroupsScreen';
-import { PeopleScreen } from './screens/people/PeopleScreen';
+import { FriendsScreen } from './screens/people/FriendsScreen';
 import { SantaListScreen } from './screens/santa/SantaListScreen';
 import { EventsScreen } from './screens/events/EventsScreen';
 // Eager: the two legal pages. Lazy-loading them produced an empty
@@ -272,7 +272,7 @@ export function AppRoutes() {
         <Route path="/i/:itemId" element={<ItemDetailScreen />} />
         <Route path="/i/:itemId/edit" element={<EditItemScreen />} />
         <Route path="/groups" element={<GroupsScreen />} />
-        <Route path="/people" element={<PeopleScreen />} />
+        <Route path="/people" element={<FriendsScreen />} />
         <Route path="/p/:userId" element={<FriendListScreen />} />
         <Route path="/santa" element={<SantaListScreen />} />
         <Route path="/santa/:eventId" element={<SantaEventScreen />} />
