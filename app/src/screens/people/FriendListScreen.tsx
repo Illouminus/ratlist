@@ -31,6 +31,7 @@ import { PrioritySectionHeader } from '../../components/PrioritySectionHeader';
 import { ReportDialog } from '../../components/ReportDialog';
 import { SittingRat, RunningRat } from '../../components/rats';
 import { groupByPriority } from '../../items/groupByPriority';
+import { formatPrice } from '../../lib/formatPrice';
 
 export function FriendListScreen() {
   const { t } = useI18n();
@@ -405,7 +406,7 @@ function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemR
                   whiteSpace: 'nowrap',
                 }}
               >
-                {item.price_text}
+                {formatPrice(item.price_text)}
               </div>
             )}
           </div>
@@ -455,12 +456,7 @@ function FriendItemRow({ item, myUserId, onClaim, onRelease, last }: FriendItemR
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
               <OccasionTag kind={item.occasion as Occasion} />
-              {/* Friend's priority — useful "do they want this hard?"
-                  signal for whoever's deciding what to claim. Same
-                  rule as my-list: only show non-default levels. */}
-              {item.priority !== 2 && (
-                <PriorityDots level={item.priority === 1 ? 1 : 3} />
-              )}
+              <PriorityDots level={item.priority === 1 ? 1 : item.priority === 3 ? 3 : 2} />
             </div>
             <ClaimControl
               myClaim={myClaim ?? null}

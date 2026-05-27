@@ -25,6 +25,7 @@ import { SittingRat } from '../components/rats';
 import { groupByPriority } from '../items/groupByPriority';
 import { PrioritySectionHeader } from '../components/PrioritySectionHeader';
 import type { Occasion } from '../lib/db';
+import { formatPrice } from '../lib/formatPrice';
 
 interface PublicOwner {
   display_name: string | null;
@@ -318,7 +319,7 @@ function Row({ item, index, last }: { item: PublicItem; index: number; last: boo
                 whiteSpace: 'nowrap',
               }}
             >
-              {item.price_text}
+              {formatPrice(item.price_text)}
             </div>
           )}
         </div>

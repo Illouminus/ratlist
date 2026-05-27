@@ -24,6 +24,7 @@ import { LangToggle } from '../../components/LangToggle';
 import { PriorityDots } from '../../components/PriorityDots';
 import { useI18n } from '../../i18n/useI18n';
 import { useAuth } from '../../auth/useAuth';
+import { formatPrice } from '../../lib/formatPrice';
 import {
   getEventView,
   joinEventViaToken,
@@ -282,7 +283,7 @@ function ItemRow({ item }: { item: EventViewItem }) {
           className="mono-meta"
           style={{ color: 'var(--ink-3)', marginTop: 'var(--s-1)', fontSize: 12 }}
         >
-          {[item.maker, item.price_text].filter(Boolean).join(' · ')}
+          {[item.maker, formatPrice(item.price_text)].filter(Boolean).join(' · ')}
         </div>
       )}
       {/* Owner's personal note — same 2-line clamp + ink-2 styling as the
@@ -305,16 +306,9 @@ function ItemRow({ item }: { item: EventViewItem }) {
           {item.note}
         </div>
       )}
-      {/* Same pattern as MyList grid `ItemCard`: render the priority dots
-          only for non-default levels (1 = «очень хочу», 3 = «если найдётся»)
-          so default-priority cards stay visually quiet. Sections aren't a
-          fit for the mosaic layout used here — the dot marker carries the
-          signal without breaking the grid. */}
-      {item.priority !== 2 && (
-        <div style={{ marginTop: 'var(--s-1)' }}>
-          <PriorityDots level={item.priority === 1 ? 1 : 3} />
-        </div>
-      )}
+      <div style={{ marginTop: 'var(--s-1)' }}>
+        <PriorityDots level={item.priority === 1 ? 1 : item.priority === 3 ? 3 : 2} />
+      </div>
     </article>
   );
 }
