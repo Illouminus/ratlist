@@ -71,7 +71,7 @@ function makeItem(overrides: Partial<MockItem> = {}): MockItem {
     note: null,
     cover_url: null,
     category: null,
-    visibility: 'friends',
+    visibility: 'shared',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     group_ids: [],

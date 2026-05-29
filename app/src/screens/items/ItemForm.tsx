@@ -76,15 +76,12 @@ export function ItemForm({ initial, onSubmit, onCancel, submitLabel }: ItemFormP
   const [note, setNote] = useState<string>(initial?.note ?? '');
   const [coverUrl, setCoverUrl] = useState<string | null>(initial?.cover_url ?? null);
   const [metaStatus, setMetaStatus] = useState<MetaFetchStatus>({ kind: 'idle' });
-  // 3-state visibility (private / friends / public). The DB default is
-  // 'friends'; we mirror it in the form so create-mode shows "friends"
-  // selected up front. Edit mode reads the existing item's value, with
-  // a 'friends' fallback in case the row predates the column (PR 1
-  // migration backfilled all existing rows, so this should never fire).
+  // 2-state visibility (shared / private). DB default is 'shared'; create
+  // mode shows "shared" up front, edit mode reads the item's value.
+  // Legacy 'friends'/'public' rows (pre-collapse) map to 'shared'.
   const [visibility, setVisibility] = useState<Visibility>(() => {
     const v = (initial as { visibility?: string } | null | undefined)?.visibility;
-    if (v === 'private' || v === 'friends' || v === 'public') return v;
-    return 'friends';
+    return v === 'private' ? 'private' : 'shared';
   });
   // Freeform category text or null. CategoryInput commits on
   // blur/Enter/pick — never per-keystroke — so this is a stable
@@ -203,7 +200,7 @@ export function ItemForm({ initial, onSubmit, onCancel, submitLabel }: ItemFormP
       visibility,
       category,
       // PR 2 of the friend-graph redesign dropped the circles picker —
-      // items now use `visibility` (private/friends/public) instead of
+      // items now use `visibility` (shared/private) instead of
       // the legacy `item_groups` junction. We still pass an empty
       // group_ids array to keep the type happy until PR 3 sweeps the
       // junction table writes out of useMyItems entirely.

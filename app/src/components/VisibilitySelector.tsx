@@ -1,6 +1,6 @@
 /**
- * `<VisibilitySelector>` — three-segment toggle for an item's audience:
- * private (just me), friends (rats), public (anyone with the share link).
+ * `<VisibilitySelector>` — two-segment toggle for an item's audience:
+ * shared (friends in-app + anyone with your share link) or private (just me).
  *
  * Mirrors the editorial filter-chip pattern (underline + bold for the
  * active option, light ink for the rest) — same visual treatment as
@@ -8,20 +8,20 @@
  * a single-line helper text describes what the active state means so
  * the user never has to guess.
  *
- * Icons are inline SVGs (lock / two-dot rats / globe) drawn in the same
- * 1.4px hairline as the rest of the design — no external icon font, no
- * lucide dependency. Sized to sit alongside 12px body text.
+ * Icons are inline SVGs (eye / lock) drawn in the same 1.4px hairline as
+ * the rest of the design — no external icon font. Sized to sit alongside
+ * 12px body text.
  */
 import { useI18n } from '../i18n/useI18n';
 
-export type Visibility = 'private' | 'friends' | 'public';
+export type Visibility = 'private' | 'shared';
 
 export interface VisibilitySelectorProps {
   value: Visibility;
   onChange: (next: Visibility) => void;
 }
 
-const VISIBILITIES: ReadonlyArray<Visibility> = ['private', 'friends', 'public'];
+const VISIBILITIES: ReadonlyArray<Visibility> = ['shared', 'private'];
 
 export function VisibilitySelector({ value, onChange }: VisibilitySelectorProps) {
   const { t } = useI18n();
@@ -128,27 +128,7 @@ function VisibilityIcon({ kind }: VisibilityIconProps) {
       </svg>
     );
   }
-  if (kind === 'friends') {
-    return (
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke={stroke}
-        strokeWidth={1.4}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <circle cx="5.5" cy="6" r="2.2" />
-        <circle cx="10.5" cy="6" r="2.2" />
-        <path d="M 2 13 c 0 -2 1.5 -3.4 3.5 -3.4 s 3.5 1.4 3.5 3.4" />
-        <path d="M 7 13 c 0 -2 1.5 -3.4 3.5 -3.4 s 3.5 1.4 3.5 3.4" />
-      </svg>
-    );
-  }
+  // shared — an open eye: "people you let in can see this".
   return (
     <svg
       width={size}
@@ -162,9 +142,8 @@ function VisibilityIcon({ kind }: VisibilityIconProps) {
       aria-hidden="true"
       focusable="false"
     >
-      <circle cx="8" cy="8" r="5.6" />
-      <path d="M 2.4 8 H 13.6" />
-      <path d="M 8 2.4 a 7 7 0 0 1 0 11.2 a 7 7 0 0 1 0 -11.2" />
+      <path d="M 1.5 8 C 3.2 4.7 5.4 3 8 3 s 4.8 1.7 6.5 5 C 12.8 11.3 10.6 13 8 13 S 3.2 11.3 1.5 8 Z" />
+      <circle cx="8" cy="8" r="2.1" />
     </svg>
   );
 }

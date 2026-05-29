@@ -20,7 +20,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useItem, type FullItem } from '../../items/useItem';
 import { useMyItems } from '../../items/useMyItems';
-import { useGroups } from '../../groups/useGroups';
 import { usePeople } from '../../people/usePeople';
 import { errorMessage } from '../../lib/errors';
 import { PaperLayout } from '../../components/PaperLayout';
@@ -45,7 +44,6 @@ export function ItemDetailScreen() {
   const { query } = useItem(itemId || null);
   // Only used when the item is mine (for "#03" position + delete).
   const { query: myItemsQ, deleteItem } = useMyItems();
-  const { query: groupsQ } = useGroups();
   // Friend items: usePeople is already loaded for the directory; we
   // look up the owner's display name from there. Cheap reuse instead
   // of an extra profile fetch.
@@ -83,9 +81,6 @@ export function ItemDetailScreen() {
     ? myItemsQ.items.findIndex((i) => i.id === item.id)
     : -1;
   const number = myIndex >= 0 ? String(myIndex + 1).padStart(2, '0') : null;
-
-  const groups = groupsQ.status === 'ready' ? groupsQ.groups : [];
-  const publishedGroups = groups.filter((g) => item.group_ids.includes(g.id));
 
   const owner =
     !isMine && peopleQ.status === 'ready'
@@ -266,7 +261,7 @@ export function ItemDetailScreen() {
 
       <Rule top={22} bottom={18} />
 
-      <MetaGrid item={item} publishedGroups={publishedGroups} showVisibility={isMine} />
+      <MetaGrid item={item} showVisibility={isMine} />
 
       <ActionsRow
         item={item}
@@ -377,23 +372,16 @@ function Rule({ top, bottom }: { top: number; bottom: number }) {
 
 interface MetaGridProps {
   item: FullItem;
-  publishedGroups: { id: string; name: string; emoji: string | null }[];
-  /** Only own-item callers see the per-group visibility row — for
-   *  someone else's item that line would just leak their grouping. */
+  /** Only own-item callers see the visibility row — no point showing
+   *  someone else's item their own audience setting. */
   showVisibility: boolean;
 }
 
-function MetaGrid({ item, publishedGroups, showVisibility }: MetaGridProps) {
+function MetaGrid({ item, showVisibility }: MetaGridProps) {
   const { t } = useI18n();
 
   const visibility =
-    publishedGroups.length === 0
-      ? t('item.privateOnly')
-      : t('item.publishedIn', {
-          groups: publishedGroups
-            .map((g) => `${g.emoji ? g.emoji + ' ' : ''}${g.name}`)
-            .join(', '),
-        });
+    item.visibility === 'private' ? t('visibility.private') : t('visibility.shared');
 
   return (
     <div
@@ -410,7 +398,7 @@ function MetaGrid({ item, publishedGroups, showVisibility }: MetaGridProps) {
       <MetaCell label={t('item.metaPriority')}>{t(priorityKey(item.priority))}</MetaCell>
       {showVisibility && (
         <div style={{ gridColumn: '1 / -1' }}>
-          <MetaCell label={t('nav.groups')}>{visibility}</MetaCell>
+          <MetaCell label={t('add.visibilityLabel')}>{visibility}</MetaCell>
         </div>
       )}
     </div>

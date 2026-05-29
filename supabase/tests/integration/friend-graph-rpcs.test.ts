@@ -241,8 +241,8 @@ describe('friend RPCs', () => {
     await admin.from('friendships').insert({ user_a: lo, user_b: hi });
 
     await admin.from('items').insert([
-      { owner_id: TEST_USERS.bob, title: 'Pan',   visibility: 'friends', category: 'Кухня' },
-      { owner_id: TEST_USERS.bob, title: 'Book',  visibility: 'friends', category: 'Книги' },
+      { owner_id: TEST_USERS.bob, title: 'Pan',   visibility: 'shared', category: 'Кухня' },
+      { owner_id: TEST_USERS.bob, title: 'Book',  visibility: 'shared', category: 'Книги' },
       { owner_id: TEST_USERS.bob, title: 'Diary', visibility: 'private', category: null },
     ]);
 
@@ -267,7 +267,7 @@ describe('friend RPCs', () => {
     await admin.from('items').insert({
       owner_id: TEST_USERS.bob,
       title: 'Secret',
-      visibility: 'friends',
+      visibility: 'shared',
     });
     const alice = await clientFor(TEST_USERS.alice);
     const { data } = await alice.rpc('get_friend_list', {

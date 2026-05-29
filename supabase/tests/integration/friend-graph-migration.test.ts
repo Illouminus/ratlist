@@ -59,7 +59,7 @@ describe('data migration — circles → friendships', () => {
       .select('id, visibility')
       .in('id', [pub!.id, priv!.id]);
     const byId = new Map((rows ?? []).map((r) => [r.id, r.visibility]));
-    expect(byId.get(pub!.id)).toBe('friends');
+    expect(byId.get(pub!.id)).toBe('shared');
     expect(byId.get(priv!.id)).toBe('private');
   });
 

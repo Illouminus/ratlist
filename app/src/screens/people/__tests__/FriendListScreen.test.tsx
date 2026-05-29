@@ -53,7 +53,7 @@ function makeFriendItem(overrides: Partial<MockFriendItem> = {}): MockFriendItem
     created_at: '',
     updated_at: '',
     category: null,
-    visibility: 'friends',
+    visibility: 'shared',
     claims: [],
     ...overrides,
   };
