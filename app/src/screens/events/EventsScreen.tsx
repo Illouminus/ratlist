@@ -71,6 +71,25 @@ export function EventsScreen() {
       </header>
 
       <EventList query={query} />
+
+      {/* Secondary entry to Secret Santa — demoted from primary nav
+          (seasonal, off the core loop) but still findable year-round.
+          A quiet hairline-separated link, not a section of its own. */}
+      <div
+        style={{
+          marginTop: 'var(--s-7)',
+          paddingTop: 'var(--s-4)',
+          borderTop: '1px solid var(--hair)',
+        }}
+      >
+        <Link
+          to="/santa"
+          className="mono-meta"
+          style={{ color: 'var(--ink-2)', textDecoration: 'none' }}
+        >
+          {t('events.santaEntry')}
+        </Link>
+      </div>
     </PaperLayout>
   );
 }
