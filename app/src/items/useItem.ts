@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
 import type { Item, Occasion, ItemStatus } from '../lib/db';
+import type { Visibility } from '../components/VisibilitySelector';
 
 /** A row from `items` plus the groups it's published into and a stable
  *  flag for "is this mine?". The latter is computed against the current
@@ -40,6 +41,8 @@ export interface FullItem {
   cover_url: string | null;
   created_at: string;
   updated_at: string;
+  /** Who can see this item: 'shared' (friends + share link) or 'private'. */
+  visibility: Visibility;
   /** Groups the item is published into. Empty = owner-only. */
   group_ids: string[];
   /** True iff the caller is the owner of this item. */
@@ -94,6 +97,7 @@ async function loadItem(itemId: string, callerId: string): Promise<FetchState> {
     cover_url: data.cover_url,
     created_at: data.created_at,
     updated_at: data.updated_at,
+    visibility: data.visibility === 'private' ? 'private' : 'shared',
     group_ids: (data.item_groups ?? []).map((g) => g.group_id),
     is_mine: data.owner_id === callerId,
   };

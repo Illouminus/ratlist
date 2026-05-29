@@ -1,12 +1,12 @@
 // get_public_list — visibility filter + category projection.
 //
 // Two separate concerns covered here:
-//   1. PRIVACY LEAK FIX. After PR 1 added `items.visibility` defaulting
-//      to 'friends', the RPC quietly returned `friends`- and `private`-
-//      tier items to anonymous share-token visitors. This file asserts
-//      only `visibility = 'public'` items are exposed.
-//   2. CATEGORY PROJECTION. The `public_item` composite now carries
-//      `category`, with an optional case-insensitive `_category` filter.
+//   1. PRIVACY. After the visibility collapse (20260529130000) the share
+//      link shows every non-private item ('shared'); 'private' items stay
+//      owner-only. This file asserts private items never leak to an
+//      anonymous share-token visitor.
+//   2. CATEGORY PROJECTION. The `public_item` composite carries `category`,
+//      with an optional case-insensitive `_category` filter.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { adminClient, clientFor } from './helpers/client.ts';
 import { ensureTestUsers, truncateBetweenTests, TEST_USERS } from './helpers/seed.ts';
@@ -30,18 +30,15 @@ describe('get_public_list — visibility filter + category', () => {
     return data;
   }
 
-  it('returns ONLY public items — friends- and private-tier items are hidden', async () => {
+  it('returns shared items but hides private ones', async () => {
     const admin = adminClient();
-    // Alice owns three items with the three different visibility levels.
     await admin.from('items').insert([
-      { owner_id: TEST_USERS.alice, title: 'Public thing',  visibility: 'public'  },
-      { owner_id: TEST_USERS.alice, title: 'Friends thing', visibility: 'friends' },
+      { owner_id: TEST_USERS.alice, title: 'Shared thing',  visibility: 'shared'  },
       { owner_id: TEST_USERS.alice, title: 'Private thing', visibility: 'private' },
     ]);
     const token = await aliceShareToken();
 
-    // Anonymous client (no JWT) — the share URL is supposed to work
-    // without auth. `adminClient` is service-role; we want anon here.
+    // Anonymous client (no JWT) — the share URL works without auth.
     const { createClient } = await import('@supabase/supabase-js');
     const { SUPABASE_URL, ANON_KEY } = await import('./helpers/env.ts');
     const anon = createClient(SUPABASE_URL, ANON_KEY, {
@@ -52,16 +49,16 @@ describe('get_public_list — visibility filter + category', () => {
     const row = Array.isArray(data) ? data[0] : null;
     expect(row).toBeTruthy();
     const items = (row as { items: Array<{ title: string }> }).items;
-    // Privacy fix: exactly one item visible to the anonymous viewer.
+    // Only the shared item is visible to the anonymous viewer.
     expect(items).toHaveLength(1);
-    expect(items[0].title).toBe('Public thing');
+    expect(items[0].title).toBe('Shared thing');
   });
 
   it('case-insensitive _category filter narrows the result set', async () => {
     const admin = adminClient();
     await admin.from('items').insert([
-      { owner_id: TEST_USERS.alice, title: 'Чайник', visibility: 'public', category: 'Кухня' },
-      { owner_id: TEST_USERS.alice, title: 'Роман',  visibility: 'public', category: 'Книги' },
+      { owner_id: TEST_USERS.alice, title: 'Чайник', visibility: 'shared', category: 'Кухня' },
+      { owner_id: TEST_USERS.alice, title: 'Роман',  visibility: 'shared', category: 'Книги' },
     ]);
     const token = await aliceShareToken();
     const { createClient } = await import('@supabase/supabase-js');
@@ -117,8 +114,8 @@ describe('get_public_list — visibility filter + category', () => {
   it('composite payload includes the category field on each row', async () => {
     const admin = adminClient();
     await admin.from('items').insert([
-      { owner_id: TEST_USERS.alice, title: 'Чайник',  visibility: 'public', category: 'Кухня' },
-      { owner_id: TEST_USERS.alice, title: 'Без полки', visibility: 'public' /* category: null */ },
+      { owner_id: TEST_USERS.alice, title: 'Чайник',    visibility: 'shared', category: 'Кухня' },
+      { owner_id: TEST_USERS.alice, title: 'Без полки', visibility: 'shared' /* category: null */ },
     ]);
     const token = await aliceShareToken();
     const { createClient } = await import('@supabase/supabase-js');
@@ -130,9 +127,6 @@ describe('get_public_list — visibility filter + category', () => {
     expect(error).toBeNull();
     const items = (data as Array<{ items: Array<{ title: string; category: string | null }> }>)[0].items;
     expect(items).toHaveLength(2);
-    // Find each by title and verify the category field exists with
-    // the expected value — not just truthy, exact equality on both
-    // the populated and the null case.
     const kitchen   = items.find((i) => i.title === 'Чайник');
     const uncategorised = items.find((i) => i.title === 'Без полки');
     expect(kitchen).toBeTruthy();

@@ -266,21 +266,17 @@ describe('ItemForm — fetchUrlMeta integration', () => {
 // ── visibility + category (friend-graph PR 2) ─────────────────────────────────
 
 describe('ItemForm — visibility and category', () => {
-  it('defaults visibility to "friends" on a fresh add form', async () => {
+  it('defaults visibility to "shared" on a fresh add form', async () => {
     renderForm();
 
-    // VisibilitySelector renders three radio segments. The active one
-    // is the only one with aria-checked="true". On create mode the
-    // default must be "friends" — PR 1 set this as the DB default and
-    // the form mirrors it explicitly.
-    const friendsRadio = await screen.findByRole('radio', { name: /friends/i });
-    expect(friendsRadio.getAttribute('aria-checked')).toBe('true');
+    // VisibilitySelector renders two radio segments. The active one is
+    // the only one with aria-checked="true". On create mode the default
+    // is "shared" — the DB default, mirrored by the form explicitly.
+    const sharedRadio = await screen.findByRole('radio', { name: /shared/i });
+    expect(sharedRadio.getAttribute('aria-checked')).toBe('true');
 
     const privateRadio = screen.getByRole('radio', { name: /just me/i });
     expect(privateRadio.getAttribute('aria-checked')).toBe('false');
-
-    const publicRadio = screen.getByRole('radio', { name: /anyone with the link/i });
-    expect(publicRadio.getAttribute('aria-checked')).toBe('false');
 
     // CategoryInput fires a background fetch on mount that calls
     // setState after the test body returns — give it a tick to settle
@@ -305,9 +301,10 @@ describe('ItemForm — visibility and category', () => {
     fireEvent.change(categoryInput, { target: { value: 'Кухня' } });
     fireEvent.keyDown(categoryInput, { key: 'Enter' });
 
-    // Switch visibility to "public".
-    const publicRadio = screen.getByRole('radio', { name: /anyone with the link/i });
-    fireEvent.click(publicRadio);
+    // Switch visibility to "just me" (private) — a non-default choice,
+    // so this proves the selector value flows into the payload.
+    const privateRadio = screen.getByRole('radio', { name: /just me/i });
+    fireEvent.click(privateRadio);
 
     // Submit.
     const submitBtn = screen.getByRole('button', { name: /save to list/i });
@@ -317,7 +314,7 @@ describe('ItemForm — visibility and category', () => {
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'A Kitchen Thing',
-          visibility: 'public',
+          visibility: 'private',
           category: 'Кухня',
         }),
       );

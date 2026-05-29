@@ -41,11 +41,9 @@ export interface CreateItemInput {
   /** Public URL of the uploaded cover image, or null for the placeholder. */
   cover_url?: string | null;
   /**
-   * 3-state visibility: 'private' (owner only), 'friends' (mutual friends
-   * from the friend-graph), or 'public' (anyone with the share link).
-   * Defaults to 'friends' on the form side — the DB default is also
-   * 'friends' (PR 1 migration) so omitting this is safe but explicit
-   * wins.
+   * 2-state visibility: 'shared' (friends in-app + anyone with the share
+   * link) or 'private' (owner only). Defaults to 'shared' both here and at
+   * the DB, so omitting it is safe but explicit wins.
    */
   visibility?: Visibility;
   /**
@@ -214,7 +212,7 @@ export function useMyItems(): UseMyItemsResult {
           note: input.note ?? null,
           priority: input.priority ?? 2,
           cover_url: input.cover_url ?? null,
-          visibility: input.visibility ?? 'friends',
+          visibility: input.visibility ?? 'shared',
           category: input.category ?? null,
         })
         .select('*')
@@ -282,7 +280,7 @@ export function useMyItems(): UseMyItemsResult {
           note: input.note ?? null,
           priority: input.priority ?? 2,
           cover_url: input.cover_url ?? null,
-          visibility: input.visibility ?? 'friends',
+          visibility: input.visibility ?? 'shared',
           category: input.category ?? null,
         })
         .eq('id', id);

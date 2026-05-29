@@ -50,7 +50,7 @@ describe('friend_graph_add migration — schema', () => {
     expect(dup?.message).toMatch(/duplicate|unique/i);
   });
 
-  it('adds items.visibility enum-checked column, default friends', async () => {
+  it('adds items.visibility enum-checked column, default shared', async () => {
     const admin = adminClient();
     const u1 = TEST_USERS.alice;
     const { data, error } = await admin
@@ -59,7 +59,7 @@ describe('friend_graph_add migration — schema', () => {
       .select('id, visibility')
       .single();
     expect(error).toBeNull();
-    expect(data?.visibility).toBe('friends');
+    expect(data?.visibility).toBe('shared');
     // Bad value must fail
     const { error: bad } = await admin
       .from('items')

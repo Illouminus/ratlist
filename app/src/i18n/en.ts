@@ -205,12 +205,10 @@ export const en: Translation = {
     selfErr: "you can't add yourself as a friend.",
   },
   visibility: {
+    shared: 'shared',
     private: 'just me',
-    friends: 'friends',
-    public: 'anyone with the link',
-    privateHelp: "only you see this — no friend will see it.",
-    friendsHelp: 'your rats see this in your list.',
-    publicHelp: 'shows up on your public page — wherever your share link goes.',
+    sharedHelp: 'your rats see it in the app — and anyone you give your list link to.',
+    privateHelp: 'only you see this. not your rats, not via the link.',
   },
   categories: {
     inputLabel: 'category',
