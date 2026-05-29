@@ -33,7 +33,7 @@ alter table public.items
   add constraint items_visibility_check check (visibility in ('private', 'shared'));
 alter table public.items alter column visibility set default 'shared';
 
--- ── 3. Items SELECT RLS — owner OR (shared AND friend) ───────────────────────
+-- ── 2. Items SELECT RLS — owner OR (shared AND friend) ───────────────────────
 -- Drops the old 3-state policy. Note this also removes the old
 -- `visibility = 'public'` branch that made public items visible to ANY
 -- authenticated user in-app; anonymous/link access goes through
@@ -49,7 +49,7 @@ create policy items_select_2state
     or (visibility = 'shared' and public.are_friends(owner_id, auth.uid()))
   );
 
--- ── 4. can_see_item — add the friendships path ───────────────────────────────
+-- ── 3. can_see_item — add the friendships path ───────────────────────────────
 -- Used by the `claims` policy (owner-blind: `not owns_item AND can_see_item`)
 -- and event policies. Owner + legacy item_groups + event-participation paths
 -- preserved; the new branch lets friends claim a friend's shared item.
@@ -80,7 +80,7 @@ as $$
     );
 $$;
 
--- ── 5. get_public_list — show everything non-private (was: only 'public') ────
+-- ── 4. get_public_list — show everything non-private (was: only 'public') ────
 -- Recreate (body identical to 20260529120000 except the visibility filter).
 drop function if exists public.get_public_list(text, text);
 
@@ -144,7 +144,7 @@ $$;
 revoke all on function public.get_public_list(text, text) from public;
 grant execute on function public.get_public_list(text, text) to anon, authenticated;
 
--- ── 6. get_friend_list — friend's shared items (was: friends + public) ───────
+-- ── 5. get_friend_list — friend's shared items (was: friends + public) ───────
 create or replace function public.get_friend_list(
   _friend_id uuid,
   _category  text default null
@@ -156,6 +156,7 @@ as $$
   select i.*
   from public.items i
   where i.owner_id = _friend_id
+    and i.status = 'active'
     and i.visibility = 'shared'
     and public.are_friends(_friend_id, auth.uid())
     and (_category is null or lower(i.category) = lower(_category));
@@ -163,55 +164,9 @@ $$;
 
 grant execute on function public.get_friend_list(uuid, text) to authenticated;
 
--- ── 7. Keep reapply_friend_backfill valid under the 2-tier model ─────────────
--- The PR1 backfill (20260527143650) guarded its visibility update on the old
--- default ('friends'). Post-collapse that value is gone, so the guard would
--- match nothing and a re-run would silently skip the "ungrouped → private"
--- step. Re-point the guard at the new default ('shared'). Friendships,
--- add_me_token, and archive logic are unchanged. NOT re-fired here — the
--- one-time prod backfill already ran; this only keeps the helper correct for
--- integration tests and any future manual re-run.
-create or replace function public.reapply_friend_backfill()
-returns void
-language plpgsql security definer
-set search_path = public, extensions
-as $$
-begin
-  insert into public.friendships (user_a, user_b, created_at)
-  select
-    gm1.user_id,
-    gm2.user_id,
-    min(least(gm1.joined_at, gm2.joined_at))
-  from public.group_members gm1
-  join public.group_members gm2
-    on gm1.group_id = gm2.group_id
-    and gm1.user_id < gm2.user_id
-  group by gm1.user_id, gm2.user_id
-  on conflict do nothing;
-
-  -- Ungrouped items still on the default ('shared') become 'private' — an
-  -- item in no group had no group-mate audience under the old model. Items
-  -- in a group keep 'shared' (visible to the friends those memberships became).
-  update public.items
-  set visibility = 'private'
-  where visibility = 'shared'
-    and not exists (
-      select 1 from public.item_groups ig where ig.item_id = items.id
-    );
-
-  update public.profiles
-  set add_me_token = encode(gen_random_bytes(16), 'hex')
-  where add_me_token is null;
-
-  drop table if exists public.archive_groups;
-  drop table if exists public.archive_group_members;
-  drop table if exists public.archive_group_invites;
-  drop table if exists public.archive_item_groups;
-  create table public.archive_groups        as select * from public.groups;
-  create table public.archive_group_members as select * from public.group_members;
-  create table public.archive_group_invites as select * from public.invites;
-  create table public.archive_item_groups   as select * from public.item_groups;
-end;
-$$;
-
-grant execute on function public.reapply_friend_backfill() to service_role;
+-- Note: reapply_friend_backfill (20260527143650) is intentionally NOT
+-- recreated here. Its visibility step guards on `visibility = 'friends'`,
+-- which is a harmless no-op post-collapse (no row is 'friends' anymore), so a
+-- re-run cannot privatise shared items. Re-pointing it at 'shared' would make
+-- a re-run wrongly downgrade legitimately-shared items, so the original is
+-- left alone. The one-time prod backfill already ran via its install DO block.

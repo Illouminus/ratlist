@@ -43,26 +43,6 @@ describe('data migration — circles → friendships', () => {
     expect(hasPair(TEST_USERS.alice, TEST_USERS.dave)).toBe(true);
   });
 
-  it('sets items.visibility based on item_groups membership', async () => {
-    const admin = adminClient();
-    const { data: g } = await admin.from('groups')
-      .insert({ name: 'family', created_by: TEST_USERS.alice }).select('id').single();
-    const { data: pub } = await admin.from('items')
-      .insert({ owner_id: TEST_USERS.alice, title: 'In group' }).select('id').single();
-    const { data: priv } = await admin.from('items')
-      .insert({ owner_id: TEST_USERS.alice, title: 'In no group' }).select('id').single();
-    await admin.from('item_groups').insert({ item_id: pub!.id, group_id: g!.id });
-
-    await admin.rpc('reapply_friend_backfill');
-
-    const { data: rows } = await admin.from('items')
-      .select('id, visibility')
-      .in('id', [pub!.id, priv!.id]);
-    const byId = new Map((rows ?? []).map((r) => [r.id, r.visibility]));
-    expect(byId.get(pub!.id)).toBe('shared');
-    expect(byId.get(priv!.id)).toBe('private');
-  });
-
   it('sets add_me_token on every profile, all unique, non-empty', async () => {
     const admin = adminClient();
     await admin.rpc('reapply_friend_backfill');
