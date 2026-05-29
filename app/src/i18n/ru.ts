@@ -711,6 +711,7 @@ export const ru: Translation = {
     notAuthenticated: 'нужно войти, чтобы это сделать.',
     permissionDenied: 'нет доступа.',
     duplicate: 'такое уже существует.',
+    rateLimited: 'слишком часто. передохни пару минут и попробуй снова.',
     foreignKey: 'связанная запись не найдена.',
 
     titleTooLong: 'название слишком длинное — максимум 200 символов.',

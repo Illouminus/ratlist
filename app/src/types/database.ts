@@ -672,6 +672,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           created_at: string
@@ -958,6 +979,10 @@ export type Database = {
         }
       }
       delete_my_account: { Args: never; Returns: undefined }
+      enforce_rate_limit: {
+        Args: { _action: string; _max: number; _window_minutes: number }
+        Returns: undefined
+      }
       export_my_data: { Args: never; Returns: Json }
       get_add_me_preview: {
         Args: { _token: string }

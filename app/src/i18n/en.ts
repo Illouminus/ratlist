@@ -706,6 +706,7 @@ export const en: Translation = {
     notAuthenticated: 'you need to sign in for this.',
     permissionDenied: 'no access.',
     duplicate: 'that already exists.',
+    rateLimited: 'too fast — take a breather and try again in a few minutes.',
     foreignKey: 'a referenced record is missing.',
 
     titleTooLong: 'title is too long — max 200 characters.',
