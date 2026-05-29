@@ -910,6 +910,7 @@ export type Database = {
       accept_add_me: { Args: { _token: string }; Returns: string }
       accept_friend_invite: { Args: { _token: string }; Returns: string }
       are_friends: { Args: { _a: string; _b: string }; Returns: boolean }
+      befriend_via_share: { Args: { _share_token: string }; Returns: string }
       can_see_event: { Args: { _event_id: string }; Returns: boolean }
       can_see_item: { Args: { _item_id: string }; Returns: boolean }
       complete_onboarding: {
@@ -1110,6 +1111,7 @@ export type Database = {
         Returns: {
           items: Database["public"]["CompositeTypes"]["public_item"][]
           owner: Database["public"]["CompositeTypes"]["public_owner"]
+          owner_id: string
         }[]
       }
       group_admin_count: { Args: { _group_id: string }; Returns: number }
