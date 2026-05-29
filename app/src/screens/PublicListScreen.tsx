@@ -12,10 +12,14 @@
  * explicitly enabled sharing and chose what status='active' items to
  * keep on their list.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useI18n } from '../i18n/useI18n';
+import { useAuth } from '../auth/useAuth';
+import { useToast } from '../components/useToast';
+import { errorMessage } from '../lib/errors';
+import { Button } from '../components/Button';
 import { PaperLayout } from '../components/PaperLayout';
 import { ItemPhoto } from '../components/ItemPhoto';
 import { OccasionTag } from '../components/OccasionTag';
@@ -67,7 +71,7 @@ interface PublicItem {
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'ready'; owner: PublicOwner; items: PublicItem[] }
+  | { kind: 'ready'; owner: PublicOwner; items: PublicItem[]; ownerId: string | null }
   | { kind: 'invalid' }
   | { kind: 'error'; message: string };
 
@@ -105,11 +109,12 @@ export function PublicListScreen() {
         }
         const owner = (row as { owner?: PublicOwner }).owner ?? null;
         const items = (row as { items?: PublicItem[] }).items ?? [];
+        const ownerId = (row as { owner_id?: string }).owner_id ?? null;
         if (!owner) {
           setState({ kind: 'invalid' });
           return;
         }
-        setState({ kind: 'ready', owner, items });
+        setState({ kind: 'ready', owner, items, ownerId });
       });
 
     return () => {
@@ -134,6 +139,10 @@ export function PublicListScreen() {
       )}
 
       {state.kind === 'ready' && <Body owner={state.owner} items={state.items} />}
+
+      {state.kind === 'ready' && token && (
+        <ConversionCta token={token} owner={state.owner} ownerId={state.ownerId} />
+      )}
 
       {token && <Footer token={token} />}
     </PaperLayout>
@@ -561,6 +570,157 @@ function Invalid() {
       <div style={{ marginTop: 'var(--s-5)', opacity: 0.6 }}>
         <SittingRat size={72} />
       </div>
+    </section>
+  );
+}
+
+// ─────────────────────────── conversion CTA ───────────────────────────
+
+/**
+ * The growth hook. A share page used to dead-end at the "powered by"
+ * footer; now every viewer gets a next step:
+ *   - anonymous → "make your own list" (the signup funnel)
+ *   - logged-in non-owner → "add {owner} as a rat" (befriend_via_share),
+ *     closing the social loop, then a deep-link into the in-app view
+ *   - logged-in owner → a quiet "this is your list · edit" line
+ */
+function ConversionCta({
+  token,
+  owner,
+  ownerId,
+}: {
+  token: string;
+  owner: PublicOwner;
+  ownerId: string | null;
+}) {
+  const { t } = useI18n();
+  const { status, user } = useAuth();
+  const toast = useToast();
+  const [befriended, setBefriended] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const ownerName = owner.handle ?? owner.display_name ?? t('publicList.headlineFallback');
+
+  async function addOwner(): Promise<void> {
+    setBusy(true);
+    const { error } = await supabase.rpc('befriend_via_share', { _share_token: token });
+    setBusy(false);
+    if (error) {
+      toast.show(errorMessage(t, error));
+      return;
+    }
+    setBefriended(true);
+    toast.show(t('publicList.addedToast', { name: ownerName }));
+  }
+
+  // Anonymous → the signup funnel. The promise stays literal: sign in,
+  // land on your own (empty) list, where the empty state nudges item #1.
+  if (status !== 'authenticated') {
+    return (
+      <CtaShell>
+        <div className="mono-meta" style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-2)' }}>
+          {t('publicList.ctaEyebrow')}
+        </div>
+        <h2
+          className="display-italic"
+          style={{ margin: 0, fontSize: 'var(--display-m)', lineHeight: 1.05, letterSpacing: -1 }}
+        >
+          {t('publicList.makeYourOwn')}
+        </h2>
+        <p
+          style={{
+            margin: 'var(--s-2) auto var(--s-4)',
+            fontSize: 14,
+            color: 'var(--ink-2)',
+            lineHeight: 1.55,
+            maxWidth: 420,
+          }}
+        >
+          {t('publicList.makeYourOwnBody')}
+        </p>
+        <Link to="/login" style={{ textDecoration: 'none' }}>
+          <Button variant="dark" style={{ padding: '14px 28px', fontSize: 13 }}>
+            {t('publicList.makeYourOwnCta')}
+          </Button>
+        </Link>
+      </CtaShell>
+    );
+  }
+
+  // Owner viewing their own share page — no befriend affordance.
+  if (user && ownerId && user.id === ownerId) {
+    return (
+      <section
+        style={{ marginTop: 'var(--s-6)', paddingTop: 'var(--s-4)', borderTop: '1px solid var(--hair)' }}
+      >
+        <span className="mono-meta" style={{ color: 'var(--ink-3)' }}>
+          {t('publicList.yourList')}{' '}
+        </span>
+        <Link to="/" className="mono-meta" style={{ color: 'var(--accent)' }}>
+          {t('publicList.yourListCta')}
+        </Link>
+      </section>
+    );
+  }
+
+  // Logged-in non-owner, just connected this session.
+  if (befriended && ownerId) {
+    return (
+      <CtaShell>
+        <h2
+          className="display-italic"
+          style={{ margin: '0 0 var(--s-3)', fontSize: 'var(--display-s)', lineHeight: 1.1, letterSpacing: -0.5 }}
+        >
+          {t('publicList.addedOwner', { name: ownerName })}
+        </h2>
+        <Link to={`/p/${ownerId}`} style={{ textDecoration: 'none' }}>
+          <Button variant="primary">{t('publicList.openList')}</Button>
+        </Link>
+      </CtaShell>
+    );
+  }
+
+  // Logged-in non-owner — offer to connect.
+  return (
+    <CtaShell>
+      <p
+        style={{
+          margin: '0 auto var(--s-4)',
+          fontSize: 14,
+          color: 'var(--ink-2)',
+          lineHeight: 1.55,
+          maxWidth: 420,
+        }}
+      >
+        {t('publicList.addOwnerBody', { name: ownerName })}
+      </p>
+      <Button
+        variant="dark"
+        onClick={addOwner}
+        disabled={busy}
+        style={{ padding: '14px 28px', fontSize: 13 }}
+      >
+        {busy ? t('publicList.addOwnerBusy') : t('publicList.addOwner', { name: ownerName })}
+      </Button>
+    </CtaShell>
+  );
+}
+
+/** Accent-soft, centered call-to-action block — same visual language as
+ *  the landing page's final CTA so crossing from a shared list into the
+ *  product feels continuous. */
+function CtaShell({ children }: { children: ReactNode }) {
+  return (
+    <section
+      style={{
+        marginTop: 'var(--s-7)',
+        padding: 'var(--s-6) var(--s-5)',
+        background: 'var(--accent-soft)',
+        borderRadius: 'var(--r-3)',
+        textAlign: 'center',
+      }}
+    >
+      {children}
     </section>
   );
 }
