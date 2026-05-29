@@ -63,6 +63,16 @@ export const en: Translation = {
     sign: 'hello?',
     orPasteLink: 'or paste a link, it’s faster',
   },
+  activation: {
+    eyebrow: 'getting started',
+    itemLabel: 'add your first thing',
+    itemCta: 'add',
+    shareLabel: 'turn on your list link',
+    shareCta: 'enable',
+    ratLabel: 'invite a rat',
+    ratCta: 'invite',
+    hide: 'hide',
+  },
   add: {
     eyebrow: 'new item',
     title: 'what caught your eye?',

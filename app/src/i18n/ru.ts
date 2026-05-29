@@ -68,6 +68,16 @@ export const ru: Translation = {
     sign: 'эй?',
     orPasteLink: 'или вставь ссылку — так быстрее',
   },
+  activation: {
+    eyebrow: 'с чего начать',
+    itemLabel: 'добавь первую вещь',
+    itemCta: 'добавить',
+    shareLabel: 'включи ссылку на список',
+    shareCta: 'включить',
+    ratLabel: 'позови крысу',
+    ratCta: 'позвать',
+    hide: 'скрыть',
+  },
   add: {
     eyebrow: 'новый айтем',
     title: 'что зацепило?',

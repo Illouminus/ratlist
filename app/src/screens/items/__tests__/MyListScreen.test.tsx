@@ -173,6 +173,21 @@ vi.mock('../../../components/ShareDialog', () => ({
   ShareDialog: () => null,
 }));
 
+// AddFriendModal + ActivationChecklist both reach supabase via their own
+// hooks. Stub them out so these wiring tests stay hermetic. The activation
+// gate helper is mocked separately — `isActivationDone: () => true` keeps
+// the checklist unmounted here regardless.
+vi.mock('../../../components/AddFriendModal', () => ({
+  AddFriendModal: () => null,
+}));
+vi.mock('../../../components/ActivationChecklist', () => ({
+  ActivationChecklist: () => null,
+}));
+vi.mock('../../../lib/activation', () => ({
+  isActivationDone: () => true,
+  markActivationDone: () => {},
+}));
+
 // ─── import component under test AFTER mocks ─────────────────────────────────
 import { MyListScreen } from '../MyListScreen';
 

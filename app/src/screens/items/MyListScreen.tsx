@@ -29,6 +29,9 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { Button } from '../../components/Button';
 import { EndOfList } from '../../components/EndOfList';
 import { ShareDialog } from '../../components/ShareDialog';
+import { AddFriendModal } from '../../components/AddFriendModal';
+import { ActivationChecklist } from '../../components/ActivationChecklist';
+import { isActivationDone } from '../../lib/activation';
 import { ListSkeleton } from '../../components/Skeleton';
 import { ItemGrid } from './ItemGrid';
 import { ItemList } from './ItemList';
@@ -51,6 +54,11 @@ export function MyListScreen() {
   const [occasion, setOccasion] = useState<Occasion | null>(null);
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [shareOpen, setShareOpen] = useState(false);
+  const [addRatOpen, setAddRatOpen] = useState(false);
+  // First-run activation checklist. Gated on a localStorage flag so a
+  // graduated account never re-mounts the checklist (and its hooks +
+  // realtime subscription) on future visits.
+  const [activationOpen, setActivationOpen] = useState(() => !isActivationDone());
 
   const allItems = useMemo(
     () => (itemsQ.status === 'ready' ? itemsQ.items : []),
@@ -96,6 +104,10 @@ export function MyListScreen() {
 
   const goAdd = () => navigate('/add');
 
+  // The checklist persists its own graduated flag; the parent only owns
+  // the session-level mount lifecycle.
+  const dismissActivation = () => setActivationOpen(false);
+
   // The page header + filters only make sense when there's a list to
   // describe. On the very first run we hand the page over to EmptyState,
   // which carries its own "nothing yet." headline.
@@ -103,23 +115,32 @@ export function MyListScreen() {
 
   return (
     <PaperLayout>
+      {showList && <Header onAdd={goAdd} onShare={() => setShareOpen(true)} />}
+
+      {activationOpen && (
+        <ActivationChecklist
+          hasItems={totalCount > 0}
+          onAdd={goAdd}
+          onShare={() => setShareOpen(true)}
+          onAddRat={() => setAddRatOpen(true)}
+          onDismiss={dismissActivation}
+        />
+      )}
+
       {showList && (
-        <>
-          <Header onAdd={goAdd} onShare={() => setShareOpen(true)} />
-          <ActionsRow
-            countShown={filteredItems.length}
-            countTotal={totalCount}
-            occasion={occasion}
-            onOccasion={setOccasion}
-            view={view}
-            onView={setView}
-            sort={sort}
-            onSort={setSort}
-            allItems={allItems}
-            category={effectiveCategory}
-            onCategory={setCategory}
-          />
-        </>
+        <ActionsRow
+          countShown={filteredItems.length}
+          countTotal={totalCount}
+          occasion={occasion}
+          onOccasion={setOccasion}
+          view={view}
+          onView={setView}
+          sort={sort}
+          onSort={setSort}
+          allItems={allItems}
+          category={effectiveCategory}
+          onCategory={setCategory}
+        />
       )}
 
       {itemsQ.status === 'loading' && <ListSkeleton rows={5} />}
@@ -128,7 +149,9 @@ export function MyListScreen() {
         <p style={{ color: 'var(--accent-deep)' }}>{itemsQ.error}</p>
       )}
 
-      {itemsQ.status === 'ready' && totalCount === 0 && <EmptyState onAdd={goAdd} />}
+      {itemsQ.status === 'ready' && totalCount === 0 && (
+        <EmptyState onAdd={goAdd} showCta={!activationOpen} />
+      )}
 
       {showList && (
         <>
@@ -166,6 +189,7 @@ export function MyListScreen() {
       )}
 
       <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} />
+      <AddFriendModal open={addRatOpen} onClose={() => setAddRatOpen(false)} />
     </PaperLayout>
   );
 }
@@ -373,7 +397,7 @@ function ActionsRow({
  * The (non-empty) Header is suppressed when this renders — see the
  * caller above.
  */
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState({ onAdd, showCta }: { onAdd: () => void; showCta: boolean }) {
   const { t } = useI18n();
   return (
     <section
@@ -442,20 +466,28 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         <SittingRat size={120} sign signText={t('empty.sign')} />
       </div>
 
-      <Button variant="dark" onClick={onAdd} style={{ width: '100%' }}>
-        {t('list.addFirst')}
-      </Button>
-      <p
-        className="marginalia"
-        style={{
-          fontSize: 14,
-          color: 'var(--ink-3)',
-          textAlign: 'center',
-          margin: 0,
-        }}
-      >
-        {t('empty.orPasteLink')}
-      </p>
+      {/* Add CTA — suppressed when the activation checklist is mounted
+          above, since that surface already owns the "add" action. Shown
+          when the checklist has been dismissed/graduated so a re-emptied
+          list never becomes a dead end. */}
+      {showCta && (
+        <>
+          <Button variant="dark" onClick={onAdd} style={{ width: '100%' }}>
+            {t('list.addFirst')}
+          </Button>
+          <p
+            className="marginalia"
+            style={{
+              fontSize: 14,
+              color: 'var(--ink-3)',
+              textAlign: 'center',
+              margin: 0,
+            }}
+          >
+            {t('empty.orPasteLink')}
+          </p>
+        </>
+      )}
     </section>
   );
 }
