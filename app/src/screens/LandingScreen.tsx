@@ -19,6 +19,7 @@ import { LangToggle } from '../components/LangToggle';
 import { Button } from '../components/Button';
 import { PaperLayout } from '../components/PaperLayout';
 import { SittingRat, PeekingRat, RunningRat, TailDoodle } from '../components/rats';
+import { useInView } from '../lib/useInView';
 
 export function LandingScreen() {
   const { t } = useI18n();
@@ -514,8 +515,18 @@ function FeatureCard({
 
 function HowItWorks() {
   const { t } = useI18n();
+  // Reveal-on-scroll: the section renders in its final state by default
+  // (prerender / no-JS safe); when it scrolls into view we add
+  // `is-revealed`, which plays the trail-draw + running rat + staggered
+  // step entrance. See global.css → "Landing how it works".
+  const { ref, inView } = useInView<HTMLElement>(0.3);
+
   return (
-    <section style={{ marginBottom: 'var(--s-8)' }}>
+    <section
+      ref={ref}
+      className={`landing-how${inView ? ' is-revealed' : ''}`}
+      style={{ marginBottom: 'var(--s-8)' }}
+    >
       <div
         className="mono-meta"
         style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-3)' }}
@@ -536,6 +547,33 @@ function HowItWorks() {
 
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: 'var(--s-5) 0 var(--s-5)' }} />
 
+      {/* Decorative trail a rat runs across as the steps reveal. Desktop
+          only (the steps sit in a row there); hidden on mobile via CSS. */}
+      <div className="landing-how-track" aria-hidden>
+        <svg
+          className="landing-how-trail-svg"
+          viewBox="0 0 1000 28"
+          preserveAspectRatio="none"
+          width="100%"
+          height="28"
+        >
+          <path
+            className="landing-how-trail"
+            pathLength={1000}
+            d="M4,18 C 180,4 300,24 480,14 C 640,6 770,24 996,12"
+            fill="none"
+            stroke="var(--accent)"
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            opacity={0.65}
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        <div className="landing-how-runner">
+          <RunningRat size={40} />
+        </div>
+      </div>
+
       <ol
         style={{
           listStyle: 'none',
@@ -547,7 +585,11 @@ function HowItWorks() {
         }}
       >
         {[1, 2, 3].map((n) => (
-          <li key={n}>
+          <li
+            key={n}
+            className="landing-how-step"
+            style={{ animationDelay: `${250 + (n - 1) * 150}ms` }}
+          >
             <div
               className="display-italic"
               style={{
