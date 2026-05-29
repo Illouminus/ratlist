@@ -30,6 +30,9 @@ import { isActivationDone, markActivationDone } from '../lib/activation';
 import { track } from '../lib/plausible';
 
 export interface ActivationChecklistProps {
+  /** Current user id — the graduated flag is keyed per user so it doesn't
+   *  leak across accounts in the same browser. */
+  userId: string;
   /** Whether the user has at least one item. Owned by MyListScreen,
    *  which already loads the item list — avoids a second subscription. */
   hasItems: boolean;
@@ -49,6 +52,7 @@ interface Step {
 }
 
 export function ActivationChecklist({
+  userId,
   hasItems,
   onAdd,
   onShare,
@@ -71,11 +75,11 @@ export function ActivationChecklist({
     // while `allDone` is still true (HMR, tab switch) must not re-fire the
     // non-idempotent `track`. markActivationDone alone is a no-op re-write,
     // but Plausible counts every call.
-    if (allDone && !isActivationDone()) {
-      markActivationDone();
+    if (allDone && !isActivationDone(userId)) {
+      markActivationDone(userId);
       track('ActivationCompleted');
     }
-  }, [allDone]);
+  }, [allDone, userId]);
 
   // Hide for the rest of this session the moment all three are done. The
   // parent's mount gate (isActivationDone) takes over on future sessions.
@@ -85,7 +89,7 @@ export function ActivationChecklist({
   // persistence authority — same as the graduate path above) and asks the
   // parent to unmount us for the rest of this session.
   const handleDismiss = () => {
-    markActivationDone();
+    markActivationDone(userId);
     onDismiss();
   };
 

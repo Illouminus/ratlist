@@ -141,6 +141,10 @@ vi.mock('../../../items/useMyItems', () => ({
   }),
 }));
 
+vi.mock('../../../auth/useAuth', () => ({
+  useAuth: () => ({ user: { id: 'u1' }, status: 'authenticated' }),
+}));
+
 vi.mock('../../../auth/useProfile', () => ({
   useProfile: () => ({
     query: {

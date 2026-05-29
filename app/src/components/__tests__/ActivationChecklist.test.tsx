@@ -50,6 +50,8 @@ const mockTrack = vi.hoisted(() => vi.fn());
 vi.mock('../../lib/plausible', () => ({ track: mockTrack }));
 
 // ─── helpers ─────────────────────────────────────────────────────────
+const USER_ID = 'user-1';
+
 function renderChecklist(props: Partial<React.ComponentProps<typeof ActivationChecklist>> = {}) {
   const onAdd = vi.fn();
   const onShare = vi.fn();
@@ -58,6 +60,7 @@ function renderChecklist(props: Partial<React.ComponentProps<typeof ActivationCh
   render(
     <I18nProvider>
       <ActivationChecklist
+        userId={USER_ID}
         hasItems={false}
         onAdd={onAdd}
         onShare={onShare}
@@ -122,7 +125,7 @@ describe('<ActivationChecklist>', () => {
     const hide = screen.getByRole('button', { name: 'скрыть' });
     fireEvent.click(hide);
     expect(onDismiss).toHaveBeenCalledTimes(1);
-    expect(isActivationDone()).toBe(true);
+    expect(isActivationDone(USER_ID)).toBe(true);
   });
 
   it('graduates (renders nothing + persists flag) when all three are done', () => {
@@ -131,7 +134,7 @@ describe('<ActivationChecklist>', () => {
     renderChecklist({ hasItems: true });
 
     expect(screen.queryByText('с чего начать')).toBeNull();
-    expect(isActivationDone()).toBe(true);
+    expect(isActivationDone(USER_ID)).toBe(true);
     expect(mockTrack).toHaveBeenCalledWith('ActivationCompleted');
   });
 });

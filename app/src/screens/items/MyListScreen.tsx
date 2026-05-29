@@ -15,6 +15,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
+import { useAuth } from '../../auth/useAuth';
 import { useProfile } from '../../auth/useProfile';
 import { useMyItems } from '../../items/useMyItems';
 import { useToast } from '../../components/useToast';
@@ -45,9 +46,12 @@ type CategoryFilter = string | null | 'all';
 export function MyListScreen() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { query: profileQ } = useProfile();
   const { query: itemsQ, updateItemPriority } = useMyItems();
   const toast = useToast();
+  // RequireAuth gates this screen, so `user` is set on first render.
+  const userId = user?.id ?? '';
 
   const [view, setView] = useViewMode();
   const [sort, setSort] = useSortMode();
@@ -58,7 +62,7 @@ export function MyListScreen() {
   // First-run activation checklist. Gated on a localStorage flag so a
   // graduated account never re-mounts the checklist (and its hooks +
   // realtime subscription) on future visits.
-  const [activationOpen, setActivationOpen] = useState(() => !isActivationDone());
+  const [activationOpen, setActivationOpen] = useState(() => !isActivationDone(userId));
 
   const allItems = useMemo(
     () => (itemsQ.status === 'ready' ? itemsQ.items : []),
@@ -119,6 +123,7 @@ export function MyListScreen() {
 
       {activationOpen && (
         <ActivationChecklist
+          userId={userId}
           hasItems={totalCount > 0}
           onAdd={goAdd}
           onShare={() => setShareOpen(true)}
