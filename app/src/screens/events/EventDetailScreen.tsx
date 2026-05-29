@@ -12,6 +12,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
+import { useAuth } from '../../auth/useAuth';
 import { useEvent, type EventClaim } from '../../events/useEvent';
 import {
   useEventParticipants,
@@ -40,12 +41,15 @@ export function EventDetailScreen() {
   const toast = useToast();
   const confirm = useConfirm();
   const [inviteOpen, setInviteOpen] = useState(false);
+  const { user } = useAuth();
   const {
     query,
     update,
     remove,
     attachItem,
     detachItem,
+    claim,
+    release,
   } = useEvent(eventId ?? null);
 
   if (query.status === 'loading') {
@@ -135,8 +139,11 @@ export function EventDetailScreen() {
       <ItemsSection
         items={items}
         isHonoree={isHonoree}
+        myUserId={user?.id ?? null}
         onAttach={attachItem}
         onDetach={detachItem}
+        onClaim={claim}
+        onRelease={release}
       />
 
       {isHonoree && (
@@ -529,11 +536,22 @@ function ParticipantsSection({ eventId }: { eventId: string }) {
 interface ItemsSectionProps {
   items: Array<{ item_id: string; item: MyItem | { id: string; cover_url: string | null; title: string; maker: string | null; price_text: string | null; note: string | null; owner_id: string; priority: number }; claims: EventClaim[] }>;
   isHonoree: boolean;
+  myUserId: string | null;
   onAttach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
   onDetach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
+  onClaim: (itemId: string) => Promise<{ ok: true } | { error: string }>;
+  onRelease: (itemId: string) => Promise<{ ok: true } | { error: string }>;
 }
 
-function ItemsSection({ items, isHonoree, onAttach, onDetach }: ItemsSectionProps) {
+function ItemsSection({
+  items,
+  isHonoree,
+  myUserId,
+  onAttach,
+  onDetach,
+  onClaim,
+  onRelease,
+}: ItemsSectionProps) {
   const { t } = useI18n();
   const { query: myItemsQ } = useMyItems();
   const [picking, setPicking] = useState(false);
@@ -600,7 +618,10 @@ function ItemsSection({ items, isHonoree, onAttach, onDetach }: ItemsSectionProp
                 <TileCuratedItem
                   entry={entry}
                   isHonoree={isHonoree}
+                  myUserId={myUserId}
                   onDetach={() => void onDetach(entry.item_id)}
+                  onClaim={() => void onClaim(entry.item_id)}
+                  onRelease={() => void onRelease(entry.item_id)}
                 />
               </li>
             ))}
