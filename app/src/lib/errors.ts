@@ -28,6 +28,7 @@ export type AppErrorCode =
   | 'notAuthenticated'
   | 'permissionDenied'
   | 'duplicate'
+  | 'rateLimited'
   // items
   | 'titleTooLong'
   | 'titleRequired'
@@ -133,6 +134,9 @@ export function errorMessage(
 function matchMessage(message: string): AppErrorCode {
   if (!message) return 'generic';
   const m = message;
+
+  // Rate-limit trigger (enforce_rate_limit raises 'rate_limited' / P0001).
+  if (m.includes('rate_limited')) return 'rateLimited';
 
   // Our RPC RAISE EXCEPTION payloads (the exception text becomes the
   // PostgrestError message).
