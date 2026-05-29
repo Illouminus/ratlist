@@ -254,6 +254,11 @@ Visual atoms (`app/src/components/`):
 - `ShareDialog` — controls the public share token (`/share/<token>`)
 - `ReportDialog` — reusable flag-for-moderation modal (share / profile / item / group);
   anon-friendly, inserts into `public.reports`
+- `AddFriendModal` — "add a rat" modal (email invite + own add-me link)
+- `ActivationChecklist` — first-run cold-start nudge on MyList (add item /
+  share link / invite rat); persists until graduated. Helpers in
+  `lib/activation` (localStorage gate); `lib/useInView` powers the landing
+  scroll-reveal
 - `rats/` — five SVG illustrations (Sitting, Running, Peeking, Tail,
   RatDefs filter)
 
@@ -303,7 +308,7 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | Items CRUD (create, edit, delete)                        | ✅      |
 | Item detail page (`/i/:itemId`) — own + friend's         | ✅      |
 | Full-screen add/edit forms (`/add`, `/i/:itemId/edit`)   | ✅      |
-| Per-group publishing + "приват" badge                    | ✅      |
+| **Item visibility: 2-tier (shared / private)**           | ✅ #45 (`75f5888`) — collapsed from private/friends/public; default `shared` = in-app friends + anyone with the share link. Per-item per-group publishing retired with the friend-graph. |
 | Cover photo upload (Supabase Storage)                    | ✅      |
 | URL metadata auto-fetch (og: + JSON-LD + Amazon-specific)| ✅      |
 | Priority chips + •/••/••• marker                         | ✅      |
@@ -359,6 +364,12 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | **Persistent grid/list view toggle**                     | ✅ shipped 2026-05-27 — PR #33. New `lib/useViewMode` (localStorage `kryska.viewMode`) + `components/ViewToggle` (extracted from `ItemFilters`). Default `'list'` on phones, `'grid'` on desktop; user pick persists. Rolled out to **MyList + FriendList + PublicList** with a shared `.items-grid-responsive` CSS class (2 cols on mobile, auto-fit on desktop). FriendList/Public got new flat tile components (`FriendItemTile`/`PublicItemTile`). |
 | **Sort by priority / price / category**                  | ✅ shipped 2026-05-27 — PR #36. New `lib/useSortMode` (localStorage `kryska.sortMode`) + `lib/sortItems` (pure helper, stable comparators) + `components/SortSelector`. Default `'priority'`. Section headers (•••/••/•) only render when sort is by priority — for the other modes the list / public-share screens go flat (per-row dot still carries the signal). MyList's `sectioned-dnd` falls back to `'flat'` when sort ≠ priority so DnD doesn't reshuffle into invisible buckets. |
 | **Image crop dialog for uploads**                        | ✅ shipped 2026-05-27 — PR #37. `react-easy-crop` (~20 KB) in `components/ImageCropDialog` (focus-trapped, drag+zoom, round preview for avatars). `lib/cropImage` renders cropped JPEG via canvas, caps long edge to caller's `outputMaxDim`. Wired into `<PhotoField>` (4:3, free crop, 1200px) and `<AvatarPanel>` (1:1, round, 512px). Bypasses iPhone-photo-too-big errors because canvas re-encode shrinks anything to fit. |
+| **Friend graph + categories** (PR 1–2)                   | ✅ shipped — PRs #41–#43. Symmetric `friendships` edges (replaces groups-as-audience) surfaced via `get_friends()` / `useFriends`; `people` directory now event-derived (`get_my_people`). Item `category` free-text + `CategoryChips`. Groups tables kept for Santa only (retired from primary UI). |
+| **Cold-start / share-loop initiative** (5 slices)        | ✅ shipped 2026-05-29 — see `memory/project_cold_start_share_loop.md`. Diagnosed `/share` as the funnel hole; the slices below close it. |
+| ↳ `/share` = conversion surface                          | ✅ #44 (`653eda9`) — anon → "make your own list"; logged-in non-owner → "+ add as a rat" (`befriend_via_share` RPC); owner → quiet line. `get_public_list` gained `owner_id`. |
+| ↳ Activation checklist on MyList                         | ✅ #46 (`e5dcf2a`) — `components/ActivationChecklist` + `lib/activation` (localStorage `kryska.activationDone`). 3 steps (add item / share link / invite rat); done-detection via `useMyItems`+`useShareToken`+`useFriends`; persists empty AND populated until all done, then graduates. `EmptyState` got `showCta`. |
+| ↳ Landing rewrite + scroll animation                     | ✅ #47 (`9ecebf4`) — copy retired circles/boards, leads with list→rats→share. `HowItWorks` reveals on scroll: hand-drawn trail draws L→R + `RunningRat` runs across + steps stagger. New `lib/useInView` (IntersectionObserver, SSR-safe; prerender/no-JS/reduced-motion show final state). |
+| ↳ Secret Santa demoted from primary nav                  | ✅ #48 (`68ad439`) — nav 4→3 tabs (My list / Events / People); Santa now a secondary `events.santaEntry` link at the bottom of `/events`. Routes unchanged; Santa still rides on `groups` (variant a, deferred to Q4). |
 | Moderation: rate limits (per-user sliding window)        | ⬜ ~1 h — design sketch in [PUBLIC_LAUNCH.md](PUBLIC_LAUNCH.md) |
 | Notification preferences UI                              | ⬜ ~1.5 h — `email_prefs` JSONB on profiles |
 | **Supabase Pro upgrade**                                 | ⬜ optional — $25/mo, unlocks image transforms + backups |
