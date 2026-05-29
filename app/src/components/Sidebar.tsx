@@ -1,9 +1,13 @@
 /**
  * `<Sidebar>` — left rail used by `<AppLayout>` on viewports ≥ 768px.
  *
- * Holds the wordmark up top, the four primary nav targets (My list /
- * Circles / People / Santa), and the signed-in user's profile + sign-out
- * pinned to the bottom. Hidden on mobile via CSS (see global.css).
+ * Holds the wordmark up top, the three primary nav targets (My list /
+ * Events / People), and the signed-in user's profile + sign-out pinned
+ * to the bottom. Hidden on mobile via CSS (see global.css).
+ *
+ * Secret Santa is intentionally NOT a primary tab — it's seasonal and
+ * off the core loop, so it's reached from a secondary entry on the
+ * Events screen instead (see EventsScreen).
  */
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
@@ -15,7 +19,6 @@ const NAV = [
   { to: '/', key: 'nav.myList' },
   { to: '/events', key: 'nav.events' },
   { to: '/people', key: 'nav.people' },
-  { to: '/santa', key: 'nav.santa' },
 ] as const;
 
 export function Sidebar() {

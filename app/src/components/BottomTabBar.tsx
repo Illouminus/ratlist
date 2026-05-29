@@ -1,8 +1,12 @@
 /**
- * `<BottomTabBar>` — fixed bottom strip on mobile (< 768px). Four
- * primary destinations grouped two-and-two around a centred FAB-style
- * "+" button. The FAB is a global "add a wish" intent that always
- * routes to `/add` (the full-screen add form).
+ * `<BottomTabBar>` — fixed bottom strip on mobile (< 768px). Three
+ * primary destinations around a centred FAB-style "+" button: My list +
+ * Events on the left, People on the right (balanced by a spacer so the
+ * FAB stays centred). The FAB is a global "add a wish" intent that
+ * always routes to `/add` (the full-screen add form).
+ *
+ * Secret Santa is intentionally not here — seasonal, off the core loop,
+ * reached from a secondary entry on the Events screen instead.
  *
  * Hidden on desktop via CSS — the `<Sidebar>` covers the same role.
  */
@@ -16,9 +20,9 @@ interface Tab {
   labelKey: string;
 }
 
-// 2 left + FAB + 2 right. Circles live in /settings now — they're
-// long-lived plumbing, not a daily destination. Events are the
-// honoree-facing primary surface; People is the friend directory.
+// Circles live in /settings now — long-lived plumbing, not a daily
+// destination. Events are the honoree-facing primary surface; People is
+// the friend directory.
 const LEFT_TABS: Tab[] = [
   { to: '/', match: (p) => p === '/', labelKey: 'nav.myList' },
   { to: '/events', match: (p) => p === '/events' || p.startsWith('/events/'), labelKey: 'nav.events' },
@@ -26,7 +30,6 @@ const LEFT_TABS: Tab[] = [
 
 const RIGHT_TABS: Tab[] = [
   { to: '/people', match: (p) => p === '/people' || p.startsWith('/p/'), labelKey: 'nav.people' },
-  { to: '/santa', match: (p) => p === '/santa' || p.startsWith('/santa/'), labelKey: 'nav.santa' },
 ];
 
 export function BottomTabBar() {
@@ -67,6 +70,10 @@ export function BottomTabBar() {
         +
       </button>
 
+      {/* Spacer keeps the FAB centred now that the right side carries a
+          single tab — People sits at the far-right edge, mirroring My
+          list at the far left. */}
+      <span aria-hidden style={{ flex: 1 }} />
       {RIGHT_TABS.map((tab) => (
         <TabLink key={tab.to} tab={tab} active={tab.match(pathname)} />
       ))}

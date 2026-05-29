@@ -277,13 +277,17 @@ Authed (full chrome via `appRoute`):
   from Settings, no longer a primary nav tab)
 - `/people` → `PeopleScreen` (directory with preview titles + event counts)
 - `/p/:userId` → `FriendListScreen` (friend's events + items + claim/release)
-- `/santa` → `SantaListScreen` (events)
+- `/santa` → `SantaListScreen` (events; reached from a secondary entry
+  on `/events`, not primary nav — see below)
 - `/santa/:eventId` → `SantaEventScreen` (participants, exclusions,
   draw, reveal)
 
-Primary nav is **4 tabs**: My list / Events / People / Santa (plus the
-central FAB → `/add`). Circles live one settings-click away — they're
-long-lived infrastructure (audience definitions), not a daily destination.
+Primary nav is **3 tabs**: My list / Events / People (plus the central
+FAB → `/add`). Secret Santa was demoted from the nav (seasonal, off the
+core loop) — it's reached from a quiet secondary link at the bottom of
+`/events` (`events.santaEntry`); routes are unchanged. Circles also live
+one settings-click away — long-lived infrastructure (audience
+definitions), not a daily destination.
 
 All authed routes are lazy-loaded via `React.lazy` — see
 `Router.lazyNamed()`. Landing + auth screens are eager (critical path).
