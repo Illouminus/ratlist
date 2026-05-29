@@ -44,7 +44,7 @@ begin
     from public.rate_limit_log
    where action = _action
      and user_id = _uid
-     and created_at > now() - (_window_minutes || ' minutes')::interval;
+     and created_at > now() - make_interval(mins => _window_minutes);
 
   if _count >= _max then
     raise exception 'rate_limited' using errcode = 'P0001';
