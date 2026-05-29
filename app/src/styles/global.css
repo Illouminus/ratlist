@@ -123,6 +123,69 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   }
 }
 
+/* ── Landing "how it works": a rat runs the trail, steps reveal ── */
+/* Progressive enhancement. Steps + trail render in their final visible
+   state by default (prerender / no-JS). useInView adds `.is-revealed`
+   when the section scrolls into view, which plays the entrance: the
+   hand-drawn trail draws itself L→R, a rat runs across it, and the three
+   steps fade up in sequence. All disabled under prefers-reduced-motion. */
+@keyframes howTrailDraw {
+  from { stroke-dashoffset: 1000; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes howRatRun {
+  0%   { left: 0; opacity: 0; }
+  12%  { opacity: 1; }
+  100% { left: calc(100% - 64px); opacity: 1; }
+}
+.landing-how-track { display: none; } /* desktop-only decoration */
+.landing-how-trail { stroke-dashoffset: 0; }
+
+@media (min-width: 880px) {
+  .landing-how-track {
+    display: block;
+    position: relative;
+    height: 44px;
+    margin-bottom: var(--s-3);
+  }
+  .landing-how-trail-svg {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    display: block;
+  }
+  .landing-how-runner {
+    position: absolute;
+    top: 0;
+    left: calc(100% - 64px);
+  }
+}
+
+.landing-how.is-revealed .landing-how-trail {
+  stroke-dasharray: 1000;
+  animation: howTrailDraw 1000ms ease-out both;
+}
+.landing-how.is-revealed .landing-how-runner {
+  animation: howRatRun 1150ms ease-in-out both;
+}
+.landing-how.is-revealed .landing-how-step {
+  animation-name: fadeUp;
+  animation-duration: var(--motion);
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-how.is-revealed .landing-how-trail,
+  .landing-how.is-revealed .landing-how-runner,
+  .landing-how.is-revealed .landing-how-step {
+    animation: none;
+  }
+  .landing-how.is-revealed .landing-how-trail {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* ── Responsive visibility utilities ────────────────────── */
 /* Mirror the --bp-tablet breakpoint used elsewhere. Use sparingly —
    prefer responsive design tokens where possible. */
