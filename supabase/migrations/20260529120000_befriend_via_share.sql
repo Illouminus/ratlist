@@ -51,7 +51,7 @@ begin
     from public.profiles
    where share_token = _share_token
      and disabled_at is null;
-  if owner_id is null then
+  if not found then
     raise exception 'invite_not_found';
   end if;
   if owner_id = caller then

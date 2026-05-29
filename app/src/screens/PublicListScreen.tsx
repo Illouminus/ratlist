@@ -76,6 +76,7 @@ type State =
   | { kind: 'error'; message: string };
 
 export function PublicListScreen() {
+  const { t } = useI18n();
   const { token } = useParams<{ token: string }>();
   // Initial state derived from token presence — avoids a setState in
   // an effect just to push the component into `invalid`.
@@ -135,7 +136,7 @@ export function PublicListScreen() {
       {state.kind === 'invalid' && <Invalid />}
 
       {state.kind === 'error' && (
-        <p style={{ color: 'var(--accent-deep)' }}>{state.message}</p>
+        <p style={{ color: 'var(--accent-deep)' }}>{errorMessage(t, state.message)}</p>
       )}
 
       {state.kind === 'ready' && <Body owner={state.owner} items={state.items} />}
@@ -613,9 +614,13 @@ function ConversionCta({
     toast.show(t('publicList.addedToast', { name: ownerName }));
   }
 
+  // Auth state still resolving — render nothing rather than flash the
+  // anonymous CTA at a logged-in owner/friend for a frame.
+  if (status === 'loading') return null;
+
   // Anonymous → the signup funnel. The promise stays literal: sign in,
   // land on your own (empty) list, where the empty state nudges item #1.
-  if (status !== 'authenticated') {
+  if (status === 'anonymous') {
     return (
       <CtaShell>
         <div className="mono-meta" style={{ marginBottom: 'var(--s-2)', color: 'var(--ink-2)' }}>
