@@ -34,6 +34,8 @@ import { track } from '../lib/plausible';
 import { PaperLayout } from '../components/PaperLayout';
 import { Button } from '../components/Button';
 import { LangToggle } from '../components/LangToggle';
+import { Wordmark } from '../components/Wordmark';
+import { PeekingRat, SittingRat } from '../components/rats';
 
 interface OwnerPreview {
   display_name: string | null;
@@ -107,73 +109,114 @@ export function AddMeScreen() {
 
   return (
     <PaperLayout narrow as="main">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--s-6)' }}>
-        <LangToggle />
-      </div>
-
-      <header style={{ marginBottom: 'var(--s-5)' }}>
-        {preview?.avatar_url && (
-          <img
-            src={preview.avatar_url}
-            alt=""
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              border: '1px solid var(--hair-strong)',
-              marginBottom: 'var(--s-3)',
-              display: 'block',
-            }}
-          />
-        )}
-        <h1
-          className="display-italic"
-          style={{ fontSize: 'var(--display-m)', margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
+      <div className="stagger-children">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'var(--s-3)',
+            marginBottom: 'var(--s-7)',
+          }}
         >
-          {title}
-        </h1>
-        {preview?.handle && (
-          <p
-            className="mono-meta"
-            style={{ color: 'var(--ink-3)', marginTop: 'var(--s-2)', marginBottom: 0 }}
+          <Wordmark size="sm" />
+          <LangToggle />
+        </div>
+
+        <header style={{ marginBottom: 'var(--s-5)' }}>
+          {preview?.avatar_url ? (
+            <div
+              style={{ position: 'relative', width: 'fit-content', marginBottom: 'var(--s-4)' }}
+            >
+              <span
+                aria-hidden
+                style={{ position: 'absolute', top: -22, left: 22, transform: 'rotate(-6deg)' }}
+              >
+                <PeekingRat size={46} />
+              </span>
+              <img
+                src={preview.avatar_url}
+                alt=""
+                style={{
+                  position: 'relative',
+                  width: 76,
+                  height: 76,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '1px solid var(--hair-strong)',
+                  display: 'block',
+                }}
+              />
+            </div>
+          ) : (
+            <div aria-hidden style={{ marginBottom: 'var(--s-3)' }}>
+              <PeekingRat size={64} />
+            </div>
+          )}
+          <h1
+            className="display-italic"
+            style={{ fontSize: 'var(--display-m)', margin: 0, lineHeight: 1.1, letterSpacing: -1 }}
           >
-            @{preview.handle}
-          </p>
-        )}
-      </header>
-
-      <p style={{ color: 'var(--ink-2)', lineHeight: 1.55, marginBottom: 'var(--s-5)' }}>
-        {t('addMe.body')}
-      </p>
-
-      {status === 'loading' && <p style={{ color: 'var(--ink-3)' }}>…</p>}
-
-      {status === 'anonymous' && (
-        <Link
-          to={`/login?next=${encodeURIComponent(`/add-me/${token}`)}`}
-          style={{ textDecoration: 'none' }}
-        >
-          <Button variant="primary">{t('auth.signIn')}</Button>
-        </Link>
-      )}
-
-      {status === 'authenticated' && (
-        <>
-          {error && (
-            <p style={{ color: 'var(--accent-deep)', lineHeight: 1.55, marginBottom: 'var(--s-4)' }}>
-              {error}
+            {title}
+          </h1>
+          {preview?.handle && (
+            <p
+              className="mono-meta"
+              style={{ color: 'var(--ink-3)', marginTop: 'var(--s-2)', marginBottom: 0 }}
+            >
+              @{preview.handle}
             </p>
           )}
-          <Button
-            variant="primary"
-            onClick={() => void handleAccept()}
-            disabled={busy}
-          >
-            {t('addMe.cta')}
-          </Button>
-        </>
-      )}
+        </header>
+
+        <p style={{ color: 'var(--ink-2)', lineHeight: 1.55, marginBottom: 'var(--s-5)' }}>
+          {t('addMe.body')}
+        </p>
+
+        <div>
+          {status === 'loading' && <p style={{ color: 'var(--ink-3)' }}>…</p>}
+
+          {status === 'anonymous' && (
+            <Link
+              to={`/login?next=${encodeURIComponent(`/add-me/${token}`)}`}
+              style={{ textDecoration: 'none' }}
+            >
+              <Button variant="primary">{t('auth.signIn')}</Button>
+            </Link>
+          )}
+
+          {status === 'authenticated' && (
+            <>
+              {error && (
+                <p
+                  style={{
+                    color: 'var(--accent-deep)',
+                    lineHeight: 1.55,
+                    marginBottom: 'var(--s-4)',
+                  }}
+                >
+                  {error}
+                </p>
+              )}
+              <Button variant="primary" onClick={() => void handleAccept()} disabled={busy}>
+                {t('addMe.cta')}
+              </Button>
+            </>
+          )}
+        </div>
+
+        <div
+          aria-hidden
+          style={{
+            marginTop: 'var(--s-7)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            opacity: 0.5,
+          }}
+        >
+          <SittingRat size={40} />
+        </div>
+      </div>
     </PaperLayout>
   );
 }

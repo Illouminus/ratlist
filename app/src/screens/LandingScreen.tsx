@@ -18,6 +18,7 @@ import { useI18n } from '../i18n/useI18n';
 import { LangToggle } from '../components/LangToggle';
 import { Button } from '../components/Button';
 import { PaperLayout } from '../components/PaperLayout';
+import { Wordmark } from '../components/Wordmark';
 import { SittingRat, PeekingRat, RunningRat, TailDoodle } from '../components/rats';
 import { useInView } from '../lib/useInView';
 
@@ -50,29 +51,7 @@ function TopBar() {
         marginBottom: 'var(--s-7)',
       }}
     >
-      <Link
-        to="/"
-        style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 'var(--s-2)',
-          textDecoration: 'none',
-          color: 'inherit',
-        }}
-      >
-        <span
-          className="display-italic"
-          style={{ fontSize: 'var(--display-s)', letterSpacing: -0.5 }}
-        >
-          {t('app.name')}
-        </span>
-        <span
-          className="marginalia"
-          style={{ fontSize: 14, color: 'var(--accent)', transform: 'rotate(-3deg)' }}
-        >
-          — '{String(new Date().getFullYear()).slice(-2)}
-        </span>
-      </Link>
+      <Wordmark size="md" />
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
         <LangToggle />
         <Link to="/login" style={{ textDecoration: 'none' }}>

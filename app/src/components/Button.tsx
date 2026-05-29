@@ -27,7 +27,7 @@ const BASE_STYLE = {
   border: 'none',
   cursor: 'pointer',
   whiteSpace: 'nowrap' as const,
-  transition: 'opacity var(--motion-fast) ease-out',
+  transition: 'opacity var(--motion-fast) ease-out, transform var(--motion-fast) ease-out',
 };
 
 function variantStyle(variant: Variant, disabled: boolean): React.CSSProperties {
@@ -54,6 +54,7 @@ export function Button({
   type = 'button',
   disabled,
   style,
+  className,
   children,
   ...rest
 }: ButtonProps) {
@@ -61,6 +62,7 @@ export function Button({
     <button
       type={type}
       disabled={disabled}
+      className={['btn', className].filter(Boolean).join(' ')}
       style={{ ...variantStyle(variant, Boolean(disabled)), ...style }}
       {...rest}
     >
