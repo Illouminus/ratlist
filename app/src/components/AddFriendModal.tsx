@@ -21,6 +21,7 @@ import { useToast } from './useToast';
 import { useProfile } from '../auth/useProfile';
 import { errorMessage } from '../lib/errors';
 import { useFocusTrap } from '../lib/useFocusTrap';
+import { track } from '../lib/plausible';
 import { Field } from './Field';
 import { SketchInput } from './SketchInput';
 
@@ -77,6 +78,7 @@ export function AddFriendModal({ open, onClose }: AddFriendModalProps) {
       toast.show(t('errors.sendFailed'));
       return;
     }
+    track('RatInvited', { method: 'email' });
     toast.show(t('addFriend.emailSent'));
     setEmail('');
     setMessage('');
@@ -87,6 +89,7 @@ export function AddFriendModal({ open, onClose }: AddFriendModalProps) {
     if (!addMeUrl) return;
     try {
       await navigator.clipboard.writeText(addMeUrl);
+      track('RatInvited', { method: 'link' });
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {

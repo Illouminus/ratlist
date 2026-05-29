@@ -19,6 +19,7 @@ import { useI18n } from '../i18n/useI18n';
 import { useAuth } from '../auth/useAuth';
 import { useToast } from '../components/useToast';
 import { errorMessage } from '../lib/errors';
+import { track } from '../lib/plausible';
 import { Button } from '../components/Button';
 import { PaperLayout } from '../components/PaperLayout';
 import { ItemPhoto } from '../components/ItemPhoto';
@@ -611,6 +612,7 @@ function ConversionCta({
       return;
     }
     setBefriended(true);
+    track('RatAdded', { source: 'share' });
     toast.show(t('publicList.addedToast', { name: ownerName }));
   }
 
@@ -643,7 +645,11 @@ function ConversionCta({
         >
           {t('publicList.makeYourOwnBody')}
         </p>
-        <Link to="/login" style={{ textDecoration: 'none' }}>
+        <Link
+          to="/login"
+          style={{ textDecoration: 'none' }}
+          onClick={() => track('ShareCtaClicked')}
+        >
           <Button variant="dark" style={{ padding: '14px 28px', fontSize: 13 }}>
             {t('publicList.makeYourOwnCta')}
           </Button>

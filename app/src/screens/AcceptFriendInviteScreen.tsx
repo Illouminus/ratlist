@@ -33,6 +33,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n/useI18n';
 import { errorCode, errorMessage } from '../lib/errors';
+import { track } from '../lib/plausible';
 import { PaperLayout } from '../components/PaperLayout';
 import { Button } from '../components/Button';
 import { LangToggle } from '../components/LangToggle';
@@ -101,6 +102,7 @@ export function AcceptFriendInviteScreen() {
       setBusy(false);
       return;
     }
+    track('RatAdded', { source: 'invite' });
     navigate(`/p/${senderId}`, { replace: true });
   }
 

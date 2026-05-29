@@ -27,6 +27,7 @@ import { useI18n } from '../i18n/useI18n';
 import { useShareToken } from '../items/useShareToken';
 import { useFriends } from '../friends/useFriends';
 import { markActivationDone } from '../lib/activation';
+import { track } from '../lib/plausible';
 
 export interface ActivationChecklistProps {
   /** Whether the user has at least one item. Owned by MyListScreen,
@@ -66,7 +67,10 @@ export function ActivationChecklist({
   // never returns in a future session. localStorage write only — no
   // setState here, so `react-hooks/set-state-in-effect` stays satisfied.
   useEffect(() => {
-    if (allDone) markActivationDone();
+    if (allDone) {
+      markActivationDone();
+      track('ActivationCompleted');
+    }
   }, [allDone]);
 
   // Hide for the rest of this session the moment all three are done. The
