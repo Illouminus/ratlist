@@ -126,6 +126,7 @@ export function useProfile(): UseProfileResult {
   // (notifyProfileChanged). Keeps the Sidebar avatar in sync with a
   // Settings-screen upload without a shared context.
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
     function onChanged(): void {
       void refresh();
     }
