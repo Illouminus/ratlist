@@ -157,6 +157,9 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   .landing-how-runner {
     position: absolute;
     top: 0;
+    /* Default = parked at the end of the trail, so no-JS / reduced-motion
+       visitors see the rat at the finish (a sensible static state). The
+       reveal animation overrides this, running it in from left: 0. */
     left: calc(100% - 64px);
   }
 }

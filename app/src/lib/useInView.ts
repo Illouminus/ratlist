@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 
 /**
  * `useInView` — fire once when an element first scrolls into view.
@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from 'react';
  */
 export function useInView<T extends Element = HTMLElement>(
   threshold = 0.25,
-): { ref: React.RefObject<T | null>; inView: boolean } {
+): { ref: RefObject<T | null>; inView: boolean } {
   const ref = useRef<T | null>(null);
   const [inView, setInView] = useState(false);
 
