@@ -19,7 +19,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
-import { useProfile } from '../../auth/useProfile';
+import { useProfile, notifyProfileChanged } from '../../auth/useProfile';
 import { useGroups } from '../../groups/useGroups';
 import { uploadAvatar } from '../../auth/uploadAvatar';
 import {
@@ -400,6 +400,7 @@ function AvatarPanel({ profile, onChanged }: AvatarPanelProps) {
       return;
     }
     await onChanged();
+    notifyProfileChanged(); // sync the Sidebar avatar (separate useProfile instance)
     toast.show(t('settings.avatarUpdatedToast'));
   }
 
@@ -413,6 +414,7 @@ function AvatarPanel({ profile, onChanged }: AvatarPanelProps) {
       return;
     }
     await onChanged();
+    notifyProfileChanged(); // sync the Sidebar avatar (separate useProfile instance)
     toast.show(t('settings.avatarRemovedToast'));
   }
 
