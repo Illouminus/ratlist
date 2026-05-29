@@ -30,6 +30,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n/useI18n';
 import { errorCode, errorMessage } from '../lib/errors';
+import { track } from '../lib/plausible';
 import { PaperLayout } from '../components/PaperLayout';
 import { Button } from '../components/Button';
 import { LangToggle } from '../components/LangToggle';
@@ -100,6 +101,7 @@ export function AddMeScreen() {
     // Success — drop straight into the new friend's list. The
     // friendships realtime channel on the source pages will refresh
     // any open tabs on the way.
+    track('RatAdded', { source: 'add_me' });
     navigate(`/p/${ownerId}`, { replace: true });
   }
 

@@ -22,6 +22,7 @@ import { useToast } from './useToast';
 import { useShareToken } from '../items/useShareToken';
 import { errorMessage } from '../lib/errors';
 import { useFocusTrap } from '../lib/useFocusTrap';
+import { track } from '../lib/plausible';
 
 export interface ShareDialogProps {
   open: boolean;
@@ -58,7 +59,11 @@ export function ShareDialog({ open, onClose }: ShareDialogProps) {
     setError(null);
     const r = await enable();
     setBusy(false);
-    if ('error' in r) setError(errorMessage(t, r.error));
+    if ('error' in r) {
+      setError(errorMessage(t, r.error));
+      return;
+    }
+    track('ShareEnabled');
   }
 
   async function handleDisable(): Promise<void> {

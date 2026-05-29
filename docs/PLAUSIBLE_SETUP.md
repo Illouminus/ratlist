@@ -78,14 +78,22 @@ ad-block traffic loss in the dashboard.
 
 ## Goal events (already wired in code)
 
-The app fires three custom events via the typed wrapper at
-`app/src/lib/plausible.ts`:
+The app fires these custom events via the typed wrapper at
+`app/src/lib/plausible.ts` (the `PlausibleGoal` union is the source of
+truth):
 
-| Goal           | Fired from                                        | When                                       |
-| -------------- | ------------------------------------------------- | ------------------------------------------ |
-| `SignedIn`     | `screens/AuthCallbackScreen.tsx`                  | auth status flips to `authenticated` on the callback URL (so it covers magic link + Google OAuth, but skips cached-session restores) |
-| `ItemAdded`    | `items/useMyItems.ts` → `createItem`              | items insert succeeds (before the publish-to-groups step, so a partial publish still counts) |
-| `GroupCreated` | `groups/useGroups.ts` → `createGroup`             | `create_group` RPC succeeds                |
+| Goal                 | Fired from                                        | When                                       |
+| -------------------- | ------------------------------------------------- | ------------------------------------------ |
+| `SignedIn`           | `screens/AuthCallbackScreen.tsx`                  | auth status flips to `authenticated` on the callback URL (covers magic link + Google OAuth, skips cached-session restores) |
+| `ItemAdded`          | `items/useMyItems.ts` → `createItem`              | items insert succeeds                      |
+| `ItemPriorityChanged`| `items/useMyItems.ts`                             | priority update succeeds (props: `from`/`to`) |
+| `GroupCreated`       | `groups/useGroups.ts` → `createGroup`             | `create_group` RPC succeeds                |
+| `ShareEnabled`       | `components/ShareDialog.tsx` → `handleEnable`     | the public `/share` link is turned on (not rotate) |
+| `RatAdded`           | `PublicListScreen` / `AddMeScreen` / `AcceptFriendInviteScreen` | a friendship is created (props.source: `share` / `add_me` / `invite`) |
+| `RatInvited`         | `components/AddFriendModal.tsx`                   | a friend invite is sent (props.method: `email` / `link`) |
+| `ActivationCompleted`| `components/ActivationChecklist.tsx`              | all three activation-checklist steps done (graduation) |
+| `ShareCtaClicked`    | `PublicListScreen` (anon conversion CTA)          | anon visitor clicks "make your own list" on `/share` |
+| `EventCreated`       | `screens/events/CreateEventScreen.tsx`            | `create_event` succeeds (props.kind)       |
 
 The wrapper is a no-op when `VITE_PLAUSIBLE_SCRIPT_ID` is unset
 (no Plausible script loaded) so call-sites don't need to guard.
@@ -98,9 +106,9 @@ matching custom event must also exist in Plausible:
 
 1. Plausible → Site settings → **Goals & funnels** → **+ Add goal**
 2. Pick **Custom event**
-3. Event name: exactly `SignedIn`, `ItemAdded`, or `GroupCreated`
-   (case-sensitive — must match what the wrapper sends)
-4. Repeat for the other two
+3. Event name: exactly the goal string (case-sensitive — must match the
+   `PlausibleGoal` union)
+4. Repeat for each goal in the table above
 
 Until those goals are added in the dashboard, the events still get
 sent and counted, they just aren't surfaced as conversions.
@@ -110,6 +118,8 @@ sent and counted, they just aren't surfaced as conversions.
 - **Outbound links** — Plausible auto-tracks outbound clicks if
   the file-downloads + outbound-links extension is enabled in the
   site settings. One toggle, no code change.
-- **Funnels** — once goals exist, you can chain them
-  (`SignedIn` → `GroupCreated` → `ItemAdded`) to see drop-off
-  between sign-up and first real use.
+- **Funnels** — once goals exist, chain them to see drop-off. The
+  cold-start activation funnel to watch:
+  `SignedIn` → `ItemAdded` → `ShareEnabled` → `RatAdded` →
+  `ActivationCompleted`. And the share-loop: `ShareCtaClicked` →
+  `SignedIn` (does a /share visitor convert to a signup?).

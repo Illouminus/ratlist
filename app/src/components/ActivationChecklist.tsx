@@ -26,7 +26,8 @@ import { useEffect } from 'react';
 import { useI18n } from '../i18n/useI18n';
 import { useShareToken } from '../items/useShareToken';
 import { useFriends } from '../friends/useFriends';
-import { markActivationDone } from '../lib/activation';
+import { isActivationDone, markActivationDone } from '../lib/activation';
+import { track } from '../lib/plausible';
 
 export interface ActivationChecklistProps {
   /** Whether the user has at least one item. Owned by MyListScreen,
@@ -66,7 +67,14 @@ export function ActivationChecklist({
   // never returns in a future session. localStorage write only — no
   // setState here, so `react-hooks/set-state-in-effect` stays satisfied.
   useEffect(() => {
-    if (allDone) markActivationDone();
+    // Guard on the persisted flag so the pair stays idempotent: a remount
+    // while `allDone` is still true (HMR, tab switch) must not re-fire the
+    // non-idempotent `track`. markActivationDone alone is a no-op re-write,
+    // but Plausible counts every call.
+    if (allDone && !isActivationDone()) {
+      markActivationDone();
+      track('ActivationCompleted');
+    }
   }, [allDone]);
 
   // Hide for the rest of this session the moment all three are done. The

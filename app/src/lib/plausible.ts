@@ -26,7 +26,14 @@ export type PlausibleGoal =
   | 'SignedIn' // user just completed a sign-in (magic link or OAuth)
   | 'ItemAdded' // user successfully created a wishlist item
   | 'GroupCreated' // user successfully created a friend circle
-  | 'ItemPriorityChanged'; // user changed the priority of a wishlist item
+  | 'ItemPriorityChanged' // user changed the priority of a wishlist item
+  // ── cold-start activation funnel (2026-05-29) ──
+  | 'ShareEnabled' // turned on their public /share link
+  | 'RatAdded' // a friendship was created — props.source: 'share' | 'add_me' | 'invite'
+  | 'RatInvited' // sent a friend invite — props.method: 'email' | 'link'
+  | 'ActivationCompleted' // all three activation-checklist steps done
+  | 'ShareCtaClicked' // anon visitor clicked "make your own list" on /share
+  | 'EventCreated'; // created an event — props.kind
 
 type PlausibleProps = Record<string, string | number | boolean>;
 

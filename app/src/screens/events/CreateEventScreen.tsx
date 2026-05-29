@@ -16,6 +16,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { useEvents } from '../../events/useEvents';
 import { useMyItems, type MyItem } from '../../items/useMyItems';
 import { errorMessage } from '../../lib/errors';
+import { track } from '../../lib/plausible';
 import { EVENT_KINDS, type EventKind } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
 import { Field } from '../../components/Field';
@@ -66,6 +67,7 @@ export function CreateEventScreen() {
       return;
     }
 
+    track('EventCreated', { kind });
     toast.show(t('events.createdToast'));
     // ?share=1 makes EventDetailScreen render the post-create share card.
     navigate(`/events/${result.event.id}?share=1`, { replace: true });

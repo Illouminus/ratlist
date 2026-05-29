@@ -46,6 +46,9 @@ vi.mock('../../friends/useFriends', () => ({
   }),
 }));
 
+const mockTrack = vi.hoisted(() => vi.fn());
+vi.mock('../../lib/plausible', () => ({ track: mockTrack }));
+
 // ─── helpers ─────────────────────────────────────────────────────────
 function renderChecklist(props: Partial<React.ComponentProps<typeof ActivationChecklist>> = {}) {
   const onAdd = vi.fn();
@@ -72,6 +75,7 @@ beforeEach(() => {
   localStorage.setItem('kryska.lang', 'ru');
   shareState.current = { status: 'ready', token: null, error: null };
   friendsState.current = { kind: 'loaded', friends: [] };
+  mockTrack.mockClear();
 });
 
 describe('<ActivationChecklist>', () => {
@@ -128,5 +132,6 @@ describe('<ActivationChecklist>', () => {
 
     expect(screen.queryByText('с чего начать')).toBeNull();
     expect(isActivationDone()).toBe(true);
+    expect(mockTrack).toHaveBeenCalledWith('ActivationCompleted');
   });
 });
