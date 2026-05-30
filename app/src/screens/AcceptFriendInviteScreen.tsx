@@ -31,6 +31,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
+import { useProfile } from '../auth/useProfile';
 import { useI18n } from '../i18n/useI18n';
 import { errorCode, errorMessage } from '../lib/errors';
 import { track } from '../lib/plausible';
@@ -48,6 +49,7 @@ interface SenderPreview {
 export function AcceptFriendInviteScreen() {
   const { t } = useI18n();
   const { status } = useAuth();
+  const { query: profileQuery } = useProfile();
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +79,16 @@ export function AcceptFriendInviteScreen() {
 
   if (!token) {
     return <Navigate to="/" replace />;
+  }
+
+  // #3: not-yet-onboarded visitor sets their name first (public route → the
+  // AuthedShell onboarding gate never fires); OnboardingScreen returns here.
+  if (
+    status === 'authenticated' &&
+    profileQuery.status === 'ready' &&
+    !profileQuery.profile.onboarded_at
+  ) {
+    return <Navigate to="/onboarding" replace state={{ from: `/friend-invite/${token}` }} />;
   }
 
   const title = t('acceptFriendInvite.title', {
@@ -167,7 +179,11 @@ export function AcceptFriendInviteScreen() {
         </Link>
       )}
 
-      {status === 'authenticated' && (
+      {status === 'authenticated' && profileQuery.status !== 'ready' && (
+        <p style={{ color: 'var(--ink-3)' }}>…</p>
+      )}
+
+      {status === 'authenticated' && profileQuery.status === 'ready' && (
         <>
           {error && (
             <p style={{ color: 'var(--accent-deep)', lineHeight: 1.55, marginBottom: 'var(--s-4)' }}>
@@ -181,6 +197,23 @@ export function AcceptFriendInviteScreen() {
           >
             {t('acceptFriendInvite.cta')}
           </Button>
+          <div style={{ marginTop: 'var(--s-3)' }}>
+            <button
+              type="button"
+              onClick={() => navigate('/', { replace: true })}
+              className="mono-meta"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                color: 'var(--ink-3)',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+              }}
+            >
+              {t('acceptFriendInvite.notNow')}
+            </button>
+          </div>
         </>
       )}
     </PaperLayout>
