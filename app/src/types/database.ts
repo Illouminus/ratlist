@@ -630,9 +630,40 @@ export type Database = {
           },
         ]
       }
+      profile_secrets: {
+        Row: {
+          add_me_token: string
+          created_at: string
+          share_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          add_me_token?: string
+          created_at?: string
+          share_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          add_me_token?: string
+          created_at?: string
+          share_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_secrets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
-          add_me_token: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -641,11 +672,9 @@ export type Database = {
           handle: string | null
           id: string
           onboarded_at: string | null
-          share_token: string | null
           updated_at: string
         }
         Insert: {
-          add_me_token?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -654,11 +683,9 @@ export type Database = {
           handle?: string | null
           id: string
           onboarded_at?: string | null
-          share_token?: string | null
           updated_at?: string
         }
         Update: {
-          add_me_token?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -667,7 +694,6 @@ export type Database = {
           handle?: string | null
           id?: string
           onboarded_at?: string | null
-          share_token?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -937,7 +963,6 @@ export type Database = {
       complete_onboarding: {
         Args: { _display_name: string; _handle?: string }
         Returns: {
-          add_me_token: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -946,7 +971,6 @@ export type Database = {
           handle: string | null
           id: string
           onboarded_at: string | null
-          share_token: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -1155,6 +1179,7 @@ export type Database = {
       join_event_via_token: { Args: { _token: string }; Returns: string }
       owns_event: { Args: { _event_id: string }; Returns: boolean }
       owns_item: { Args: { _item_id: string }; Returns: boolean }
+      profile_has_share: { Args: { _user: string }; Returns: boolean }
       reapply_friend_backfill: { Args: never; Returns: undefined }
       redeem_invite: {
         Args: { _token: string }
@@ -1169,6 +1194,7 @@ export type Database = {
       rotate_add_me_token: { Args: never; Returns: string }
       run_santa_draw: { Args: { _event_id: string }; Returns: undefined }
       set_share_token: { Args: { _enabled: boolean }; Returns: string }
+      shares_event_with: { Args: { _a: string; _b: string }; Returns: boolean }
       shares_group_with: { Args: { _other_user: string }; Returns: boolean }
       truncate_test_state: { Args: never; Returns: undefined }
       unfriend: { Args: { _other: string }; Returns: undefined }

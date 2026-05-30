@@ -43,10 +43,9 @@ describe('data migration — circles → friendships', () => {
     expect(hasPair(TEST_USERS.alice, TEST_USERS.dave)).toBe(true);
   });
 
-  it('sets add_me_token on every profile, all unique, non-empty', async () => {
+  it('every profile has a unique, non-empty add_me_token (now in profile_secrets)', async () => {
     const admin = adminClient();
-    await admin.rpc('reapply_friend_backfill');
-    const { data: rows } = await admin.from('profiles').select('id, add_me_token');
+    const { data: rows } = await admin.from('profile_secrets').select('user_id, add_me_token');
     expect(rows!.length).toBeGreaterThanOrEqual(4);
     const tokens = (rows ?? []).map((r) => r.add_me_token as string | null);
     expect(tokens.every((t) => typeof t === 'string' && t.length > 0)).toBe(true);

@@ -18,7 +18,6 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useI18n } from '../i18n/useI18n';
 import { useToast } from './useToast';
-import { useProfile } from '../auth/useProfile';
 import { errorMessage } from '../lib/errors';
 import { useFocusTrap } from '../lib/useFocusTrap';
 import { track } from '../lib/plausible';
@@ -33,11 +32,11 @@ export interface AddFriendModalProps {
 export function AddFriendModal({ open, onClose }: AddFriendModalProps) {
   const { t } = useI18n();
   const toast = useToast();
-  const { query, refresh: refreshProfile } = useProfile();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [addMeToken, setAddMeToken] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   useFocusTrap(cardRef, open);
 
@@ -52,12 +51,25 @@ export function AddFriendModal({ open, onClose }: AddFriendModalProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  // Load the caller's own add-me token from profile_secrets (self-read RLS).
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void supabase
+      .from('profile_secrets')
+      .select('add_me_token')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setAddMeToken(data?.add_me_token ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   if (!open) return null;
 
-  const profile = query.status === 'ready' ? query.profile : null;
-  const addMeUrl = profile?.add_me_token
-    ? `${window.location.origin}/add-me/${profile.add_me_token}`
-    : '';
+  const addMeUrl = addMeToken ? `${window.location.origin}/add-me/${addMeToken}` : '';
 
   async function submitEmail(): Promise<void> {
     setBusy(true);
@@ -98,12 +110,12 @@ export function AddFriendModal({ open, onClose }: AddFriendModalProps) {
   }
 
   async function rotateLink(): Promise<void> {
-    const { error } = await supabase.rpc('rotate_add_me_token');
+    const { data: newToken, error } = await supabase.rpc('rotate_add_me_token');
     if (error) {
       toast.show(errorMessage(t, error));
       return;
     }
-    await refreshProfile();
+    setAddMeToken(typeof newToken === 'string' ? newToken : null);
     toast.show(t('addFriend.linkRotated'));
   }
 

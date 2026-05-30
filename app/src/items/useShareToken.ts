@@ -52,9 +52,9 @@ type FetchState =
 
 async function loadToken(userId: string): Promise<FetchState> {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('profile_secrets')
     .select('share_token')
-    .eq('id', userId)
+    .eq('user_id', userId)
     .maybeSingle();
   if (error) return { kind: 'failed', userId, error: error.message };
   return { kind: 'loaded', userId, token: data?.share_token ?? null };

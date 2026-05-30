@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 import { adminClient, clientFor } from './helpers/client.ts';
 import { SUPABASE_URL, ANON_KEY } from './helpers/env.ts';
-import { ensureTestUsers, truncateBetweenTests, TEST_USERS } from './helpers/seed.ts';
+import { ensureTestUsers, truncateBetweenTests, setAddMeToken, TEST_USERS } from './helpers/seed.ts';
 
 const anonClient = () => createClient(SUPABASE_URL, ANON_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -14,17 +14,20 @@ describe('friend preview RPCs', () => {
     await ensureTestUsers();
     // truncate_test_state intentionally keeps profiles; reset the
     // transient fields tests in this file mutate so order doesn't matter.
+    // add_me_token now lives in profile_secrets (NOT NULL) so it isn't reset
+    // here — each test sets the one token it asserts on.
     const admin = adminClient();
     await admin.from('profiles')
-      .update({ disabled_at: null, avatar_url: null, add_me_token: null })
+      .update({ disabled_at: null, avatar_url: null })
       .in('id', Object.values(TEST_USERS));
   });
 
   describe('get_add_me_preview', () => {
     it('returns the owning profile for a valid token (anon caller)', async () => {
       const admin = adminClient();
+      await setAddMeToken(TEST_USERS.alice, 'alice_link');
       await admin.from('profiles')
-        .update({ add_me_token: 'alice_link', avatar_url: 'https://example.test/a.png' })
+        .update({ avatar_url: 'https://example.test/a.png' })
         .eq('id', TEST_USERS.alice);
 
       const { data, error } = await anonClient().rpc('get_add_me_preview', {
@@ -50,8 +53,9 @@ describe('friend preview RPCs', () => {
 
     it('returns zero rows when the owning profile is disabled', async () => {
       const admin = adminClient();
+      await setAddMeToken(TEST_USERS.alice, 'alice_link');
       await admin.from('profiles')
-        .update({ add_me_token: 'alice_link', disabled_at: new Date().toISOString() })
+        .update({ disabled_at: new Date().toISOString() })
         .eq('id', TEST_USERS.alice);
 
       const { data, error } = await anonClient().rpc('get_add_me_preview', {
@@ -62,8 +66,7 @@ describe('friend preview RPCs', () => {
     });
 
     it('is callable by an authenticated user (not only anon)', async () => {
-      const admin = adminClient();
-      await admin.from('profiles').update({ add_me_token: 'alice_link' }).eq('id', TEST_USERS.alice);
+      await setAddMeToken(TEST_USERS.alice, 'alice_link');
 
       const bob = await clientFor(TEST_USERS.bob);
       const { data, error } = await bob.rpc('get_add_me_preview', { _token: 'alice_link' });
