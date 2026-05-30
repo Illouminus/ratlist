@@ -48,11 +48,23 @@ beforeEach(() => {
 });
 
 describe('<ShareDialog>', () => {
-  it('closes the dialog after copying the share link', async () => {
+  it('copies, toasts, and closes the dialog — in that order', async () => {
     const onClose = renderDialog();
     fireEvent.click(screen.getByRole('button', { name: /скопировать|copy/i }));
     expect(mocks.writeText).toHaveBeenCalled();
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+    // The success path shows the toast before closing.
+    expect(mocks.toastShow).toHaveBeenCalled();
+  });
+
+  it('does NOT close if the clipboard write fails', async () => {
+    mocks.writeText.mockRejectedValue(new Error('clipboard blocked'));
+    const onClose = renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: /скопировать|copy/i }));
+    // Let the rejected clipboard promise settle.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(mocks.toastShow).not.toHaveBeenCalled();
   });
 
   it('has an explicit close (×) button that closes the dialog', () => {
