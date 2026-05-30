@@ -316,7 +316,7 @@ describe('<EventDetailScreen> items rendering', () => {
 
   it('guest sees a claim button wired to useEvent.claim', () => {
     localStorage.setItem('kryska.lang', 'ru');
-    const claim = vi.fn();
+    const claim = vi.fn().mockResolvedValue({ ok: true });
     mocks.useEvent.mockReturnValue({
       query: {
         status: 'ready',

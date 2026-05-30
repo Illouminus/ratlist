@@ -62,7 +62,8 @@ export function TileCuratedItem({
   const { t } = useI18n();
   const { item, claims } = entry;
   const myClaim = myUserId ? claims.find((c) => c.user_id === myUserId) ?? null : null;
-  const othersClaim = claims.find((c) => c.user_id !== myUserId) ?? null;
+  const othersClaim =
+    claims.find((c) => myUserId !== null && c.user_id !== myUserId) ?? null;
 
   return (
     <article data-testid="item-tile" className="curated-tile">

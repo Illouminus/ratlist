@@ -97,6 +97,20 @@ export function EventDetailScreen() {
     navigate('/events', { replace: true });
   }
 
+  // Surface claim/release failures (e.g. a rate-limited or raced insert)
+  // instead of silently no-opping — claiming is the guest's primary action.
+  async function handleClaim(itemId: string): Promise<{ ok: true } | { error: string }> {
+    const result = await claim(itemId);
+    if ('error' in result) toast.show(errorMessage(t, result.error));
+    return result;
+  }
+
+  async function handleRelease(itemId: string): Promise<{ ok: true } | { error: string }> {
+    const result = await release(itemId);
+    if ('error' in result) toast.show(errorMessage(t, result.error));
+    return result;
+  }
+
   return (
     <PaperLayout>
       <Link
@@ -142,8 +156,8 @@ export function EventDetailScreen() {
         myUserId={user?.id ?? null}
         onAttach={attachItem}
         onDetach={detachItem}
-        onClaim={claim}
-        onRelease={release}
+        onClaim={handleClaim}
+        onRelease={handleRelease}
       />
 
       {isHonoree && (
