@@ -152,6 +152,7 @@ export function EventDetailScreen() {
 
       <ItemsSection
         items={items}
+        eventId={event.id}
         isHonoree={isHonoree}
         myUserId={user?.id ?? null}
         onAttach={attachItem}
@@ -600,6 +601,7 @@ function ParticipantsSection({ eventId }: { eventId: string }) {
 
 interface ItemsSectionProps {
   items: Array<{ item_id: string; item: MyItem | { id: string; cover_url: string | null; title: string; maker: string | null; price_text: string | null; note: string | null; owner_id: string; priority: number }; claims: EventClaim[] }>;
+  eventId: string;
   isHonoree: boolean;
   myUserId: string | null;
   onAttach: (itemId: string) => Promise<{ ok: true } | { error: string }>;
@@ -610,6 +612,7 @@ interface ItemsSectionProps {
 
 function ItemsSection({
   items,
+  eventId,
   isHonoree,
   myUserId,
   onAttach,
@@ -682,6 +685,7 @@ function ItemsSection({
               <li key={entry.item_id}>
                 <TileCuratedItem
                   entry={entry}
+                  eventId={eventId}
                   isHonoree={isHonoree}
                   myUserId={myUserId}
                   onDetach={() => void onDetach(entry.item_id)}

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { I18nProvider } from '../../../i18n';
 import { TileCuratedItem } from '../TileCuratedItem';
 import type { EventClaim } from '../../../events/useEvent';
@@ -48,11 +48,16 @@ function mkClaim(userId: string, displayName: string): EventClaim {
 
 interface RenderProps {
   entry?: ReturnType<typeof mkEntry>;
+  eventId?: string;
   isHonoree?: boolean;
   myUserId?: string | null;
   onDetach?: () => void;
   onClaim?: () => void;
   onRelease?: () => void;
+}
+
+function LocationProbe() {
+  return <div data-testid="loc">{useLocation().pathname}</div>;
 }
 
 function renderTile(props: RenderProps = {}) {
@@ -61,12 +66,14 @@ function renderTile(props: RenderProps = {}) {
       <I18nProvider>
         <TileCuratedItem
           entry={props.entry ?? mkEntry()}
+          eventId={props.eventId ?? 'event-1'}
           isHonoree={props.isHonoree ?? false}
           myUserId={props.myUserId ?? null}
           onDetach={props.onDetach ?? vi.fn()}
           onClaim={props.onClaim ?? vi.fn()}
           onRelease={props.onRelease ?? vi.fn()}
         />
+        <LocationProbe />
       </I18nProvider>
     </MemoryRouter>,
   );
@@ -128,14 +135,18 @@ describe('<TileCuratedItem>', () => {
     expect(onRelease).toHaveBeenCalledTimes(1);
   });
 
-  it('when someone else claimed it, shows their name and no claim button', () => {
+  it('when someone else claimed it, their name links to their list + no claim button', () => {
     renderTile({
       entry: mkEntry({ claims: [mkClaim('other', 'Аня')] }),
+      eventId: 'ev-9',
       isHonoree: false,
       myUserId: 'me',
     });
-    expect(screen.getByText(/Аня берёт/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /я возьму/i })).toBeNull();
+    // The claimer's name is clickable → opens their co-participant list.
+    const nameBtn = screen.getByRole('button', { name: /Аня берёт/i });
+    fireEvent.click(nameBtn);
+    expect(screen.getByTestId('loc').textContent).toBe('/events/ev-9/member/other');
   });
 
   it('renders priority dot for «очень хочу» (priority 1)', () => {

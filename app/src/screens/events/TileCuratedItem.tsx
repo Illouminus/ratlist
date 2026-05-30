@@ -19,7 +19,7 @@
  * and row (88px) widths the SittingRat with sign reads cleanly enough.
  */
 import type { MouseEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { PriorityDots } from '../../components/PriorityDots';
@@ -43,6 +43,7 @@ interface TileCuratedItemEntry {
 
 interface TileCuratedItemProps {
   entry: TileCuratedItemEntry;
+  eventId: string;
   isHonoree: boolean;
   /** Current viewer's id — used to split my-claim from someone-else's. */
   myUserId: string | null;
@@ -53,6 +54,7 @@ interface TileCuratedItemProps {
 
 export function TileCuratedItem({
   entry,
+  eventId,
   isHonoree,
   myUserId,
   onDetach,
@@ -131,6 +133,7 @@ export function TileCuratedItem({
               <ClaimControl
                 myClaim={myClaim}
                 othersClaim={othersClaim}
+                eventId={eventId}
                 onClaim={onClaim}
                 onRelease={onRelease}
               />
@@ -158,6 +161,7 @@ export function TileCuratedItem({
 interface ClaimControlProps {
   myClaim: EventClaim | null;
   othersClaim: EventClaim | null;
+  eventId: string;
   onClaim: () => void;
   onRelease: () => void;
 }
@@ -168,8 +172,9 @@ interface ClaimControlProps {
  * a `<Link>`, so the buttons `intercept` the click to avoid also navigating
  * to `/i/:id` — same pattern as the friend-list claim control.
  */
-function ClaimControl({ myClaim, othersClaim, onClaim, onRelease }: ClaimControlProps) {
+function ClaimControl({ myClaim, othersClaim, eventId, onClaim, onRelease }: ClaimControlProps) {
   const { t } = useI18n();
+  const navigate = useNavigate();
 
   function intercept(handler: () => void) {
     return (e: MouseEvent) => {
@@ -212,8 +217,14 @@ function ClaimControl({ myClaim, othersClaim, onClaim, onRelease }: ClaimControl
   }
 
   if (othersClaim) {
+    // The tile body is itself a <Link to /i/:id>, so we can't nest an <a>.
+    // Use a button that intercepts the click and navigates to the claimer's
+    // co-participant list (discovery). Falls back to an empty list if you
+    // don't share an event with them.
     return (
-      <span
+      <button
+        type="button"
+        onClick={intercept(() => navigate(`/events/${eventId}/member/${othersClaim.user_id}`))}
         className="marginalia"
         style={{
           fontSize: 13,
@@ -221,10 +232,17 @@ function ClaimControl({ myClaim, othersClaim, onClaim, onRelease }: ClaimControl
           transform: 'rotate(-2deg)',
           display: 'inline-block',
           whiteSpace: 'nowrap',
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          textDecoration: 'underline',
+          textDecorationStyle: 'dotted',
+          textUnderlineOffset: 3,
         }}
       >
         {t('friend.claimedBy', { name: othersClaim.user.display_name })}
-      </span>
+      </button>
     );
   }
 
