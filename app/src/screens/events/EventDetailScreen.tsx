@@ -160,6 +160,10 @@ export function EventDetailScreen() {
         onRelease={handleRelease}
       />
 
+      {!isHonoree && eventId && (
+        <GuestParticipants eventId={eventId} myUserId={user?.id ?? null} />
+      )}
+
       {isHonoree && (
         <footer
           style={{
@@ -196,6 +200,53 @@ export function EventDetailScreen() {
         />
       )}
     </PaperLayout>
+  );
+}
+
+// ─────────────── guest-facing co-participant list ───────────────
+
+/**
+ * Shown to guests (not the honoree): the other active participants of this
+ * event, each a link into their shared wishlist for discovery + "copy to my
+ * list". Excludes self. The honoree gets the richer `<ParticipantsSection>`
+ * (status management) instead.
+ */
+function GuestParticipants({ eventId, myUserId }: { eventId: string; myUserId: string | null }) {
+  const { t } = useI18n();
+  const { query } = useEventParticipants(eventId);
+  if (query.status !== 'ready') return null;
+  const others = query.participants.filter((p) => p.status === 'active' && p.user_id !== myUserId);
+  if (others.length === 0) return null;
+  return (
+    <section style={{ marginTop: 'var(--s-6)' }}>
+      <h2 className="display-xs" style={{ marginBottom: 'var(--s-3)' }}>
+        {t('events.guests.title')}
+      </h2>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {others.map((p) => (
+          <li key={p.user_id}>
+            <Link
+              to={`/events/${eventId}/member/${p.user_id}`}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                gap: 'var(--s-3)',
+                padding: 'var(--s-2) 0',
+                borderBottom: '1px solid var(--hair)',
+                textDecoration: 'none',
+                color: 'var(--ink)',
+              }}
+            >
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 14 }}>{p.display_name}</span>
+              <span className="mono-meta" style={{ color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>
+                {t('events.guests.browse')} →
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

@@ -114,6 +114,10 @@ const CreateEventScreen = lazyNamed(
   () => import('./screens/events/CreateEventScreen'),
   'CreateEventScreen',
 );
+const EventMemberListScreen = lazyNamed(
+  () => import('./screens/events/EventMemberListScreen'),
+  'EventMemberListScreen',
+);
 
 /**
  * Single shared frame for every authed-and-onboarded screen.
@@ -293,6 +297,7 @@ export function AppRoutes() {
         <Route path="/events" element={<EventsScreen />} />
         <Route path="/events/new" element={<CreateEventScreen />} />
         <Route path="/events/:eventId" element={<EventDetailScreen />} />
+        <Route path="/events/:eventId/member/:userId" element={<EventMemberListScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
       </Route>
 

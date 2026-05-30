@@ -141,6 +141,13 @@ export const ru: Translation = {
     priorityHigh: 'очень хочу',
     privateOnly: 'только тебе видно',
     publishedIn: 'видно в {groups}',
+    copy: 'хочу себе',
+    copiedToast: 'добавили тебе в список',
+  },
+  member: {
+    heading: 'список {name}',
+    backToEvent: 'к событию',
+    empty: 'тут пока пусто',
   },
   priority: {
     sectionHigh:      'Очень хочу',
@@ -383,6 +390,10 @@ export const ru: Translation = {
     itemsLabel: 'в подборке',
     noItemsHonoree: 'пока ничего не добавлено. иди в свой список и отметь то, что хочешь именно к этому поводу.',
     noItemsGuest: 'хозяин ещё не выбрал что хочет к этому поводу.',
+    guests: {
+      title: 'кто ещё дарит',
+      browse: 'посмотреть список',
+    },
     kind: {
       birthday: 'др',
       holidays: 'праздники',
