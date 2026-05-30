@@ -755,6 +755,7 @@ export const en: Translation = {
     back: 'back',
     yes: 'yes',
     no: 'no',
+    close: 'close',
   },
   a11y: {
     skipToMain: 'Skip to main content',

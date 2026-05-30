@@ -760,6 +760,7 @@ export const ru: Translation = {
     back: 'назад',
     yes: 'да',
     no: 'нет',
+    close: 'закрыть',
   },
   a11y: {
     skipToMain: 'Перейти к содержимому',
