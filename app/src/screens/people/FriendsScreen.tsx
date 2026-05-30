@@ -30,6 +30,7 @@ import { useFriendInvites, type PendingInvite } from '../../friends/useFriendInv
 import { useEvents } from '../../events/useEvents';
 import { errorMessage } from '../../lib/errors';
 import { PaperLayout } from '../../components/PaperLayout';
+import { Avatar } from '../../components/Avatar';
 import { SittingRat } from '../../components/rats';
 import { ListSkeleton } from '../../components/Skeleton';
 import { AddFriendModal } from '../../components/AddFriendModal';
@@ -343,7 +344,7 @@ function FriendRow({ friend, eventCount, onUnfriend }: FriendRowProps) {
           color: 'inherit',
         }}
       >
-        <Avatar name={friend.display_name} />
+        <Avatar avatarUrl={friend.avatar_url} name={friend.handle ?? friend.display_name} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3
             className="display-italic"
@@ -400,7 +401,7 @@ function FriendRow({ friend, eventCount, onUnfriend }: FriendRowProps) {
   );
 }
 
-// ─────────────────────────── empty / avatar ───────────────────────────
+// ─────────────────────────── empty ───────────────────────────
 
 function EmptyState() {
   const { t } = useI18n();
@@ -428,29 +429,3 @@ function EmptyState() {
   );
 }
 
-/** Simple circular initial badge in the accent wash colour. */
-function Avatar({ name }: { name: string }) {
-  const initial = name.trim().charAt(0).toUpperCase() || '?';
-  return (
-    <span
-      style={{
-        width: 40,
-        height: 40,
-        flexShrink: 0,
-        borderRadius: '50%',
-        background: 'var(--accent-wash)',
-        color: 'var(--ink)',
-        display: 'grid',
-        placeItems: 'center',
-        fontFamily: 'var(--font-display)',
-        fontStyle: 'italic',
-        fontWeight: 500,
-        fontSize: 18,
-        boxShadow: 'inset 0 0 0 1px var(--hair-strong)',
-      }}
-      aria-hidden
-    >
-      {initial}
-    </span>
-  );
-}

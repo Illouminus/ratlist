@@ -24,6 +24,7 @@ import { errorMessage } from '../../lib/errors';
 import type { Occasion } from '../../lib/db';
 import type { Profile } from '../../lib/db';
 import { PaperLayout } from '../../components/PaperLayout';
+import { Avatar } from '../../components/Avatar';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { OccasionTag } from '../../components/OccasionTag';
 import { PriorityDots } from '../../components/PriorityDots';
@@ -319,35 +320,46 @@ function Header({
       >
         {t('friend.backToPeople')}
       </Link>
-      <div className="mono-meta" style={{ marginBottom: 'var(--s-2)' }}>
-        {profile.display_name}
-        {profile.handle && profile.handle !== profile.display_name && (
-          <>{' · @'}{profile.handle}</>
-        )}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
-        <h2
-          className="display-italic"
-          style={{
-            margin: 0,
-            fontSize: 'var(--display-l)',
-            lineHeight: 1.0,
-            letterSpacing: -1.2,
-          }}
-        >
-          {headline}
-        </h2>
-        <div
-          className="marginalia"
-          style={{
-            fontSize: 16,
-            color: 'var(--accent)',
-            transform: 'rotate(-2deg)',
-            marginBottom: 4,
-            display: 'inline-block',
-          }}
-        >
-          {t('friend.annotation')}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-4)' }}>
+        <Avatar
+          avatarUrl={profile.avatar_url}
+          name={profile.handle ?? profile.display_name}
+          size={52}
+        />
+        <div style={{ minWidth: 0 }}>
+          <div className="mono-meta" style={{ marginBottom: 'var(--s-2)' }}>
+            {profile.display_name}
+            {profile.handle && profile.handle !== profile.display_name && (
+              <>{' · @'}{profile.handle}</>
+            )}
+          </div>
+          <div
+            style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--s-3)', flexWrap: 'wrap' }}
+          >
+            <h2
+              className="display-italic"
+              style={{
+                margin: 0,
+                fontSize: 'var(--display-l)',
+                lineHeight: 1.0,
+                letterSpacing: -1.2,
+              }}
+            >
+              {headline}
+            </h2>
+            <div
+              className="marginalia"
+              style={{
+                fontSize: 16,
+                color: 'var(--accent)',
+                transform: 'rotate(-2deg)',
+                marginBottom: 4,
+                display: 'inline-block',
+              }}
+            >
+              {t('friend.annotation')}
+            </div>
+          </div>
         </div>
       </div>
       <hr style={{ border: 0, borderTop: '1px solid var(--hair)', margin: 'var(--s-4) 0 0' }} />
