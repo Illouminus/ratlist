@@ -372,7 +372,11 @@ All authed routes are lazy-loaded via `React.lazy` — see
 | ↳ Secret Santa demoted from primary nav                  | ✅ #48 (`68ad439`) — nav 4→3 tabs (My list / Events / People); Santa now a secondary `events.santaEntry` link at the bottom of `/events`. Routes unchanged; Santa still rides on `groups` (variant a, deferred to Q4). |
 | **Plausible activation funnel** (analytics)              | ✅ #50 (`bd7a923`) — goals `ShareEnabled` / `RatAdded{source}` / `RatInvited{method}` / `ActivationCompleted` / `ShareCtaClicked` / `EventCreated` + `track()` call sites. Dashboard goals still need registering — see [docs/PLAUSIBLE_SETUP.md](docs/PLAUSIBLE_SETUP.md). |
 | **Rate limits** (per-user sliding window)                | ✅ #51 (`dcc9c57`) — `rate_limit_log` + `enforce_rate_limit` (SECURITY DEFINER) + BEFORE INSERT triggers: items 100/h, friend_invites 10/h, reports 20/h; anon/service (uid null) unrestricted. `rateLimited` mapped in errors.ts. Live in prod. Follow-up: prune `rate_limit_log` rows >24h (pg_cron/external). |
-| **Prod-smoke fixes** (2026-05-29)                        | ✅ #52 (`5c8ebbf`) profiles friend-view RLS — friends can read each other's profiles (`/p/:id` was "something went wrong" + blank avatar); #53 (`f03696a`) realtime anon-key `.trim()` (a prod env TAB broke websockets), per-user activation flag (`kryska.activationDone.<id>` — was leaking across accounts in one browser), sidebar avatar sync (`notifyProfileChanged` window event). Found via prod smoke — see `memory/project_prod_smoke_2026-05-29.md`. **Still open: #10 (event-link guest join/claim) + UX batch #1/2/3/7.** |
+| **Prod-smoke fixes** (2026-05-29)                        | ✅ #52 (`5c8ebbf`) profiles friend-view RLS — friends can read each other's profiles (`/p/:id` was "something went wrong" + blank avatar); #53 (`f03696a`) realtime anon-key `.trim()` (a prod env TAB broke websockets), per-user activation flag (`kryska.activationDone.<id>` — was leaking across accounts in one browser), sidebar avatar sync (`notifyProfileChanged` window event). Found via prod smoke — see `memory/project_prod_smoke_2026-05-29.md`. **Resolved since:** #10→#55, #1→#56, #2/#3→#62 (2026-05-30). **Still open: #7** (add an existing friend to an event — confirm what's actually missing vs the honoree's `InviteFromPeopleModal`). |
+| **profile_secrets + event co-participant visibility** (2026-05-30) | ✅ #59 (`7f6cd0f`) — moved `share_token`/`add_me_token` out of `profiles` into an owner-read-only `profile_secrets`; added `shares_event_with(a,b)` + a `profiles` SELECT policy for event co-participants. **Fixes bug F** (co-participants now see who claimed; honoree stays blind). Migration `20260530120000`. Also closed #52's token-exposure-to-friends + a latent null `add_me_token` for new users. |
+| **Event discovery: browse co-participant lists + copy** (2026-05-30) | ✅ #60 (`a47f0c3`) — guests see «кто ещё дарит» (other active participants) → open each other's SHARED lists (`get_coparticipant_list` RPC, gated on `shares_event_with`, copy-only / no claims) → «хочу себе» = `copyItem`/`buildCopyInput` (refs source cover_url, v1). New `EventMemberListScreen` at `/events/:eventId/member/:userId`. Migration `20260530130000`. |
+| **Fix: event participant lists rendered empty** (2026-05-30) | ✅ #61 (`f5c70da`) — `useEventParticipants` embedded `profiles!user_id`, but `event_participants` has no FK to `profiles` → PGRST200 → both honoree + guest «кто ещё дарит» showed nothing (pre-existing; #60 surfaced it). Fix: two queries (rows, then `profiles.in(ids)`). Also made the claimer name on a curated item a link → that person's member list. |
+| **Add-me flow: onboarding-first + decline** (2026-05-30) | ✅ #62 — #3: a not-yet-onboarded visitor on `/add-me/:token` or `/friend-invite/:token` is redirected to onboarding (name) FIRST, then back (these are public routes, so the AuthedShell onboarding gate never fired). #2: added a «не сейчас» decline on the accept screen. Both screens. |
 | Notification preferences UI                              | ⬜ ~1.5 h — `email_prefs` JSONB on profiles |
 | **Supabase Pro upgrade**                                 | ⬜ optional — $25/mo, unlocks image transforms + backups |
 | Share % (partial claims)                                 | ⬜ (schema has `share`, no UI) |
@@ -387,6 +391,29 @@ We run on **544xx** (54421 API / 54422 DB / 54423 Studio / 54424 Mailpit
 other Supabase project that runs on default 543xx. **Don't `supabase
 stop` the other instance** without authorisation — the user said
 "наверное" which the classifier read as tentative.
+
+### Can't embed `profiles` from `event_participants`
+
+There is **no FK** between `event_participants` and `profiles`:
+`event_participants.user_id` (and `invited_by`) reference `auth.users`, not
+`profiles`. A PostgREST embed like `profiles!user_id(...)` therefore errors
+with **`PGRST200`** and silently empties the result — which is exactly how the
+participant list ("кто ещё дарит" + the honoree list) shipped broken until #61.
+**Use two queries** instead: fetch the rows, then
+`profiles.select(...).in('id', ids)`, and join in JS. (`claims → profiles`
+embeds fine — single FK, no ambiguity. The gotcha is specific to tables with
+two `auth.users` FKs.) When moving/dropping a column referenced by functions,
+also scan `pg_proc.prosrc` — a source grep misses function bodies (bit us in
+#59: `get_my_people` + `reapply_friend_backfill`).
+
+### PWA service worker has no auto-update
+
+After a deploy the service worker keeps serving the **old precached bundle**
+until every tab of the site closes; a plain refresh doesn't pick up the new
+build. This burned the 2026-05-30 prod smoke (old build looked like the deploy
+hadn't landed). To verify a fresh deploy: incognito, or DevTools → Application
+→ Service Workers → Unregister + Clear site data. **Backlog:** add an SW
+update-and-reload prompt (#29 added registration but no update flow).
 
 ### `verbatimModuleSyntax`
 
