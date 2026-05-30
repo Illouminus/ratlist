@@ -9,7 +9,7 @@
  * Pass `name` as whatever label the row actually displays (e.g.
  * `handle ?? display_name`) so the fallback initial matches the headline.
  */
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 interface AvatarProps {
   avatarUrl: string | null;
@@ -19,6 +19,11 @@ interface AvatarProps {
 }
 
 export function Avatar({ avatarUrl, name, size = 40 }: AvatarProps) {
+  // A stored URL can 404 (object deleted from Storage, transient CDN miss) —
+  // fall back to the initial badge instead of the browser's broken-image icon.
+  // List callers key by user id, so `failed` never leaks across people.
+  const [failed, setFailed] = useState(false);
+
   const base: CSSProperties = {
     width: size,
     height: size,
@@ -27,7 +32,7 @@ export function Avatar({ avatarUrl, name, size = 40 }: AvatarProps) {
     boxShadow: 'inset 0 0 0 1px var(--hair-strong)',
   };
 
-  if (avatarUrl) {
+  if (avatarUrl && !failed) {
     return (
       <img
         src={avatarUrl}
@@ -35,6 +40,7 @@ export function Avatar({ avatarUrl, name, size = 40 }: AvatarProps) {
         width={size}
         height={size}
         aria-hidden
+        onError={() => setFailed(true)}
         style={{ ...base, objectFit: 'cover', display: 'block' }}
       />
     );

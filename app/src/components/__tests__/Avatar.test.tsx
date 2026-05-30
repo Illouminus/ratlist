@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { Avatar } from '../Avatar';
 
 describe('<Avatar>', () => {
@@ -21,5 +21,12 @@ describe('<Avatar>', () => {
   it('shows ? when the name is blank', () => {
     render(<Avatar avatarUrl={null} name="   " />);
     expect(screen.getByText('?')).toBeTruthy();
+  });
+
+  it('falls back to the initial badge if the image fails to load', () => {
+    const { container } = render(<Avatar avatarUrl="https://cdn.example/broken.jpg" name="Hui" />);
+    fireEvent.error(container.querySelector('img')!);
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('H')).toBeTruthy();
   });
 });
