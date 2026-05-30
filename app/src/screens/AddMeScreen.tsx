@@ -28,6 +28,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
+import { useProfile } from '../auth/useProfile';
 import { useI18n } from '../i18n/useI18n';
 import { errorCode, errorMessage } from '../lib/errors';
 import { track } from '../lib/plausible';
@@ -46,6 +47,7 @@ interface OwnerPreview {
 export function AddMeScreen() {
   const { t } = useI18n();
   const { status } = useAuth();
+  const { query: profileQuery } = useProfile();
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,17 @@ export function AddMeScreen() {
   // an unusual setup. Treat as a malformed link.
   if (!token) {
     return <Navigate to="/" replace />;
+  }
+
+  // #3: a freshly-signed-up (not-yet-onboarded) visitor must set their name
+  // FIRST — then OnboardingScreen returns them here (via state.from) to accept.
+  // /add-me is a public route, so the AuthedShell onboarding gate never fires.
+  if (
+    status === 'authenticated' &&
+    profileQuery.status === 'ready' &&
+    !profileQuery.profile.onboarded_at
+  ) {
+    return <Navigate to="/onboarding" replace state={{ from: `/add-me/${token}` }} />;
   }
 
   // When the preview has a name, the title reads «{name} хочет
@@ -185,7 +198,11 @@ export function AddMeScreen() {
             </Link>
           )}
 
-          {status === 'authenticated' && (
+          {status === 'authenticated' && profileQuery.status !== 'ready' && (
+            <p style={{ color: 'var(--ink-3)' }}>…</p>
+          )}
+
+          {status === 'authenticated' && profileQuery.status === 'ready' && (
             <>
               {error && (
                 <p
@@ -201,6 +218,23 @@ export function AddMeScreen() {
               <Button variant="primary" onClick={() => void handleAccept()} disabled={busy}>
                 {t('addMe.cta')}
               </Button>
+              <div style={{ marginTop: 'var(--s-3)' }}>
+                <button
+                  type="button"
+                  onClick={() => navigate('/', { replace: true })}
+                  className="mono-meta"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    color: 'var(--ink-3)',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {t('addMe.notNow')}
+                </button>
+              </div>
             </>
           )}
         </div>
