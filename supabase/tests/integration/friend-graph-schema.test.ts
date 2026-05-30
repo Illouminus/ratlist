@@ -80,15 +80,13 @@ describe('friend_graph_add migration — schema', () => {
     expect(data?.category).toBe('Кухня');
   });
 
-  it('adds profiles.add_me_token unique', async () => {
+  it('add_me_token is unique (now on profile_secrets)', async () => {
     const admin = adminClient();
-    const u1 = TEST_USERS.alice;
-    const u2 = TEST_USERS.bob;
-    await admin.from('profiles').update({ add_me_token: 'collision' }).eq('id', u1);
+    await admin.from('profile_secrets').update({ add_me_token: 'collision' }).eq('user_id', TEST_USERS.alice);
     const { error: dup } = await admin
-      .from('profiles')
+      .from('profile_secrets')
       .update({ add_me_token: 'collision' })
-      .eq('id', u2);
+      .eq('user_id', TEST_USERS.bob);
     expect(dup).toBeTruthy();
     expect(dup?.message).toMatch(/duplicate|unique/i);
   });

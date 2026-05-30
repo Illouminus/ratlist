@@ -49,6 +49,23 @@ export async function truncateBetweenTests(): Promise<void> {
   if (error) throw new Error(`truncate_test_state failed: ${error.message}`);
 }
 
+/**
+ * Tokens live in `profile_secrets` (moved out of `profiles` so cross-user
+ * profile reads can't leak them). These helpers let fixtures set a known
+ * token without caring where the column physically lives.
+ */
+export async function setShareToken(userId: string, token: string | null): Promise<void> {
+  const admin = adminClient();
+  const { error } = await admin.from('profile_secrets').update({ share_token: token }).eq('user_id', userId);
+  if (error) throw new Error(`setShareToken(${userId}) failed: ${error.message}`);
+}
+
+export async function setAddMeToken(userId: string, token: string): Promise<void> {
+  const admin = adminClient();
+  const { error } = await admin.from('profile_secrets').update({ add_me_token: token }).eq('user_id', userId);
+  if (error) throw new Error(`setAddMeToken(${userId}) failed: ${error.message}`);
+}
+
 export async function seedFresh(): Promise<SeedContext> {
   await truncateBetweenTests();
   const users = await ensureTestUsers();

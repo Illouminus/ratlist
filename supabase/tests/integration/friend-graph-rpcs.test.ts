@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { adminClient, clientFor } from './helpers/client.ts';
-import { ensureTestUsers, truncateBetweenTests, TEST_USERS } from './helpers/seed.ts';
+import { ensureTestUsers, truncateBetweenTests, setAddMeToken, TEST_USERS } from './helpers/seed.ts';
 
 describe('friend RPCs', () => {
   beforeEach(async () => {
@@ -140,7 +140,7 @@ describe('friend RPCs', () => {
   it('rotate_add_me_token gives new token, old one stops working', async () => {
     const admin = adminClient();
     const alice = await clientFor(TEST_USERS.alice);
-    await admin.from('profiles').update({ add_me_token: 'old_token' }).eq('id', TEST_USERS.alice);
+    await setAddMeToken(TEST_USERS.alice, 'old_token');
 
     const { data: newToken, error } = await alice.rpc('rotate_add_me_token');
     expect(error).toBeNull();
@@ -148,16 +148,16 @@ describe('friend RPCs', () => {
     expect(newToken).not.toBe('old_token');
 
     const { data: prof } = await admin
-      .from('profiles')
+      .from('profile_secrets')
       .select('add_me_token')
-      .eq('id', TEST_USERS.alice)
+      .eq('user_id', TEST_USERS.alice)
       .single();
     expect(prof?.add_me_token).toBe(newToken);
   });
 
   it('accept_add_me inserts friendship', async () => {
     const admin = adminClient();
-    await admin.from('profiles').update({ add_me_token: 'alice_link' }).eq('id', TEST_USERS.alice);
+    await setAddMeToken(TEST_USERS.alice, 'alice_link');
     const bob = await clientFor(TEST_USERS.bob);
     const { data: friendId, error } = await bob.rpc('accept_add_me', { _token: 'alice_link' });
     expect(error).toBeNull();
@@ -175,8 +175,7 @@ describe('friend RPCs', () => {
   });
 
   it('accept_add_me rejects self', async () => {
-    const admin = adminClient();
-    await admin.from('profiles').update({ add_me_token: 'alice_link' }).eq('id', TEST_USERS.alice);
+    await setAddMeToken(TEST_USERS.alice, 'alice_link');
     const alice = await clientFor(TEST_USERS.alice);
     const { error } = await alice.rpc('accept_add_me', { _token: 'alice_link' });
     expect(error).toBeTruthy();
