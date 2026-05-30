@@ -22,6 +22,7 @@ import { PaperLayout } from '../../components/PaperLayout';
 import { ItemPhoto } from '../../components/ItemPhoto';
 import { LangToggle } from '../../components/LangToggle';
 import { PriorityDots } from '../../components/PriorityDots';
+import { Wordmark } from '../../components/Wordmark';
 import { useI18n } from '../../i18n/useI18n';
 import { useAuth } from '../../auth/useAuth';
 import { formatPrice } from '../../lib/formatPrice';
@@ -125,7 +126,6 @@ export function EventLandingScreen() {
 // ─────────────────────────── parts ───────────────────────────
 
 function TopRow() {
-  const { t } = useI18n();
   return (
     <div
       style={{
@@ -137,33 +137,7 @@ function TopRow() {
         flexWrap: 'wrap',
       }}
     >
-      <Link
-        to="/"
-        style={{
-          textDecoration: 'none',
-          color: 'inherit',
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 'var(--s-2)',
-        }}
-      >
-        <span
-          className="display-italic"
-          style={{
-            fontSize: 'var(--display-xs)',
-            lineHeight: 1.05,
-            letterSpacing: -0.4,
-          }}
-        >
-          {t('app.name')}
-        </span>
-        <span
-          className="marginalia"
-          style={{ fontSize: 14, color: 'var(--accent)', transform: 'rotate(-3deg)' }}
-        >
-          — '26
-        </span>
-      </Link>
+      <Wordmark size="sm" />
       <LangToggle />
     </div>
   );

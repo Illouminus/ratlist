@@ -7,6 +7,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { useI18n } from '../i18n/useI18n';
+import { Wordmark } from './Wordmark';
 
 export function MobileTopBar() {
   const { t } = useI18n();
@@ -14,29 +15,7 @@ export function MobileTopBar() {
 
   return (
     <header className="app-mobile-top">
-      <Link
-        to="/"
-        style={{
-          textDecoration: 'none',
-          color: 'inherit',
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 'var(--s-2)',
-        }}
-      >
-        <span
-          className="display-italic"
-          style={{ fontSize: 22, lineHeight: 1, letterSpacing: -0.5 }}
-        >
-          {t('app.name')}
-        </span>
-        <span
-          className="marginalia"
-          style={{ fontSize: 14, color: 'var(--accent)', transform: 'rotate(-3deg)' }}
-        >
-          — '26
-        </span>
-      </Link>
+      <Wordmark size="sm" />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
         <Link

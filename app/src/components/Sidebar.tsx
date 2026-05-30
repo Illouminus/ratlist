@@ -14,6 +14,7 @@ import { useAuth } from '../auth/useAuth';
 import { useProfile } from '../auth/useProfile';
 import { useI18n } from '../i18n/useI18n';
 import { LangToggle } from './LangToggle';
+import { Wordmark } from './Wordmark';
 
 const NAV = [
   { to: '/', key: 'nav.myList' },
@@ -30,35 +31,10 @@ export function Sidebar() {
 
   return (
     <aside className="app-sidebar">
-      <Link
-        to="/"
-        style={{
-          textDecoration: 'none',
-          color: 'inherit',
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 'var(--s-3)',
-          marginBottom: 'var(--s-7)',
-          padding: '0 var(--s-3)',
-        }}
-      >
-        <div
-          className="display-italic"
-          style={{
-            fontSize: 'var(--display-s)',
-            lineHeight: 1.05,
-            letterSpacing: -0.6,
-          }}
-        >
-          {t('app.name')}
-        </div>
-        <span
-          className="marginalia"
-          style={{ fontSize: 16, color: 'var(--accent)', transform: 'rotate(-3deg)' }}
-        >
-          — '26
-        </span>
-      </Link>
+      <Wordmark
+        size="md"
+        style={{ marginBottom: 'var(--s-7)', padding: '0 var(--s-3)' }}
+      />
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {NAV.map(({ to, key }) => (

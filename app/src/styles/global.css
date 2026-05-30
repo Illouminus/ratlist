@@ -74,12 +74,72 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   color: var(--ink-3);
 }
 
+/* ── Wordmark (brand lockup) ────────────────────────────── */
+/* App name in editorial italic + a terracotta accent dot that echoes
+   favicon.svg (italic "R" with a floating terracotta dot). Sizes set the
+   container font-size so the dot (em) and year marginalia scale with it. */
+.wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  text-decoration: none;
+  color: inherit;
+}
+.wordmark-sm { font-size: var(--display-xs); }
+.wordmark-md { font-size: var(--display-s); }
+.wordmark-lg { font-size: var(--display-l); }
+.wordmark-name {
+  font-size: 1em;
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+}
+.wordmark-dot {
+  display: inline-block;
+  width: 0.16em;
+  height: 0.16em;
+  margin-left: 0.1em;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 0.52em; /* float near cap height, mirroring the favicon dot */
+  transition: transform var(--motion-fast) ease-out;
+}
+.wordmark:hover .wordmark-dot { transform: scale(1.5); }
+.wordmark-year {
+  display: inline-block; /* so the rotate applies regardless of flex/inline context */
+  font-size: 0.56em;
+  color: var(--accent);
+  transform: rotate(-3deg);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wordmark-dot { transition: none; }
+}
+
 /* ── Motion helpers ─────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .fade-up { animation: fadeUp var(--motion) ease-out both; }
+
+/* Staggered entrance: a container's direct children fade up in sequence.
+   Capped at 6 distinct delays; anything later shares the last one. */
+.stagger-children > * { animation: fadeUp var(--motion) ease-out both; }
+.stagger-children > *:nth-child(1) { animation-delay: 40ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 220ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 280ms; }
+.stagger-children > *:nth-child(n+6) { animation-delay: 340ms; }
+
+/* Press feedback for the <Button> component (it carries `.btn`). The
+   component's inline transition includes `transform`, so this animates. */
+.btn:active:not(:disabled) { transform: translateY(1px) scale(0.985); }
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-children > * { animation: none; }
+  .btn:active:not(:disabled) { transform: none; }
+}
 
 @keyframes fadeIn {
   from { opacity: 0; }
