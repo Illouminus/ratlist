@@ -29,10 +29,13 @@ describe('<Wordmark>', () => {
     expect(screen.getByText('Rat List')).toBeTruthy();
   });
 
-  it('links home by default', () => {
+  it('links home with the app name as its accessible name', () => {
     localStorage.setItem('kryska.lang', 'ru');
     renderWordmark(<Wordmark />);
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/');
+    // The link wraps non-text nodes (styled name span + decorative dot/year),
+    // so the aria-label is its only accessible name.
+    const link = screen.getByRole('link', { name: 'Крысиные желания' });
+    expect(link.getAttribute('href')).toBe('/');
   });
 
   it('renders a plain inline lockup (no link) when link={false}', () => {
