@@ -236,7 +236,6 @@ function ClaimControl({ myClaim, othersClaim, eventId, onClaim, onRelease }: Cla
           border: 'none',
           padding: 0,
           cursor: 'pointer',
-          font: 'inherit',
           textDecoration: 'underline',
           textDecorationStyle: 'dotted',
           textUnderlineOffset: 3,
