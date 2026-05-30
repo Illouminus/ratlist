@@ -95,6 +95,7 @@ export function ShareDialog({ open, onClose }: ShareDialogProps) {
     try {
       await navigator.clipboard.writeText(shareUrl);
       toast.show(t('share.copiedToast'));
+      onClose();
     } catch {
       /* clipboard blocked — fall through silently */
     }
@@ -122,6 +123,7 @@ export function ShareDialog({ open, onClose }: ShareDialogProps) {
         onClick={(e) => e.stopPropagation()}
         className="fade-up"
         style={{
+          position: 'relative',
           width: 'min(480px, 100%)',
           background: 'var(--paper)',
           border: '1px solid var(--hair-strong)',
@@ -130,7 +132,26 @@ export function ShareDialog({ open, onClose }: ShareDialogProps) {
           boxShadow: '0 16px 40px rgba(43, 38, 32, 0.25)',
         }}
       >
-        <div className="mono-meta" style={{ marginBottom: 'var(--s-2)' }}>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t('common.close')}
+          style={{
+            position: 'absolute',
+            top: 'var(--s-3)',
+            right: 'var(--s-3)',
+            background: 'transparent',
+            border: 'none',
+            padding: 4,
+            lineHeight: 1,
+            fontSize: 20,
+            color: 'var(--ink-3)',
+            cursor: 'pointer',
+          }}
+        >
+          ×
+        </button>
+        <div className="mono-meta" style={{ marginBottom: 'var(--s-2)', paddingRight: 'var(--s-5)' }}>
           {t('share.eyebrow')}
         </div>
         <h2

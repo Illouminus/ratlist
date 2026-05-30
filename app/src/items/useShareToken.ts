@@ -14,6 +14,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
 
+// `useShareToken` is per-hook local state, so a mutation in one instance
+// (the ShareDialog) is invisible to another (the activation checklist on
+// MyList) until a full re-fetch. Mirror `notifyProfileChanged`: the
+// mutators dispatch this window event and every mounted instance re-fetches.
+// The re-fetch never dispatches, so the listener can't loop.
+const SHARE_TOKEN_CHANGED_EVENT = 'kryska:share-token-changed';
+
+/** Call after toggling the caller's share token so every mounted
+ *  `useShareToken` (ShareDialog, ActivationChecklist, …) re-fetches. */
+export function notifyShareTokenChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(SHARE_TOKEN_CHANGED_EVENT));
+  }
+}
+
 export type ShareQuery =
   | { status: 'loading'; token: null; error: null }
   | { status: 'anonymous'; token: null; error: null }
@@ -61,6 +76,19 @@ export function useShareToken(): UseShareTokenResult {
     };
   }, [authStatus, user]);
 
+  // Cross-instance sync: when any instance toggles the token, re-fetch so
+  // this one reflects it without a page reload (e.g. the activation
+  // checklist ticking the moment the ShareDialog enables sharing).
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !user) return undefined;
+    const userId = user.id;
+    function onChanged() {
+      void loadToken(userId).then((state) => setFetched(state));
+    }
+    window.addEventListener(SHARE_TOKEN_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(SHARE_TOKEN_CHANGED_EVENT, onChanged);
+  }, [authStatus, user]);
+
   const query = useMemo<ShareQuery>(() => {
     if (authStatus === 'loading') return { status: 'loading', token: null, error: null };
     if (authStatus === 'anonymous' || !user) {
@@ -80,6 +108,7 @@ export function useShareToken(): UseShareTokenResult {
     const { data, error } = await supabase.rpc('set_share_token', { _enabled: true });
     if (error || typeof data !== 'string') return { error: error?.message ?? 'unknown error' };
     setFetched({ kind: 'loaded', userId: user.id, token: data });
+    notifyShareTokenChanged();
     return { token: data };
   }, [user]);
 
@@ -88,6 +117,7 @@ export function useShareToken(): UseShareTokenResult {
     const { error } = await supabase.rpc('set_share_token', { _enabled: false });
     if (error) return { error: error.message };
     setFetched({ kind: 'loaded', userId: user.id, token: null });
+    notifyShareTokenChanged();
     return { ok: true };
   }, [user]);
 
