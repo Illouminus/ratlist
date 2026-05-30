@@ -156,7 +156,6 @@ vi.mock('../../../auth/useProfile', () => ({
         avatar_url: null,
         onboarded_at: '2026-01-01T00:00:00Z',
         disabled_at: null,
-        share_token: null,
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
       },

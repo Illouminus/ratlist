@@ -136,6 +136,13 @@ export const en: Translation = {
     priorityHigh: 'really want it',
     privateOnly: 'private to you',
     publishedIn: 'visible in {groups}',
+    copy: 'I want this too',
+    copiedToast: 'added to your list',
+  },
+  member: {
+    heading: '{name}’s list',
+    backToEvent: 'back to event',
+    empty: 'nothing here yet',
   },
   priority: {
     sectionHigh:      'Really want',
@@ -378,6 +385,10 @@ export const en: Translation = {
     itemsLabel: 'curated',
     noItemsHonoree: 'nothing curated yet. open your list and tag what you want for this occasion.',
     noItemsGuest: 'the honoree has not curated anything for this occasion yet.',
+    guests: {
+      title: 'who else is gifting',
+      browse: 'see their list',
+    },
     kind: {
       birthday: 'birthday',
       holidays: 'holidays',

@@ -39,7 +39,6 @@ const profile = {
   avatar_url: null,
   onboarded_at: null,
   disabled_at: null,
-  share_token: null,
   created_at: '2026-05-25T00:00:00Z',
   updated_at: '2026-05-25T00:00:00Z',
 };

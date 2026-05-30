@@ -1017,6 +1017,32 @@ export type Database = {
           id: string
         }[]
       }
+      get_coparticipant_list: {
+        Args: { _category?: string; _member_id: string }
+        Returns: {
+          category: string | null
+          cover_url: string | null
+          created_at: string
+          id: string
+          maker: string | null
+          note: string | null
+          occasion: string
+          owner_id: string
+          price_text: string | null
+          priority: number
+          status: string
+          title: string
+          updated_at: string
+          url: string | null
+          visibility: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_event_view: {
         Args: { _token: string }
         Returns: {

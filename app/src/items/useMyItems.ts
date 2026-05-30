@@ -66,10 +66,36 @@ export interface CreateItemInput {
   event_ids?: string[];
 }
 
+/** Max title length accepted by the DB CHECK constraint. */
+const MAX_COPY_TITLE = 200;
+
+/**
+ * Map an item the caller can see (e.g. a co-participant's shared item) into a
+ * CreateItemInput for "copy to my list". Forces `shared` visibility + no group
+ * writes; references the source `cover_url` as-is (no re-upload, v1).
+ */
+export function buildCopyInput(source: Item): CreateItemInput {
+  return {
+    title: source.title.slice(0, MAX_COPY_TITLE),
+    maker: source.maker ?? null,
+    url: source.url ?? null,
+    price_text: source.price_text ?? null,
+    occasion: source.occasion as Occasion,
+    note: source.note ?? null,
+    priority: source.priority as 1 | 2 | 3,
+    cover_url: source.cover_url ?? null,
+    category: source.category ?? null,
+    visibility: 'shared',
+    group_ids: [],
+  };
+}
+
 export interface UseMyItemsResult {
   query: ItemsQuery;
   refresh: () => Promise<void>;
   createItem: (input: CreateItemInput) => Promise<{ item: MyItem } | { error: string }>;
+  /** Copy another user's visible item into the caller's own list. */
+  copyItem: (source: Item) => Promise<{ item: MyItem } | { error: string }>;
   /**
    * Replace an existing item's editable fields AND the full set of groups it
    * is published to. group_ids is treated as a full replacement, not a diff
@@ -262,6 +288,11 @@ export function useMyItems(): UseMyItemsResult {
     [user],
   );
 
+  const copyItem = useCallback(
+    (source: Item): Promise<{ item: MyItem } | { error: string }> => createItem(buildCopyInput(source)),
+    [createItem],
+  );
+
   const updateItem = useCallback(
     async (
       id: string,
@@ -400,5 +431,5 @@ export function useMyItems(): UseMyItemsResult {
     [fetched],
   );
 
-  return { query, refresh, createItem, updateItem, deleteItem, updateStatus, updateItemPriority };
+  return { query, refresh, createItem, copyItem, updateItem, deleteItem, updateStatus, updateItemPriority };
 }
