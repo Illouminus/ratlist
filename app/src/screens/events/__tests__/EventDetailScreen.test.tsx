@@ -313,6 +313,51 @@ describe('<EventDetailScreen> items rendering', () => {
     expect(screen.queryByText('Очень хочу')).toBeNull();
     expect(screen.queryByText('Если найдётся')).toBeNull();
   });
+
+  it('guest sees a claim button wired to useEvent.claim', () => {
+    localStorage.setItem('kryska.lang', 'ru');
+    const claim = vi.fn().mockResolvedValue({ ok: true });
+    mocks.useEvent.mockReturnValue({
+      query: {
+        status: 'ready',
+        data: {
+          event: honoreeEvent,
+          items: [curated('a', 1, 'Книга')],
+          isHonoree: false,
+        },
+        error: null,
+      },
+      refresh: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+      attachItem: vi.fn(),
+      detachItem: vi.fn(),
+      claim,
+      release: vi.fn(),
+    });
+    mocks.useAuth.mockReturnValue({
+      status: 'authenticated',
+      user: { id: 'u-guest' },
+      session: null,
+      signInWithMagicLink: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signOut: vi.fn(),
+    });
+
+    renderAt('/events/e1');
+
+    fireEvent.click(screen.getByRole('button', { name: /я возьму/i }));
+    expect(claim).toHaveBeenCalledWith('a');
+  });
+
+  it('honoree sees no claim button on own curated items', () => {
+    localStorage.setItem('kryska.lang', 'ru');
+    stubWithItems([curated('a', 1, 'Книга')], true);
+
+    renderAt('/events/e1');
+
+    expect(screen.queryByRole('button', { name: /я возьму|i'll get it/i })).toBeNull();
+  });
 });
 
 describe('EventDetailScreen — inline share-meta line (redesign)', () => {
